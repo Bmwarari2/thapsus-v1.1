@@ -1,0 +1,12 @@
+-- Schema v2 → v3: PackageEntity gains `order_id` so the operator console can
+-- post receive/customer/screen calls against the correct uuid (the v1 code
+-- assumed packages.id == orders.id, which broke the moment customer order
+-- creation started routing through /api/orders, where each gets its own uuid).
+--
+-- Idempotent: SQLite's ALTER TABLE … ADD COLUMN is a no-op if the column
+-- already exists is NOT true — it errors. We can't `IF NOT EXISTS` add a column
+-- pre-3.35, so we wrap in a guard against the SkieSwift driver re-running.
+-- In practice SQLDelight only runs each .sqm once per user_version bump, so
+-- a plain ADD COLUMN here is safe.
+
+ALTER TABLE PackageEntity ADD COLUMN order_id TEXT;

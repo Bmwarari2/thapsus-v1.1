@@ -1,0 +1,21 @@
+-- ============================================================
+-- Migration 4.sqm — add OutboxFailureEntity table
+--
+-- Mirrors the new OutboxFailure.sq schema. Adding a `.sq` file alone
+-- only updates fresh installs (the SQLDelight schema generator runs
+-- once at app first launch); existing installs need this migration to
+-- pick up the new table. See memory: sqldelight_migrations.md.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS OutboxFailureEntity (
+    mutation_id TEXT NOT NULL PRIMARY KEY,
+    kind TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    target_table TEXT NOT NULL,
+    target_id TEXT,
+    error_status INTEGER NOT NULL,
+    error_message TEXT,
+    failed_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_outbox_fail_target ON OutboxFailureEntity(target_id);

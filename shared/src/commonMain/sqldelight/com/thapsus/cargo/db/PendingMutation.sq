@@ -1,0 +1,57 @@
+-- Outbox queue for offline-first writes (rider POD captures, customs submissions
+-- made on flaky connections, operator intake commits). Worker drains this queue
+-- when connectivity returns.
+
+CREATE TABLE IF NOT EXISTS PendingMutationEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    kind TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    target_table TEXT NOT NULL,
+    target_id TEXT,
+    attempts INTEGER NOT NULL DEFAULT 0,
+    last_error TEXT,
+    enqueued_at_epoch_ms INTEGER NOT NULL,
+    next_attempt_at_epoch_ms INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_pm_next_attempt ON PendingMutationEntity(next_attempt_at_epoch_ms);
+
+enqueue:
+INSERT OR REPLACE INTO PendingMutationEntity(
+    id, kind, payload_json, target_table, target_id,
+    attempts, last_error, enqueued_at_epoch_ms, next_attempt_at_epoch_ms
+) VALUES (
+    :id, :kind, :payload_json, :target_table, :target_id,
+    :attempts, :last_error, :enqueued_at_epoch_ms, :next_attempt_at_epoch_ms
+);
+
+dequeueDue:
+SELECT * FROM PendingMutationEntity
+WHERE next_attempt_at_epoch_ms <= :now_epoch_ms
+ORDER BY enqueued_at_epoch_ms ASC
+LIMIT :limit;
+
+-- Manual-flush variant: ignores exponential backoff so the user's
+-- "Flush now" tap always tries every queued row. Background workers
+-- should keep using dequeueDue. Audit followup: outbox felt "stuck"
+-- because manual taps within the 64s back-off window returned zero.
+dequeueAll:
+SELECT * FROM PendingMutationEntity
+ORDER BY enqueued_at_epoch_ms ASC
+LIMIT :limit;
+
+remove:
+DELETE FROM PendingMutationEntity WHERE id = :id;
+
+bumpRetry:
+UPDATE PendingMutationEntity
+SET attempts = attempts + 1,
+    last_error = :last_error,
+    next_attempt_at_epoch_ms = :next_attempt_at_epoch_ms
+WHERE id = :id;
+
+countAll:
+SELECT COUNT(*) FROM PendingMutationEntity;
+
+deleteAll:
+DELETE FROM PendingMutationEntity;

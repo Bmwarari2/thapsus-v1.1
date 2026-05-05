@@ -1,0 +1,42 @@
+CREATE TABLE IF NOT EXISTS TicketEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    subject TEXT NOT NULL,
+    description TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'open',
+    priority TEXT NOT NULL DEFAULT 'medium',
+    photo_url TEXT,
+    created_at TEXT,
+    updated_at TEXT,
+    cached_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_ticket_user ON TicketEntity(user_id);
+CREATE INDEX IF NOT EXISTS idx_ticket_status ON TicketEntity(status);
+
+upsert:
+INSERT OR REPLACE INTO TicketEntity(
+    id, user_id, subject, description, status, priority, photo_url,
+    created_at, updated_at, cached_at_epoch_ms
+) VALUES (
+    :id, :user_id, :subject, :description, :status, :priority, :photo_url,
+    :created_at, :updated_at, :cached_at_epoch_ms
+);
+
+selectForUser:
+SELECT * FROM TicketEntity
+ WHERE user_id = :user_id
+ ORDER BY (updated_at IS NULL), updated_at DESC;
+
+selectAll:
+SELECT * FROM TicketEntity
+ ORDER BY (updated_at IS NULL), updated_at DESC;
+
+selectById:
+SELECT * FROM TicketEntity WHERE id = :id;
+
+deleteForUser:
+DELETE FROM TicketEntity WHERE user_id = :user_id;
+
+deleteAll:
+DELETE FROM TicketEntity;

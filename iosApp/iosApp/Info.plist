@@ -1,0 +1,113 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleDevelopmentRegion</key>
+    <string>$(DEVELOPMENT_LANGUAGE)</string>
+    <key>CFBundleDisplayName</key>
+    <string>Thapsus Cargo</string>
+    <key>CFBundleExecutable</key>
+    <string>$(EXECUTABLE_NAME)</string>
+    <key>CFBundleIdentifier</key>
+    <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+    <key>CFBundleInfoDictionaryVersion</key>
+    <string>6.0</string>
+    <key>CFBundleName</key>
+    <string>$(PRODUCT_NAME)</string>
+    <key>CFBundlePackageType</key>
+    <string>$(PRODUCT_BUNDLE_PACKAGE_TYPE)</string>
+    <key>CFBundleShortVersionString</key>
+    <string>1.0.0</string>
+    <key>CFBundleVersion</key>
+    <string>1</string>
+
+    <!-- Supabase connection — values come from Config.xcconfig at build time. -->
+    <key>SUPABASE_URL</key>
+    <string>$(SUPABASE_URL)</string>
+    <key>SUPABASE_ANON_KEY</key>
+    <string>$(SUPABASE_ANON_KEY)</string>
+
+    <!-- Express backend (Swiftcargo-main /api). Set via Config.local.xcconfig. -->
+    <key>API_BASE_URL</key>
+    <string>$(API_BASE_URL)</string>
+
+    <!-- App schemes we open ourselves (WhatsApp). Required by iOS 9+ for
+         canOpenURL/openURL on a non-https scheme. -->
+    <key>LSApplicationQueriesSchemes</key>
+    <array>
+        <string>whatsapp</string>
+    </array>
+
+    <!-- Custom URL scheme for deep links: thapsus://pay/<orderId> opens the
+         PublicPaymentView for invoice settlement. -->
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>uk.thapsus.cargo.pay</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>thapsus</string>
+            </array>
+        </dict>
+    </array>
+
+    <key>LSRequiresIPhoneOS</key>
+    <true/>
+    <key>UIApplicationSceneManifest</key>
+    <dict>
+        <key>UIApplicationSupportsMultipleScenes</key>
+        <false/>
+    </dict>
+    <key>UILaunchScreen</key>
+    <dict>
+        <key>UIColorName</key>
+        <string>BrandNavy</string>
+    </dict>
+    <key>UISupportedInterfaceOrientations</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+    </array>
+    <key>UISupportedInterfaceOrientations~ipad</key>
+    <array>
+        <string>UIInterfaceOrientationPortrait</string>
+        <string>UIInterfaceOrientationPortraitUpsideDown</string>
+        <string>UIInterfaceOrientationLandscapeLeft</string>
+        <string>UIInterfaceOrientationLandscapeRight</string>
+    </array>
+
+    <!-- U.S. encryption export compliance.
+         The app uses encryption beyond Apple's provided defaults (Supabase
+         HTTPS via BoringSSL / Network.framework, JWT signature validation,
+         and SHA-256 over reset-tokens / OTPs / log-out token revocation), so
+         we declare ITSAppUsesNonExemptEncryption=YES and file the annual
+         self-classification with the U.S. Bureau of Industry and Security.
+         The previous pairing with ITSAppUsesNonExemptEncryption_NoCryptography_Exemption
+         was internally contradictory — we both claim non-exempt encryption
+         AND assert no cryptography is used.  Removed (audit T27).
+         ITSEncryptionExportComplianceCode is left blank in source; the
+         App Store Connect record carries the actual ERN year-letter. -->
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <true/>
+    <key>ITSEncryptionExportComplianceCode</key>
+    <string></string>
+
+    <!-- Camera permission for the operator AVFoundation barcode scanner -->
+    <key>NSCameraUsageDescription</key>
+    <string>Thapsus uses your camera to scan parcel barcodes at the warehouse and capture proof-of-delivery photos on rider runs.</string>
+
+    <!-- Photo library — POD photos and parcel-condition shots -->
+    <key>NSPhotoLibraryUsageDescription</key>
+    <string>Thapsus saves proof-of-delivery photos to your library so they remain with you alongside our records.</string>
+    <key>NSPhotoLibraryAddUsageDescription</key>
+    <string>Thapsus saves proof-of-delivery photos to your library so they remain with you alongside our records.</string>
+
+    <!-- Contact Picker for the customer address book -->
+    <key>NSContactsUsageDescription</key>
+    <string>Thapsus uses your contacts so you can quickly assign a recipient to a parcel without retyping their phone number.</string>
+
+    <!-- Bluetooth & local network — barcode scanner accessories, optional -->
+    <key>NSLocalNetworkUsageDescription</key>
+    <string>Thapsus uses the local network to discover wireless label printers at the Stockport hub.</string>
+</dict>
+</plist>

@@ -1,0 +1,112 @@
+{
+  "fill" : "system-dark",
+  "groups" : [
+    {
+      "blur-material" : null,
+      "hidden" : false,
+      "layers" : [
+        {
+          "fill" : "none",
+          "glass" : true,
+          "image-name" : "shape 1.svg",
+          "name" : "shape 1",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              72.234375,
+              154.7890625
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "shape 2.svg",
+          "name" : "shape 2",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              47.98828125,
+              47.26171875
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "shape 3.svg",
+          "name" : "shape 3",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -173.16015625,
+              -158.32421875
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "shape 4.svg",
+          "name" : "shape 4",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              47.33203125,
+              -50.3984375
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "shape 5.svg",
+          "name" : "shape 5",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              -166.57421875,
+              154.47265625
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "shape 6.svg",
+          "name" : "shape 6",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              67.984375,
+              -156.24609375
+            ]
+          }
+        },
+        {
+          "hidden" : false,
+          "image-name" : "shape 7.svg",
+          "name" : "shape 7",
+          "position" : {
+            "scale" : 1,
+            "translation-in-points" : [
+              93.521484375,
+              -1.85546875
+            ]
+          }
+        }
+      ],
+      "name" : "Group",
+      "shadow" : {
+        "kind" : "layer-color",
+        "opacity" : 0.5
+      },
+      "specular" : true,
+      "translucency" : {
+        "enabled" : true,
+        "value" : 0.1
+      }
+    }
+  ],
+  "supported-platforms" : {
+    "circles" : [
+      "watchOS"
+    ],
+    "squares" : "shared"
+  }
+}

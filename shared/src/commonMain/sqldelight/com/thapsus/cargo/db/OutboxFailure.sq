@@ -1,0 +1,53 @@
+-- Terminal outbox failures (4xx server rejections).
+--
+-- The outbox worker retries 5xx / transport errors with exponential
+-- backoff, but a 4xx means the server actively rejected the payload —
+-- duplicate id, OTP mismatch, parcel not on this run — and retrying
+-- forever burns battery and inflates server logs without fixing the
+-- root cause. Move terminally-failed mutations into this table so the
+-- UI can surface "POD didn't sync — tap to retry" inline on the stop
+-- list (audit M2). The user explicitly retries by deleting the row +
+-- re-enqueueing.
+--
+-- One row per failed mutation. Rows live until the user either retries
+-- (delete + re-enqueue) or dismisses the failure.
+
+CREATE TABLE IF NOT EXISTS OutboxFailureEntity (
+    mutation_id TEXT NOT NULL PRIMARY KEY,
+    kind TEXT NOT NULL,
+    payload_json TEXT NOT NULL,
+    target_table TEXT NOT NULL,
+    target_id TEXT,
+    error_status INTEGER NOT NULL,
+    error_message TEXT,
+    failed_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_outbox_fail_target ON OutboxFailureEntity(target_id);
+
+insertFailure:
+INSERT OR REPLACE INTO OutboxFailureEntity(
+    mutation_id, kind, payload_json, target_table, target_id,
+    error_status, error_message, failed_at_epoch_ms
+) VALUES (
+    :mutation_id, :kind, :payload_json, :target_table, :target_id,
+    :error_status, :error_message, :failed_at_epoch_ms
+);
+
+selectAll:
+SELECT * FROM OutboxFailureEntity ORDER BY failed_at_epoch_ms DESC;
+
+selectByTargetId:
+SELECT * FROM OutboxFailureEntity WHERE target_id = :target_id;
+
+removeFailure:
+DELETE FROM OutboxFailureEntity WHERE mutation_id = :mutation_id;
+
+removeForTargetId:
+DELETE FROM OutboxFailureEntity WHERE target_id = :target_id;
+
+countAll:
+SELECT COUNT(*) FROM OutboxFailureEntity;
+
+deleteAll:
+DELETE FROM OutboxFailureEntity;

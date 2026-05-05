@@ -1,0 +1,85 @@
+[versions]
+# Pinned to 2.1.10 — the latest Kotlin version supported by SKIE 0.10.1.
+kotlin = "2.1.10"
+coroutines = "1.10.1"
+serialization = "1.7.3"
+datetime = "0.6.1"
+ktor = "3.1.2"
+supabase = "3.1.4"
+sqldelight = "2.0.2"
+koin = "4.0.0"
+skie = "0.10.1"
+turbine = "1.2.0"
+agp = "8.13.2"
+composeBom = "2024.10.01"
+activityCompose = "1.9.3"
+lifecycle = "2.8.7"
+navigationCompose = "2.8.4"
+coreKtx = "1.13.1"
+cameraX = "1.4.0"
+mlkitBarcode = "17.3.0"
+
+[libraries]
+kotlinx-coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "coroutines" }
+kotlinx-coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "coroutines" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "datetime" }
+
+ktor-client-core = { module = "io.ktor:ktor-client-core", version.ref = "ktor" }
+ktor-client-content-negotiation = { module = "io.ktor:ktor-client-content-negotiation", version.ref = "ktor" }
+ktor-client-darwin = { module = "io.ktor:ktor-client-darwin", version.ref = "ktor" }
+ktor-client-okhttp = { module = "io.ktor:ktor-client-okhttp", version.ref = "ktor" }
+ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx-json", version.ref = "ktor" }
+
+supabase-bom = { module = "io.github.jan-tennert.supabase:bom", version.ref = "supabase" }
+supabase-postgrest = { module = "io.github.jan-tennert.supabase:postgrest-kt" }
+supabase-auth = { module = "io.github.jan-tennert.supabase:auth-kt" }
+supabase-storage = { module = "io.github.jan-tennert.supabase:storage-kt" }
+supabase-realtime = { module = "io.github.jan-tennert.supabase:realtime-kt" }
+supabase-functions = { module = "io.github.jan-tennert.supabase:functions-kt" }
+
+sqldelight-runtime = { module = "app.cash.sqldelight:runtime", version.ref = "sqldelight" }
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight" }
+sqldelight-native-driver = { module = "app.cash.sqldelight:native-driver", version.ref = "sqldelight" }
+sqldelight-android-driver = { module = "app.cash.sqldelight:android-driver", version.ref = "sqldelight" }
+sqldelight-primitive-adapters = { module = "app.cash.sqldelight:primitive-adapters", version.ref = "sqldelight" }
+
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-test = { module = "io.insert-koin:koin-test", version.ref = "koin" }
+koin-android = { module = "io.insert-koin:koin-android", version.ref = "koin" }
+koin-androidx-compose = { module = "io.insert-koin:koin-androidx-compose", version.ref = "koin" }
+
+turbine = { module = "app.cash.turbine:turbine", version.ref = "turbine" }
+
+androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
+androidx-activity-compose = { module = "androidx.activity:activity-compose", version.ref = "activityCompose" }
+androidx-lifecycle-runtime-ktx = { module = "androidx.lifecycle:lifecycle-runtime-ktx", version.ref = "lifecycle" }
+androidx-lifecycle-runtime-compose = { module = "androidx.lifecycle:lifecycle-runtime-compose", version.ref = "lifecycle" }
+androidx-lifecycle-viewmodel-compose = { module = "androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
+androidx-navigation-compose = { module = "androidx.navigation:navigation-compose", version.ref = "navigationCompose" }
+
+androidx-print = { module = "androidx.print:print", version = "1.0.0" }
+androidx-camera-core = { module = "androidx.camera:camera-core", version.ref = "cameraX" }
+androidx-camera-camera2 = { module = "androidx.camera:camera-camera2", version.ref = "cameraX" }
+androidx-camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version.ref = "cameraX" }
+androidx-camera-view = { module = "androidx.camera:camera-view", version.ref = "cameraX" }
+mlkit-barcode-scanning = { module = "com.google.mlkit:barcode-scanning", version.ref = "mlkitBarcode" }
+
+compose-bom = { module = "androidx.compose:compose-bom", version.ref = "composeBom" }
+compose-ui = { module = "androidx.compose.ui:ui" }
+compose-ui-graphics = { module = "androidx.compose.ui:ui-graphics" }
+compose-ui-tooling = { module = "androidx.compose.ui:ui-tooling" }
+compose-ui-tooling-preview = { module = "androidx.compose.ui:ui-tooling-preview" }
+compose-foundation = { module = "androidx.compose.foundation:foundation" }
+compose-material3 = { module = "androidx.compose.material3:material3" }
+compose-material-icons-extended = { module = "androidx.compose.material:material-icons-extended" }
+
+[plugins]
+kotlinMultiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
+kotlinSerialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
+kotlinCompose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
+kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+skie = { id = "co.touchlab.skie", version.ref = "skie" }
+androidLibrary = { id = "com.android.library", version.ref = "agp" }
+androidApplication = { id = "com.android.application", version.ref = "agp" }

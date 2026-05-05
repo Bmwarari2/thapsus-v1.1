@@ -1,0 +1,39 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+
+# Kotlin
+.kotlin/
+*.hprof
+
+# IntelliJ / Android Studio
+.idea/
+*.iml
+local.properties
+
+# Xcode
+xcuserdata/
+*.xcuserstate
+DerivedData/
+.swiftpm/
+*.xcworkspace/contents.xcworkspacedata
+
+# CocoaPods
+Pods/
+Podfile.lock
+
+# Per-developer xcconfig — Supabase keys live here
+iosApp/Configuration/Config.local.xcconfig
+
+# Environment
+.env
+.env.local
+*.secrets
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local DB / migration backups (may contain user data)
+.backups/

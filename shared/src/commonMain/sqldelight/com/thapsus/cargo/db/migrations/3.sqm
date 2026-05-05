@@ -1,0 +1,40 @@
+-- ============================================================
+-- Migration 3.sqm — LastMileRunEntity.rider_id nullable
+--
+-- Mirrors the Postgres migration 013 (rider_id NULL on prod) so the
+-- iOS local cache can ingest unassigned runs from
+-- GET /api/last-mile/dispatch without the SQLDelight upsert
+-- exploding on a NOT NULL constraint.
+--
+-- SQLite doesn't support `ALTER TABLE … ALTER COLUMN DROP NOT NULL`
+-- on every supported version, so we rebuild the table the canonical
+-- way: new table → copy data → drop old → rename → re-create
+-- indexes (which were dropped with the table).
+-- ============================================================
+
+CREATE TABLE LastMileRunEntity_new (
+    id TEXT NOT NULL PRIMARY KEY,
+    rider_id TEXT,
+    zone TEXT NOT NULL,
+    run_date TEXT NOT NULL,
+    status TEXT NOT NULL,
+    started_at_epoch_ms INTEGER,
+    completed_at_epoch_ms INTEGER,
+    cached_at_epoch_ms INTEGER NOT NULL,
+    is_dirty INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT INTO LastMileRunEntity_new(
+    id, rider_id, zone, run_date, status,
+    started_at_epoch_ms, completed_at_epoch_ms, cached_at_epoch_ms, is_dirty
+)
+SELECT
+    id, rider_id, zone, run_date, status,
+    started_at_epoch_ms, completed_at_epoch_ms, cached_at_epoch_ms, is_dirty
+FROM LastMileRunEntity;
+
+DROP TABLE LastMileRunEntity;
+ALTER TABLE LastMileRunEntity_new RENAME TO LastMileRunEntity;
+
+CREATE INDEX IF NOT EXISTS idx_run_rider ON LastMileRunEntity(rider_id);
+CREATE INDEX IF NOT EXISTS idx_run_date ON LastMileRunEntity(run_date);

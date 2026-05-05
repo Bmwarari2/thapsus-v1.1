@@ -1,0 +1,74 @@
+CREATE TABLE IF NOT EXISTS LastMileRunEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    -- nullable since 3.sqm — a planned run can sit unassigned until
+    -- an operator attaches a rider via PATCH /runs/:id (mirrors the
+    -- Postgres migration 013 nullability change on the server).
+    rider_id TEXT,
+    zone TEXT NOT NULL,
+    run_date TEXT NOT NULL,
+    status TEXT NOT NULL,
+    started_at_epoch_ms INTEGER,
+    completed_at_epoch_ms INTEGER,
+    cached_at_epoch_ms INTEGER NOT NULL,
+    is_dirty INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_run_rider ON LastMileRunEntity(rider_id);
+CREATE INDEX IF NOT EXISTS idx_run_date ON LastMileRunEntity(run_date);
+
+CREATE TABLE IF NOT EXISTS RunStopEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    run_id TEXT NOT NULL,
+    parcel_id TEXT NOT NULL,
+    sequence INTEGER NOT NULL,
+    recipient_name TEXT,
+    recipient_phone TEXT,
+    address_line TEXT,
+    latitude REAL,
+    longitude REAL,
+    status TEXT NOT NULL,
+    cached_at_epoch_ms INTEGER NOT NULL,
+    is_dirty INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (run_id) REFERENCES LastMileRunEntity(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_stop_run ON RunStopEntity(run_id);
+
+upsertRun:
+INSERT OR REPLACE INTO LastMileRunEntity(
+    id, rider_id, zone, run_date, status,
+    started_at_epoch_ms, completed_at_epoch_ms, cached_at_epoch_ms, is_dirty
+) VALUES (
+    :id, :rider_id, :zone, :run_date, :status,
+    :started_at_epoch_ms, :completed_at_epoch_ms, :cached_at_epoch_ms, :is_dirty
+);
+
+upsertStop:
+INSERT OR REPLACE INTO RunStopEntity(
+    id, run_id, parcel_id, sequence, recipient_name, recipient_phone,
+    address_line, latitude, longitude, status, cached_at_epoch_ms, is_dirty
+) VALUES (
+    :id, :run_id, :parcel_id, :sequence, :recipient_name, :recipient_phone,
+    :address_line, :latitude, :longitude, :status, :cached_at_epoch_ms, :is_dirty
+);
+
+selectRunsForRider:
+SELECT * FROM LastMileRunEntity WHERE rider_id = :rider_id ORDER BY run_date DESC;
+
+selectRunsForToday:
+SELECT * FROM LastMileRunEntity WHERE rider_id = :rider_id AND run_date = :run_date;
+
+selectStopsForRun:
+SELECT * FROM RunStopEntity WHERE run_id = :run_id ORDER BY sequence ASC;
+
+dirtyStops:
+SELECT * FROM RunStopEntity WHERE is_dirty = 1;
+
+markStopClean:
+UPDATE RunStopEntity SET is_dirty = 0 WHERE id = :id;
+
+deleteAllRuns:
+DELETE FROM LastMileRunEntity;
+
+deleteAllStops:
+DELETE FROM RunStopEntity;

@@ -1,0 +1,12 @@
+-- Migration 020 — add `rejected` to the customs_status enum
+--
+-- Live enum values are: pre_alert, idf_submitted, entry_filed, duty_assessed,
+-- duty_paid, released. The iOS / Android client UI ships a "rejected" terminal
+-- state for clearing-agent flows but the enum had no slot for it, so any
+-- attempt to PATCH a customs entry to `rejected` would fail with
+--
+--   invalid input value for enum customs_status: "rejected"
+--
+-- Postgres allows ADD VALUE on existing enums (since 9.6) — idempotent via
+-- IF NOT EXISTS.
+ALTER TYPE public.customs_status ADD VALUE IF NOT EXISTS 'rejected';

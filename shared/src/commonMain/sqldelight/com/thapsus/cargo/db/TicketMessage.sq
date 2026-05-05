@@ -1,0 +1,35 @@
+CREATE TABLE IF NOT EXISTS TicketMessageEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    ticket_id TEXT NOT NULL,
+    sender_id TEXT,
+    message TEXT NOT NULL,
+    sender_email TEXT,
+    sender_name TEXT,
+    sender_role TEXT,
+    created_at TEXT,
+    cached_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_msg_ticket ON TicketMessageEntity(ticket_id);
+
+upsert:
+INSERT OR REPLACE INTO TicketMessageEntity(
+    id, ticket_id, sender_id, message,
+    sender_email, sender_name, sender_role,
+    created_at, cached_at_epoch_ms
+) VALUES (
+    :id, :ticket_id, :sender_id, :message,
+    :sender_email, :sender_name, :sender_role,
+    :created_at, :cached_at_epoch_ms
+);
+
+selectForTicket:
+SELECT * FROM TicketMessageEntity
+ WHERE ticket_id = :ticket_id
+ ORDER BY (created_at IS NULL), created_at ASC;
+
+deleteForTicket:
+DELETE FROM TicketMessageEntity WHERE ticket_id = :ticket_id;
+
+deleteAll:
+DELETE FROM TicketMessageEntity;

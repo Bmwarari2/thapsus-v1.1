@@ -1,0 +1,18 @@
+// Build settings shared by Debug + Release. Override secrets in Config.local.xcconfig
+// (gitignored). Never commit Supabase service-role keys — only the anon key belongs here.
+
+TEAM_ID = ABCDE12345
+APP_BUNDLE_ID = uk.thapsus.cargo
+APP_VERSION = 1.0.0
+APP_BUILD = 1
+
+// Inject Supabase anon credentials at build time. Override locally in
+// Config.local.xcconfig.
+//
+// NOTE on xcconfig escaping: the "//" in an https URL is parsed as a
+// comment-start marker. Use the SLASH macro to escape both slashes.
+SLASH = /
+SUPABASE_URL = https:$(SLASH)$(SLASH)your-project.supabase.co
+SUPABASE_ANON_KEY = your-anon-key
+
+#include? "Config.local.xcconfig"

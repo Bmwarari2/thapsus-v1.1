@@ -1,0 +1,47 @@
+CREATE TABLE IF NOT EXISTS ConsolidationEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    week_start TEXT NOT NULL,
+    cutoff_at TEXT NOT NULL,
+    departure_at TEXT,
+    status TEXT NOT NULL,
+    total_kg REAL NOT NULL DEFAULT 0,
+    total_parcels INTEGER NOT NULL DEFAULT 0,
+    master_awb_no TEXT,
+    master_awb_pdf_url TEXT,
+    tudor_invoice_no TEXT,
+    manifest_pdf_url TEXT,
+    assigned_agent_id TEXT,
+    updated_at_epoch_ms INTEGER NOT NULL,
+    cached_at_epoch_ms INTEGER NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_consol_status ON ConsolidationEntity(status);
+
+upsert:
+INSERT OR REPLACE INTO ConsolidationEntity(
+    id, week_start, cutoff_at, departure_at, status, total_kg, total_parcels,
+    master_awb_no, master_awb_pdf_url, tudor_invoice_no, manifest_pdf_url,
+    assigned_agent_id, updated_at_epoch_ms, cached_at_epoch_ms
+) VALUES (
+    :id, :week_start, :cutoff_at, :departure_at, :status, :total_kg, :total_parcels,
+    :master_awb_no, :master_awb_pdf_url, :tudor_invoice_no, :manifest_pdf_url,
+    :assigned_agent_id, :updated_at_epoch_ms, :cached_at_epoch_ms
+);
+
+selectById:
+SELECT * FROM ConsolidationEntity WHERE id = :id;
+
+selectAll:
+SELECT * FROM ConsolidationEntity ORDER BY week_start DESC;
+
+selectOpen:
+SELECT * FROM ConsolidationEntity WHERE status IN ('open', 'locked') ORDER BY cutoff_at ASC;
+
+selectForAgent:
+SELECT * FROM ConsolidationEntity WHERE assigned_agent_id = :agent_id ORDER BY week_start DESC;
+
+deleteById:
+DELETE FROM ConsolidationEntity WHERE id = :id;
+
+deleteAll:
+DELETE FROM ConsolidationEntity;

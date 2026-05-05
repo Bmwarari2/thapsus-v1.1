@@ -1,0 +1,6 @@
+# iosApp — Phase 2
+
+This directory will hold the SwiftUI presentation layer (iOS 26 Liquid Glass) once Phase 1
+compiles green. The Xcode project will be created here in Phase 2 and will link against
+the `ThapsusShared.framework` produced by `:shared:linkPodReleaseFrameworkIosArm64`
+(or via the `embedAndSignAppleFrameworkForXcode` task wired through SKIE).

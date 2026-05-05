@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Universal Links: associate the app with thapsus.uk so links like
+         https://thapsus.uk/pay/<id>, /track/<id>, /orders/<id> open inside
+         the app instead of Safari. The webapp serves the matching
+         apple-app-site-association at /.well-known/apple-app-site-association.
+         Replace YOUR_TEAM_ID in that JSON with the real Apple team prefix once
+         signing is configured (Xcode auto-fills the entitlement from team). -->
+    <key>com.apple.developer.associated-domains</key>
+    <array>
+        <string>applinks:thapsus.uk</string>
+        <string>applinks:www.thapsus.uk</string>
+    </array>
+</dict>
+</plist>

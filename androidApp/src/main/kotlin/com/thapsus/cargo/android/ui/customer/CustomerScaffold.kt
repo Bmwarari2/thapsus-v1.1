@@ -1,0 +1,151 @@
+package com.thapsus.cargo.android.ui.customer
+
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Scale
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
+import com.thapsus.cargo.android.ui.theme.Brand
+import com.thapsus.cargo.data.repository.AuthSession
+
+private data class TabSpec(val label: String, val route: String, val icon: ImageVector)
+
+private val customerTabs = listOf(
+    TabSpec("Home", CustomerRoutes.HOME, Icons.Filled.Home),
+    TabSpec("Tracking", CustomerRoutes.TRACKING, Icons.Filled.Search),
+    TabSpec("Wallet", CustomerRoutes.WALLET, Icons.Filled.CreditCard),
+    TabSpec("Quote", CustomerRoutes.QUOTE, Icons.Filled.Scale),
+    TabSpec("Account", CustomerRoutes.ACCOUNT, Icons.Filled.AccountCircle)
+)
+
+/**
+ * Scaffold for the customer role. Bottom nav swaps between the five top-level
+ * customer routes, and sub-screens (NewOrder, ParcelDetail, Notifications,
+ * ProfileEdit) push onto the same back stack so the bottom nav stays visible
+ * while they're showing.
+ */
+@Composable
+fun CustomerScaffold(
+    session: AuthSession.Authenticated,
+    onSignOut: () -> Unit
+) {
+    val nav = rememberNavController()
+    val backStack by nav.currentBackStackEntryAsState()
+    val currentDestination = backStack?.destination
+
+    Scaffold(
+        containerColor = Color.Transparent,
+        bottomBar = {
+            NavigationBar(containerColor = Brand.cream) {
+                customerTabs.forEach { tab ->
+                    val selected = currentDestination?.hierarchy?.any { it.route == tab.route } == true
+                    NavigationBarItem(
+                        selected = selected,
+                        onClick = {
+                            // If the tab's route is already on the back stack
+                            // (because we pushed a sub-screen from it), pop
+                            // back to it. Otherwise switch to the tab fresh.
+                            val popped = nav.popBackStack(tab.route, inclusive = false)
+                            if (!popped) {
+                                nav.navigate(tab.route) {
+                                    popUpTo(nav.graph.findStartDestination().id) {
+                                        inclusive = false
+                                        saveState = false
+                                    }
+                                    launchSingleTop = true
+                                }
+                            }
+                        },
+                        icon = { Icon(tab.icon, contentDescription = tab.label) },
+                        label = { Text(tab.label) }
+                    )
+                }
+            }
+        }
+    ) { padding ->
+        NavHost(
+            navController = nav,
+            startDestination = CustomerRoutes.HOME,
+            modifier = Modifier.fillMaxSize().padding(padding)
+        ) {
+            composable(CustomerRoutes.HOME) {
+                HomeScreen(
+                    session = session,
+                    onOpenNewOrder = { nav.navigate(CustomerRoutes.NEW_ORDER) },
+                    onOpenParcel = { nav.navigate(CustomerRoutes.parcelDetail(it)) },
+                    onOpenTracking = { nav.navigate(CustomerRoutes.TRACKING) },
+                    onOpenWallet = { nav.navigate(CustomerRoutes.WALLET) },
+                    onOpenNotifications = { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
+                )
+            }
+            composable(CustomerRoutes.TRACKING) {
+                TrackingScreen(
+                    userId = session.userId,
+                    onOpenParcel = { nav.navigate(CustomerRoutes.parcelDetail(it)) }
+                )
+            }
+            composable(CustomerRoutes.WALLET) {
+                WalletScreen(userId = session.userId)
+            }
+            composable(CustomerRoutes.QUOTE) {
+                QuoteScreen()
+            }
+            composable(CustomerRoutes.ACCOUNT) {
+                AccountScreen(
+                    session = session,
+                    onSignOut = onSignOut,
+                    onOpenNewOrder = { nav.navigate(CustomerRoutes.NEW_ORDER) },
+                    onOpenNotifications = { nav.navigate(CustomerRoutes.NOTIFICATIONS) },
+                    onOpenProfileEdit = { nav.navigate(CustomerRoutes.PROFILE_EDIT) }
+                )
+            }
+            composable(CustomerRoutes.NEW_ORDER) {
+                NewOrderScreen(
+                    userId = session.userId,
+                    onClose = { nav.popBackStack() }
+                )
+            }
+            composable(
+                route = CustomerRoutes.PARCEL_DETAIL,
+                arguments = listOf(navArgument("parcelId") { type = NavType.StringType })
+            ) { entry ->
+                val parcelId = entry.arguments?.getString("parcelId") ?: ""
+                ParcelDetailScreen(
+                    parcelId = parcelId,
+                    userId = session.userId,
+                    onClose = { nav.popBackStack() }
+                )
+            }
+            composable(CustomerRoutes.NOTIFICATIONS) {
+                NotificationInboxScreen(
+                    userId = session.userId,
+                    onClose = { nav.popBackStack() }
+                )
+            }
+            composable(CustomerRoutes.PROFILE_EDIT) {
+                ProfileEditScreen(onClose = { nav.popBackStack() })
+            }
+        }
+    }
+}

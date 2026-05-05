@@ -1,0 +1,53 @@
+CREATE TABLE IF NOT EXISTS CustomsEntryEntity (
+    id TEXT NOT NULL PRIMARY KEY,
+    parcel_id TEXT NOT NULL,
+    consolidation_id TEXT NOT NULL,
+    idf_no TEXT,
+    entry_no TEXT,
+    cif_kes_cents INTEGER NOT NULL DEFAULT 0,
+    duty_kes_cents INTEGER NOT NULL DEFAULT 0,
+    vat_kes_cents INTEGER NOT NULL DEFAULT 0,
+    idf_kes_cents INTEGER NOT NULL DEFAULT 0,
+    rdl_kes_cents INTEGER NOT NULL DEFAULT 0,
+    status TEXT NOT NULL,
+    submitted_at_epoch_ms INTEGER,
+    released_at_epoch_ms INTEGER,
+    cached_at_epoch_ms INTEGER NOT NULL,
+    is_dirty INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE INDEX IF NOT EXISTS idx_customs_parcel ON CustomsEntryEntity(parcel_id);
+CREATE INDEX IF NOT EXISTS idx_customs_consol ON CustomsEntryEntity(consolidation_id);
+CREATE INDEX IF NOT EXISTS idx_customs_dirty ON CustomsEntryEntity(is_dirty);
+
+upsert:
+INSERT OR REPLACE INTO CustomsEntryEntity(
+    id, parcel_id, consolidation_id, idf_no, entry_no,
+    cif_kes_cents, duty_kes_cents, vat_kes_cents, idf_kes_cents, rdl_kes_cents,
+    status, submitted_at_epoch_ms, released_at_epoch_ms, cached_at_epoch_ms, is_dirty
+) VALUES (
+    :id, :parcel_id, :consolidation_id, :idf_no, :entry_no,
+    :cif_kes_cents, :duty_kes_cents, :vat_kes_cents, :idf_kes_cents, :rdl_kes_cents,
+    :status, :submitted_at_epoch_ms, :released_at_epoch_ms, :cached_at_epoch_ms, :is_dirty
+);
+
+selectById:
+SELECT * FROM CustomsEntryEntity WHERE id = :id;
+
+selectForConsolidation:
+SELECT * FROM CustomsEntryEntity WHERE consolidation_id = :consolidation_id;
+
+selectForParcel:
+SELECT * FROM CustomsEntryEntity WHERE parcel_id = :parcel_id;
+
+selectDirty:
+SELECT * FROM CustomsEntryEntity WHERE is_dirty = 1;
+
+markClean:
+UPDATE CustomsEntryEntity SET is_dirty = 0 WHERE id = :id;
+
+deleteById:
+DELETE FROM CustomsEntryEntity WHERE id = :id;
+
+deleteAll:
+DELETE FROM CustomsEntryEntity;

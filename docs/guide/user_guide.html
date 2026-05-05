@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Thapsus Cargo — User Guide</title>
+<script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+<script>
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'base',
+    themeVariables: {
+      primaryColor: '#FF7A1A',
+      primaryTextColor: '#1B1B1B',
+      primaryBorderColor: '#1B1B1B',
+      lineColor: '#1B1B1B',
+      tertiaryColor: '#FFF6EE',
+      fontFamily: 'Inter, -apple-system, system-ui, sans-serif',
+      fontSize: '14px'
+    },
+    flowchart: { curve: 'basis', useMaxWidth: true }
+  });
+</script>
+<style>
+  @page {
+    size: A4;
+    margin: 18mm 16mm 18mm 16mm;
+    @bottom-center { content: counter(page) " / " counter(pages); font-size: 9pt; color: #888; }
+  }
+  body {
+    font-family: 'Inter', -apple-system, system-ui, 'Helvetica Neue', sans-serif;
+    color: #1B1B1B;
+    line-height: 1.55;
+    font-size: 11pt;
+    margin: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .page { padding: 0 0 12mm; }
+  h1, h2, h3, h4 { font-family: 'Inter', system-ui, sans-serif; color: #1B1B1B; }
+  h1 { font-size: 28pt; margin: 0 0 6pt; letter-spacing: -0.5px; }
+  h2 { font-size: 18pt; margin: 28pt 0 10pt; padding-bottom: 4pt; border-bottom: 2px solid #FF7A1A; page-break-after: avoid; }
+  h3 { font-size: 13pt; margin: 18pt 0 8pt; color: #FF7A1A; page-break-after: avoid; }
+  h4 { font-size: 11pt; margin: 12pt 0 4pt; }
+  .cover {
+    display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
+    min-height: 230mm;
+    padding-left: 6mm;
+  }
+  .cover .eyebrow {
+    text-transform: uppercase; font-weight: 900; letter-spacing: 4px;
+    color: #FF7A1A; font-size: 10pt; margin-bottom: 12pt;
+  }
+  .cover h1 {
+    font-size: 48pt; line-height: 1.05; margin: 0 0 18pt; max-width: 16cm;
+  }
+  .cover .sub {
+    font-size: 14pt; color: #444; max-width: 14cm;
+  }
+  .cover .meta {
+    margin-top: 36pt; font-size: 10pt; color: #777;
+  }
+  .toc { page-break-after: always; padding-top: 8mm; }
+  .toc h2 { border-bottom: none; margin-top: 0; }
+  .toc ol { padding-left: 1.4em; }
+  .toc li { margin: 4pt 0; font-size: 11pt; }
+  .toc a { color: #1B1B1B; text-decoration: none; }
+  .toc .role { color: #FF7A1A; font-weight: 600; }
+  section { page-break-before: always; }
+  section.intro { page-break-before: auto; }
+  blockquote {
+    margin: 8pt 0; padding: 8pt 14pt; border-left: 3px solid #FF7A1A;
+    background: #FFF6EE; font-size: 10pt; color: #333;
+  }
+  code {
+    font-family: 'JetBrains Mono', Menlo, monospace; font-size: 10pt;
+    background: #F2EEE6; padding: 1pt 4pt; border-radius: 3px;
+  }
+  pre code { background: none; padding: 0; }
+  pre {
+    background: #1B1B1B; color: #F8F1E6; padding: 10pt 12pt; border-radius: 6px;
+    font-size: 9.5pt; overflow-x: hidden; white-space: pre-wrap;
+  }
+  table { border-collapse: collapse; width: 100%; margin: 12pt 0; font-size: 10pt; }
+  th, td { border: 1px solid #DDD; padding: 6pt 8pt; text-align: left; vertical-align: top; }
+  th { background: #FFF6EE; font-weight: 700; }
+  ul, ol { padding-left: 1.4em; }
+  li { margin: 3pt 0; }
+  .mermaid { display: block; margin: 12pt auto; max-width: 100%; }
+  .role-pill {
+    display: inline-block; background: #FF7A1A; color: white;
+    font-weight: 800; letter-spacing: 1.5px; padding: 3pt 10pt;
+    border-radius: 99px; font-size: 8pt; text-transform: uppercase;
+    margin-right: 8pt;
+  }
+  .step {
+    counter-increment: step; padding: 6pt 0 6pt 28pt; position: relative;
+  }
+  .step::before {
+    content: counter(step); position: absolute; left: 0; top: 4pt;
+    width: 20pt; height: 20pt; border-radius: 99px; background: #1B1B1B;
+    color: white; text-align: center; line-height: 20pt; font-weight: 800;
+    font-size: 10pt;
+  }
+  .steps { counter-reset: step; }
+  .callout {
+    background: #FFF6EE; border: 1px solid #FFD9B8; border-radius: 6px;
+    padding: 8pt 12pt; margin: 10pt 0; font-size: 10pt;
+  }
+  .callout.warn { background: #FFE9E9; border-color: #FFB8B8; }
+  .callout strong { color: #FF7A1A; }
+  .callout.warn strong { color: #B8001A; }
+  .two-col { display: flex; gap: 14pt; }
+  .two-col > div { flex: 1; }
+  hr { border: none; border-top: 1px solid #DDD; margin: 18pt 0; }
+  a { color: #FF7A1A; }
+  .small { font-size: 9.5pt; color: #555; }
+  .center { text-align: center; }
+</style>
+</head>
+<body>
+
+<!-- ─── COVER ─────────────────────────────────────────────────────────── -->
+<section class="cover intro">
+  <div class="eyebrow">Thapsus Cargo</div>
+  <h1>The Operating Manual</h1>
+  <div class="sub">A complete guide to using the iOS app and the web app, written for the people who actually run the business — customers, admins, operators, riders, and shipping agents.</div>
+  <div class="meta">Version 1.0 · April 2026 · Stockport ⇄ Nairobi</div>
+</section>
+
+<!-- ─── TABLE OF CONTENTS ────────────────────────────────────────────── -->
+<section class="toc intro">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#intro">Introduction</a></li>
+    <li><a href="#shape">The shape of a parcel's journey</a></li>
+    <li><span class="role">Customer</span> <a href="#customer">— the iOS app and webapp</a></li>
+    <li><span class="role">Operator</span> <a href="#operator">— the Stockport hub</a></li>
+    <li><span class="role">Shipping agent</span> <a href="#agent">— customs &amp; clearance</a></li>
+    <li><span class="role">Rider</span> <a href="#rider">— last-mile delivery</a></li>
+    <li><span class="role">Admin</span> <a href="#admin">— running the company</a></li>
+    <li><a href="#troubleshoot">Troubleshooting &amp; common questions</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ol>
+</section>
+
+<!-- ─── INTRODUCTION ─────────────────────────────────────────────────── -->
+<section id="intro">
+  <h2>1 · Introduction</h2>
+
+  <p>Thapsus Cargo moves parcels from the United Kingdom to Kenya. A customer ships an item from a UK retailer to our hub in Stockport, we receive it, weigh it, photograph it, screen it for prohibited goods, consolidate it onto a flight to Nairobi, clear it through customs, and a rider hands it over at the customer's door.</p>
+
+  <p>Two software products run that pipeline:</p>
+
+  <table>
+    <thead><tr><th>Product</th><th>Who it is for</th><th>Where to find it</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Web app</strong></td><td>Customers, admins, operators, shipping agents, riders, public visitors</td><td>The browser, at the deployed Railway URL.</td></tr>
+      <tr><td><strong>iOS app</strong></td><td>Customers and field staff (operators, riders, agents) who need an app on a phone</td><td>iPhone — Thapsus Cargo from the App Store.</td></tr>
+    </tbody>
+  </table>
+
+  <p>Both apps are skinned in the same brand language (the cream-and-orange Liquid Glass look). Both talk to the same Express API and the same Supabase database, so a parcel created on iOS shows up on the web admin console seconds later, and vice-versa.</p>
+
+  <div class="callout">
+    <strong>The mental model:</strong> the web app is the <em>desk</em> — full keyboard, big screens, deep workflows like consolidations and customs paperwork. The iOS app is the <em>floor</em> — phone in hand, scanning labels in the warehouse, capturing proof-of-delivery photos at the door, and quickly checking parcel status while on the move.
+  </div>
+
+  <h3>Roles in one sentence each</h3>
+  <ul>
+    <li><strong>Customer.</strong> The person whose parcel it is. Creates orders, tracks them, pays.</li>
+    <li><strong>Operator.</strong> Hub staff at Stockport. Receives parcels, prints SKU labels, builds consolidations, prints manifests.</li>
+    <li><strong>Shipping agent.</strong> Clears parcels through Kenyan customs and uploads PVOC paperwork.</li>
+    <li><strong>Rider.</strong> Picks up the cleared parcel from the Nairobi hub and delivers it.</li>
+    <li><strong>Admin.</strong> Owns the system. Sees everything, can override anything, sets pricing.</li>
+  </ul>
+</section>
+
+<!-- ─── SHAPE OF JOURNEY ────────────────────────────────────────────── -->
+<section id="shape">
+  <h2>2 · The shape of a parcel's journey</h2>
+  <p>Every parcel passes through the same eight states, in the same order. Most of the rest of this manual is just "what does each role do at each step."</p>
+
+  <div class="mermaid">
+flowchart LR
+  A[Pre-registered<br/>customer creates order] --> B[Received at warehouse<br/>operator prints SKU label]
+  B --> C[Manifested<br/>operator builds consolidation]
+  C --> D[In transit<br/>flight UK to Kenya]
+  D --> E[Customs<br/>shipping agent clears]
+  E --> F[Released<br/>ready for last mile]
+  F --> G[Out for delivery<br/>rider picks up]
+  G --> H[Delivered<br/>POD photo + signature]
+  style A fill:#FFE7D2,stroke:#1B1B1B
+  style B fill:#FFD9B8,stroke:#1B1B1B
+  style C fill:#FFCB99,stroke:#1B1B1B
+  style D fill:#FFB87A,stroke:#1B1B1B
+  style E fill:#FFA855,stroke:#1B1B1B
+  style F fill:#FF9637,stroke:#1B1B1B
+  style G fill:#FF8419,stroke:#1B1B1B
+  style H fill:#FF7A1A,stroke:#1B1B1B,color:#fff
+  </div>
+
+  <p>The status on the parcel never goes backwards under normal flow. The two exceptions are <em>held</em> (pulled out by screening or operator decision) and <em>cancelled</em> (customer-initiated before the parcel reaches the hub).</p>
+
+  <h3>Who acts when</h3>
+  <div class="mermaid">
+sequenceDiagram
+  autonumber
+  actor C as Customer
+  actor O as Operator
+  actor A as Shipping agent
+  actor R as Rider
+  C->>+O: Ships parcel to Stockport hub
+  O->>O: Receive, weigh, photograph, label
+  O->>O: Build consolidation
+  O->>+A: Manifest + AWB hand-over (in transit)
+  A->>A: Clear customs (KRA, PVOC)
+  A->>+R: Released parcel
+  R->>-C: Doorstep delivery + POD
+  </div>
+</section>
+
+<!-- ─── CUSTOMER SECTION ────────────────────────────────────────────── -->
+<section id="customer">
+  <h2><span class="role-pill">Customer</span> 3 · The iOS app and the web app</h2>
+
+  <p>A customer can do everything from either the iOS app or the website. This section walks through the most common five tasks.</p>
+
+  <h3>3.1 · Creating an account</h3>
+  <ol class="steps">
+    <li class="step"><strong>Open the app or visit the website.</strong> Tap "Register" (web) or "Create account" (iOS).</li>
+    <li class="step"><strong>Fill in name, email, phone, password.</strong> Phone goes in international format (e.g. <code>+254712345678</code>) so SMS receipts can reach you.</li>
+    <li class="step"><strong>Confirm.</strong> The system mints you a unique <strong>warehouse ID</strong> in the form <code>TC-XXXX</code>. This is the code you write on every parcel you send to Stockport — it's how the hub matches a box to your account.</li>
+    <li class="step"><strong>Sign in.</strong> The first sign-in stays signed in for 30 days; if you sign out, biometrics speed it back up.</li>
+  </ol>
+
+  <div class="callout">
+    <strong>Where to find your warehouse ID:</strong> on the iOS app it's at the top of the <em>Account</em> tab. On the web it's in the dashboard header. Always include this code on outgoing parcels.
+  </div>
+
+  <h3>3.2 · Creating a new order</h3>
+  <p>An order is the data record we use to expect, receive, charge for, and track a parcel. You always create an order <em>before</em> the parcel reaches the warehouse — that way we know to expect it.</p>
+
+  <div class="mermaid">
+flowchart TD
+  S([Tap + New order]) --> R{Retailer?}
+  R -->|Amazon, Next, Shein, etc.| RP[Pick from list]
+  R -->|Other| RC[Type custom name]
+  RP --> D[Description<br/>e.g. iPhone 15 Pro]
+  RC --> D
+  D --> V[Declared value £]
+  V --> I{Insurance tier}
+  I --> M[Market: UK or China]
+  M --> H[HS tier:<br/>general / electronics / fragile]
+  H --> CO[Confirm + create]
+  CO --> EM[Email confirmation sent<br/>order in dashboard]
+  </div>
+
+  <ol class="steps">
+    <li class="step"><strong>Open the order form.</strong> iOS: tap the orange "+" floating button on the Home tab. Web: click <em>New order</em> from the dashboard.</li>
+    <li class="step"><strong>Pick the retailer.</strong> If you don't see it in the list, tap "Other" and type the name. The retailer name is what an operator sees on the warehouse shelf — the more accurate it is, the faster the match.</li>
+    <li class="step"><strong>Describe the item.</strong> One short phrase ("iPhone 15", "Boxers", "Hair products"). Avoid the word "Item".</li>
+    <li class="step"><strong>Declared value (£).</strong> What the goods are worth. This drives KRA customs duty and your insurance cover.</li>
+    <li class="step"><strong>Insurance tier.</strong> Standard is included. Plus, Premier and Custom add cover at a per-tier premium — pricing shown on screen before you confirm.</li>
+    <li class="step"><strong>Market and HS tier.</strong> Market is where the parcel ships from (UK air, China air, UK sea). HS tier picks the broad customs band — "general" for clothing &amp; books, "electronics" for phones &amp; laptops, "fragile" for glassware.</li>
+    <li class="step"><strong>Confirm.</strong> A confirmation email arrives within a minute. The order shows up on your dashboard with status <em>pending</em> and a tracking number like <code>TC-20260429-AB12</code>.</li>
+  </ol>
+
+  <div class="callout warn">
+    <strong>Don't ship before you create the order.</strong> If a box arrives at the hub without a matching order in the system, an operator has to chase you for the details — that adds days to your delivery.
+  </div>
+
+  <h3>3.3 · Tracking a parcel</h3>
+  <p>You have three places to see status:</p>
+  <ul>
+    <li><strong>Home dashboard</strong> — the latest five parcels with a chip showing current status.</li>
+    <li><strong>Tracking tab (iOS) / Track Package (web)</strong> — the full timeline view: when it was received, photographed, manifested, when the flight left, when it cleared customs, when the rider was assigned, when it landed.</li>
+    <li><strong>Public tracking link</strong> — the email confirmation contains a no-login link you can share with whoever is receiving the parcel on your behalf.</li>
+  </ul>
+
+  <h3>3.4 · Wallet, top-ups, and paying for delivery</h3>
+  <p>Your wallet holds balance you've added (M-Pesa or card). When a parcel is consolidated, the system computes the total charge (freight + duty + insurance + fees) and debits the wallet. If the wallet is short, the parcel is held at <em>awaiting duty payment</em> until you top it up.</p>
+
+  <ol class="steps">
+    <li class="step"><strong>Open the Wallet tab.</strong> Current balance and the last twenty transactions are shown.</li>
+    <li class="step"><strong>Top up.</strong> Tap "Add funds" → choose M-Pesa or Card → enter amount → confirm. M-Pesa pushes a STK prompt to the phone number on your account; cards run via Stripe.</li>
+    <li class="step"><strong>Watch the live banner.</strong> Once the payment confirms, the wallet refreshes within a few seconds (admin sees the same event).</li>
+  </ol>
+
+  <h3>3.5 · The Quote calculator</h3>
+  <p>Use it before you ship anything to know what you'll be charged. Pick market (UK air / China air / UK sea), enter weight or dimensions (the calculator uses whichever is heavier — actual or volumetric), pick HS tier, and the calculator shows freight, duty, fees, and an all-in total in £ and KSh.</p>
+
+  <h3>3.6 · Support, FAQ, and prohibited items</h3>
+  <ul>
+    <li><strong>FAQ</strong> on the web is the first stop for general questions.</li>
+    <li><strong>Prohibited items</strong> — open the searchable list before you ship anything that might be questionable. The list flags <em>prohibited</em>, <em>restricted</em>, and <em>dangerous-goods-suspect</em> categories.</li>
+    <li><strong>Support tickets</strong> — open one from the iOS Support tab or the web Support page. Replies appear as iMessage-style bubbles in the same screen.</li>
+    <li><strong>WhatsApp</strong> — fastest for time-sensitive issues. There's a button right on the customer Home that opens WhatsApp to <code>+44 7424 531483</code> with a pre-filled message including your order number.</li>
+  </ul>
+</section>
+
+<!-- ─── OPERATOR SECTION ────────────────────────────────────────────── -->
+<section id="operator">
+  <h2><span class="role-pill">Operator</span> 4 · Running the Stockport hub</h2>
+
+  <p>Operators are at the warehouse all day. The iOS app is built for them — five tabs that walk linearly through a parcel's life from arriving at the door to going out on a flight.</p>
+
+  <div class="mermaid">
+flowchart LR
+  T1[Today] --> T2[Receive] --> T3[Consols] --> T4[Dispatch]
+  T1 -.- N1[/incoming queue + held + KPIs/]
+  T2 -.- N2[/scan SKU OR pick from list,<br/>weigh, photograph, mark received/]
+  T3 -.- N3[/build new consolidation,<br/>add parcels, print manifest, set AWB/]
+  T4 -.- N4[/release for last-mile pickup/]
+  </div>
+
+  <h3>4.1 · The Today tab</h3>
+  <p>Opens to a five-card snapshot of the warehouse:</p>
+  <ul>
+    <li><strong>Expected today</strong> — orders created in the last 14 days that haven't been received yet.</li>
+    <li><strong>Received</strong> — parcels currently on the floor, status <em>received_at_warehouse</em>.</li>
+    <li><strong>Consolidating</strong> — already attached to an open consolidation.</li>
+    <li><strong>In transit</strong> — already on a flight.</li>
+    <li><strong>Held</strong> — flagged by screening or by an operator. Click through to see the reason.</li>
+  </ul>
+
+  <h3>4.2 · The Receive flow</h3>
+  <p>This is the most-used screen of any role. There are now <strong>two</strong> ways to start it.</p>
+
+  <div class="two-col">
+    <div>
+      <h4>From the queue</h4>
+      <ol class="steps">
+        <li class="step">Open the <em>Receive</em> tab.</li>
+        <li class="step">Match the parcel on the table to a row by description / sender / customer name.</li>
+        <li class="step">Tap the row.</li>
+      </ol>
+    </div>
+    <div>
+      <h4>By scanning</h4>
+      <ol class="steps">
+        <li class="step">Tap the orange <em>Scan SKU</em> button.</li>
+        <li class="step">Point the camera at any printed STK-XXXXXX label.</li>
+        <li class="step">If pre-registered → Receive sheet opens. Otherwise → detail panel.</li>
+      </ol>
+    </div>
+  </div>
+
+  <p>Both paths land on the same Receive sheet. From there:</p>
+  <ol class="steps">
+    <li class="step"><strong>Confirm the customer.</strong> Top of the screen shows the full name and the personal warehouse code (<code>TC-XXXX</code>). If it doesn't match what's on the box, stop and contact admin.</li>
+    <li class="step"><strong>Re-mint the SKU if you need to.</strong> The "Re-mint" button issues a fresh <code>STK-XXXXXX</code>; the old printed label becomes invalid as soon as you mark received with the new one.</li>
+    <li class="step"><strong>Type the dimensions and weight.</strong> Length, width, height in cm; weight in kg. Defaults are 30/20/20/1 — overwrite them.</li>
+    <li class="step"><strong>Tap Print Label.</strong> AirPrint dialog opens; pick the warehouse Brother / Zebra printer. Stick the printed label on the box (always cover any retailer labels).</li>
+    <li class="step"><strong>Tap Mark Received.</strong> Status flips to <em>received_at_warehouse</em>, the customer's tracking page updates, and the parcel is now eligible for consolidation.</li>
+  </ol>
+
+  <div class="callout">
+    <strong>Why we re-mint:</strong> if a customer accidentally re-printed an old label or a previous staff member voided it, mint a fresh one. Only the latest SKU on a parcel is valid.
+  </div>
+
+  <h3>4.3 · Building a consolidation (Consols tab)</h3>
+  <p>A consolidation is a group of parcels going on the same flight. There is no fixed weekly cadence — operators create them on demand based on volume and flight availability.</p>
+
+  <ol class="steps">
+    <li class="step">Open the <em>Consols</em> tab and tap <em>+ New consolidation</em>.</li>
+    <li class="step">Pick the market (UK air, China air, UK sea) and enter the planned departure date.</li>
+    <li class="step">Open the new consolidation and tap <em>Add parcels to manifest</em> — multi-select from the "ready" list.</li>
+    <li class="step">When the consolidation is closed (no more parcels), tap <em>Print manifest</em> — produces a paginated A4 PDF with parcel list, weights, declared values, totals, and a KRA-customs reminder footer.</li>
+    <li class="step">Enter the <em>master AWB</em> (the air-waybill number from the airline) and tap <em>Submit AWB &amp; mark in-transit</em>. Every parcel in the manifest flips to <em>in_transit</em>.</li>
+  </ol>
+
+  <h3>4.4 · The Dispatch tab</h3>
+  <p>Once cleared at the Nairobi hub, parcels show up here ready for last-mile pickup. An operator (or admin) attaches a rider to a run and the parcels disappear from the queue as the rider takes them out.</p>
+
+  <h3>4.5 · Held parcels</h3>
+  <p>If a screening flags a parcel (the Receive flow runs the <em>prohibited items</em> check on the description), or an operator manually puts a parcel on hold, it sits in the <em>held</em> bucket on Today. From the parcel's detail view you can:</p>
+  <ul>
+    <li><strong>Release</strong> — put it back into the normal flow (e.g. customer provided a missing PVOC document).</li>
+    <li><strong>Re-screen</strong> — re-run the prohibited check, e.g. after the description was updated.</li>
+    <li><strong>Cancel</strong> — escalates to admin; only admins close a held parcel for good.</li>
+  </ul>
+</section>
+
+<!-- ─── SHIPPING AGENT SECTION ──────────────────────────────────────── -->
+<section id="agent">
+  <h2><span class="role-pill">Agent</span> 5 · Shipping agent (customs &amp; clearance)</h2>
+
+  <p>Shipping agents pick up consolidations after the flight lands at JKIA, run them through KRA and any required PVOC paperwork, and release the parcels for last-mile delivery. The agent app has a focused two-tab layout — <em>Customs</em> and <em>Invoices</em>.</p>
+
+  <h3>5.1 · The Customs queue</h3>
+  <ol class="steps">
+    <li class="step">Open the <em>Customs</em> tab. Each row is a consolidation that has landed and is awaiting clearance.</li>
+    <li class="step">Tap a row to open. You see the manifest (every parcel with declared value, weight, HS tier), the master AWB, and any uploaded PVOC documents.</li>
+    <li class="step">Upload PVOC certificates and the customs entry. Each upload attaches to the parent consolidation; the customer sees a generic "in customs" status without seeing the document set.</li>
+    <li class="step">When KRA releases the consolidation, mark it <em>cleared</em>. All child parcels flip to <em>released</em> and become eligible for last-mile.</li>
+  </ol>
+
+  <h3>5.2 · Invoices</h3>
+  <p>Each consolidation generates an agent invoice covering customs duty, agent fees, and any per-parcel charges. The Invoices tab lists them with status <em>draft / sent / paid</em> and lets you push a sent invoice to admin for reconciliation.</p>
+
+  <div class="callout">
+    <strong>Where the data goes:</strong> the agent's uploads land in the <code>pvoc_documents</code> and <code>customs_entries</code> tables; admin sees the same files on the web Customs view. Customers don't see the documents themselves — they see the high-level "in customs" / "released" status only.
+  </div>
+
+  <h3>5.3 · Workflow diagram</h3>
+  <div class="mermaid">
+flowchart LR
+  L[Flight lands<br/>consolidation in_transit] --> Q[Agent picks up<br/>opens Customs queue]
+  Q --> P{Documents complete?}
+  P -- No --> U[Upload PVOC<br/>+ customs entry]
+  U --> P
+  P -- Yes --> K[Submit to KRA]
+  K --> R[Mark released<br/>parcels eligible<br/>for last-mile]
+  R --> I[Generate agent invoice]
+  </div>
+</section>
+
+<!-- ─── RIDER SECTION ───────────────────────────────────────────────── -->
+<section id="rider">
+  <h2><span class="role-pill">Rider</span> 6 · Last-mile rider</h2>
+
+  <p>Riders are on a phone almost exclusively. The iOS app has two tabs that matter — <em>Today</em> (the run) and <em>Outbox</em> (offline-queued POD captures).</p>
+
+  <h3>6.1 · Starting a run</h3>
+  <ol class="steps">
+    <li class="step">Open the <em>Today</em> tab. The run admin assigned to you opens automatically — list of stops in optimised delivery order with addresses + phone numbers.</li>
+    <li class="step">Tap a stop to expand. You see the parcel SKU, recipient name, declared value, special instructions, and a one-tap call/WhatsApp button.</li>
+    <li class="step">Tap <em>Navigate</em> — opens Apple Maps to the address.</li>
+  </ol>
+
+  <h3>6.2 · Capturing proof of delivery</h3>
+  <ol class="steps">
+    <li class="step">At the door, tap <em>Mark delivered</em>.</li>
+    <li class="step">Take a photo of the parcel handed to the recipient (or in their hands).</li>
+    <li class="step">Capture a signature on screen (recipient draws with a finger).</li>
+    <li class="step">Confirm. The parcel flips to <em>delivered</em>, the customer gets a "delivered" notification + the photo, and the next stop slides up the list.</li>
+  </ol>
+
+  <h3>6.3 · The Outbox (offline mode)</h3>
+  <p>Phone networks in Nairobi traffic are unreliable. Every POD capture writes to a local outbox first, then syncs when network is back. The Outbox tab shows you the queue — a yellow chip means it's still queued, a green chip means it landed on the server.</p>
+
+  <div class="callout warn">
+    <strong>If you see a stuck queue,</strong> check the device's data connection. As long as the rider is signed in and the queue is visible, the captures are safe — they will sync when the network returns.
+  </div>
+
+  <h3>6.4 · End of day</h3>
+  <p>When the last stop is delivered, the run auto-closes. The rider sees a one-line summary: stops completed, distance, on-time rate. Admin sees the same summary in the KPI dashboard.</p>
+
+  <div class="mermaid">
+flowchart LR
+  S[Start run] --> N{Next stop}
+  N --> D[Deliver]
+  D --> P[POD: photo + signature]
+  P --> O{Network up?}
+  O -- Yes --> SY[Sync to server]
+  O -- No --> Q[Queue in Outbox]
+  Q -.-> SY
+  SY --> N
+  N -->|No more stops| C[End of run<br/>auto summary]
+  </div>
+</section>
+
+<!-- ─── ADMIN SECTION ──────────────────────────────────────────────── -->
+<section id="admin">
+  <h2><span class="role-pill">Admin</span> 7 · Running the company</h2>
+
+  <p>Admins use both the web app (deeper screens, more keyboard) and the iOS app (quick checks while away from desk). The five iOS tabs are <em>Console, KPI, Consols, Settings, Account.</em></p>
+
+  <h3>7.1 · Admin Console</h3>
+  <p>The single screen that lists every order, parcel, customer, payment, ticket, and error log. Has filter bars across the top and per-row actions:</p>
+  <ul>
+    <li><strong>Orders</strong> — see status chip, declared value, customer, retailer; cancel an order with a reason; send a payment reminder; edit declared value.</li>
+    <li><strong>Customers</strong> — search by email/phone/warehouse code; impersonate (read-only); resend the welcome email.</li>
+    <li><strong>Payments</strong> — pending wallet top-ups appear here with the M-Pesa SMS proof inline. Approve or reject with a reason — both update the wallet and email the customer.</li>
+    <li><strong>Tickets</strong> — open support conversations with iMessage-style bubbles. Reply inline; mark resolved.</li>
+    <li><strong>Error logs</strong> — server errors, with stack and request context. Useful for triaging customer complaints.</li>
+    <li><strong>Email logs</strong> — outbound email audit (subject, recipient, status). Great for "did the confirmation email actually go out?" questions.</li>
+  </ul>
+
+  <h3>7.2 · KPI dashboard</h3>
+  <p>Six top-level numbers update live from the database:</p>
+  <ul>
+    <li>Active customers (last 30 d).</li>
+    <li>Orders created this week.</li>
+    <li>Parcels in transit.</li>
+    <li>Average end-to-end time (created → delivered).</li>
+    <li>NPS score (rolling 30 d, customer survey on delivery).</li>
+    <li>Revenue this month (sum of paid invoices).</li>
+  </ul>
+
+  <h3>7.3 · Ops Settings</h3>
+  <p>Where pricing actually lives. Three sub-screens:</p>
+  <ul>
+    <li><strong>Pricing tiers</strong> — per market and weight band (UK_air 0-1kg, 1-5kg, …). Edit the per-kg rate, the active flag, and whether it's a percentage. Changes are live immediately.</li>
+    <li><strong>Fees</strong> — flat fees (handling, fuel surcharge, KRA fee). Inline edit label/code/amount/active/percentage.</li>
+    <li><strong>Exchange rates</strong> — pairs USD/GBP/EUR/CNY → KES. Edit per-pair or "Save all".</li>
+  </ul>
+
+  <div class="callout warn">
+    <strong>Pricing changes apply to new orders only.</strong> Already-priced orders keep their original quote until manually re-quoted from the order detail page.
+  </div>
+
+  <h3>7.4 · Approving a wallet top-up</h3>
+  <ol class="steps">
+    <li class="step">Open the <em>Console</em> tab → <em>Payments</em> sub-tab.</li>
+    <li class="step">Pending row shows the customer, amount, the raw M-Pesa SMS body the customer pasted, and the wallet snapshot.</li>
+    <li class="step">Verify the SMS code against the M-Pesa portal.</li>
+    <li class="step">Approve → wallet credited, customer emailed. Reject → require a reason; customer emailed and a banner shown next time they sign in.</li>
+  </ol>
+
+  <h3>7.5 · Architecture at a glance</h3>
+  <p>If you're new to the system, this is what's running under the hood:</p>
+
+  <div class="mermaid">
+flowchart TB
+  subgraph Devices
+    iOS[iOS app<br/>SwiftUI + KMP]
+    Web[Web app<br/>React]
+  end
+  subgraph Backend
+    API[Express API<br/>routes/ on Railway]
+    Worker[Worker<br/>email, NPS, jobs]
+  end
+  subgraph Data
+    DB[(Supabase Postgres)]
+    Realtime[(Supabase Realtime)]
+    Storage[(Supabase Storage<br/>POD photos, PVOC)]
+  end
+  iOS -->|JWT auth| API
+  Web -->|JWT auth| API
+  iOS -.subscribe.- Realtime
+  Web -.subscribe.- Realtime
+  API --> DB
+  API --> Storage
+  Worker --> API
+  DB --> Realtime
+  </div>
+
+  <p>The Express API is the only thing that writes to the database. Both apps read live updates over Realtime. RLS policies on every table mean a customer's JWT can only read their own rows; staff JWTs can read all.</p>
+
+  <h3>7.6 · Daily/weekly cadence</h3>
+  <table>
+    <thead><tr><th>Cadence</th><th>What to do</th><th>Where</th></tr></thead>
+    <tbody>
+      <tr><td>Every morning</td><td>Skim error logs and email logs from the previous 24 h</td><td>Console → Errors / Emails</td></tr>
+      <tr><td>Every morning</td><td>Approve pending payments</td><td>Console → Payments</td></tr>
+      <tr><td>Every Monday</td><td>Review NPS responses + open tickets</td><td>KPI + Console → Tickets</td></tr>
+      <tr><td>Every consolidation</td><td>Spot-check an operator's manifest before AWB submit</td><td>Web → Ops → Consolidations</td></tr>
+      <tr><td>Monthly</td><td>Review pricing tiers vs. carrier rates</td><td>Settings → Pricing</td></tr>
+      <tr><td>Pre-launch / quarterly</td><td>Run the Supabase linter; address security findings</td><td>Studio → Database → Linter</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ─── TROUBLESHOOTING ─────────────────────────────────────────────── -->
+<section id="troubleshoot">
+  <h2>8 · Troubleshooting &amp; common questions</h2>
+
+  <h3>8.1 · "I can't sign in"</h3>
+  <ul>
+    <li><strong>Wrong password</strong> → "Forgot password" sends a reset link to your email.</li>
+    <li><strong>Email not recognised</strong> → check the address you used to register; warehouse-code-only lookups don't work for sign-in.</li>
+    <li><strong>Session expired</strong> → sign in again. Sessions last 30 days.</li>
+  </ul>
+
+  <h3>8.2 · "My parcel isn't on the dashboard"</h3>
+  <ul>
+    <li>Pull to refresh on the iOS Home tab; the realtime subscription occasionally drops on a poor network.</li>
+    <li>Check the email confirmation — if it never arrived, the order didn't actually land. Try creating it again.</li>
+  </ul>
+
+  <h3>8.3 · "The operator says my warehouse code doesn't match"</h3>
+  <p>This means the box arrived without the right TC-XXXX code or with someone else's. Open a support ticket immediately with photos of the box and the courier label. Admin can re-link the box on the back end.</p>
+
+  <h3>8.4 · Operator: "Mark received fails"</h3>
+  <p>The Receive sheet shows a red "Couldn't save — no order found" banner. This means the package row in the database isn't linked to an order (legacy data from before the orders-routing fix). Contact admin — they have a backfill script that links it back.</p>
+
+  <h3>8.5 · Operator: "The scanner says 'no parcel with that SKU'"</h3>
+  <ul>
+    <li>The SKU was re-minted on a later print; only the most recent label is valid. Re-print and re-scan.</li>
+    <li>The receive call never landed (e.g. earlier failure). Use the Receive tab's queue to find the parcel by description and re-run the receive flow.</li>
+  </ul>
+
+  <h3>8.6 · Rider: "POD photo isn't uploading"</h3>
+  <ul>
+    <li>The Outbox tab shows a yellow chip — it's queued and will sync when network returns.</li>
+    <li>If the chip stays yellow for &gt;30 minutes, sign out and sign back in. The queue persists across sessions.</li>
+  </ul>
+
+  <h3>8.7 · Admin: "A customer paid via M-Pesa but balance didn't update"</h3>
+  <p>That's by design — wallet credits happen only after admin approval. Open Console → Payments, find the pending row, verify the SMS, and approve.</p>
+
+  <h3>8.8 · Where to file a bug</h3>
+  <p>Two places:</p>
+  <ul>
+    <li>The error log auto-captures server-side issues — review them in Console → Errors.</li>
+    <li>For a UX bug a customer hit, open a support ticket on their behalf from Console → Tickets, link the parcel, and tag <code>bug</code>.</li>
+  </ul>
+</section>
+
+<!-- ─── GLOSSARY ────────────────────────────────────────────────────── -->
+<section id="glossary">
+  <h2>9 · Glossary</h2>
+  <table>
+    <thead><tr><th>Term</th><th>Meaning</th></tr></thead>
+    <tbody>
+      <tr><td><strong>AWB</strong></td><td>Air waybill — the airline's identifier for a consolidation.</td></tr>
+      <tr><td><strong>Chargeable kg</strong></td><td>The greater of actual weight and volumetric weight (L×W×H/6000). What we charge by.</td></tr>
+      <tr><td><strong>Consolidation</strong></td><td>A bundle of parcels travelling on the same flight under one master AWB.</td></tr>
+      <tr><td><strong>HS tier</strong></td><td>A simplified Harmonised System bucket — general / electronics / fragile — driving customs duty.</td></tr>
+      <tr><td><strong>KRA</strong></td><td>Kenya Revenue Authority — the customs counter-party.</td></tr>
+      <tr><td><strong>Manifest</strong></td><td>The printed A4 sheet listing every parcel in a consolidation. Goes with the AWB.</td></tr>
+      <tr><td><strong>POD</strong></td><td>Proof of delivery — the photo + signature a rider captures at the door.</td></tr>
+      <tr><td><strong>PVOC</strong></td><td>Pre-export Verification of Conformity — KRA paperwork required for some categories.</td></tr>
+      <tr><td><strong>SKU label</strong></td><td>The <code>STK-XXXXXX</code> sticker an operator prints and applies in the warehouse.</td></tr>
+      <tr><td><strong>Volumetric kg</strong></td><td>(Length × Width × Height) cm ÷ 6000. The dimensional-weight equivalent.</td></tr>
+      <tr><td><strong>Warehouse ID</strong></td><td>The <code>TC-XXXX</code> code unique to each customer; written on every outgoing parcel.</td></tr>
+    </tbody>
+  </table>
+
+  <hr />
+  <p class="small center">Thapsus Cargo · Stockport ⇄ Nairobi · Operating manual v1.0 · April 2026</p>
+</section>
+
+</body>
+</html>
