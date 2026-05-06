@@ -4,6 +4,7 @@ import com.thapsus.cargo.data.dto.CreateOrderRequest
 import com.thapsus.cargo.data.dto.OrderDto
 import com.thapsus.cargo.data.dto.OrderListResponse
 import com.thapsus.cargo.data.dto.OrderResponse
+import com.thapsus.cargo.data.remote.ApiException
 import com.thapsus.cargo.data.remote.Tables
 import com.thapsus.cargo.data.remote.ThapsusApiClient
 import io.github.jan.supabase.SupabaseClient
@@ -102,11 +103,20 @@ class OrdersRepository(
     /**
      * GET /api/orders/:id/pod — fresh POD summary for a delivered parcel.
      * Server mints short-lived (5 min) signed download URLs for the photo
-     * + signature, so callers must use the response immediately. Returns
-     * null on 404 (no POD recorded yet).
+     * + signature, so callers must use the response immediately.
+     *
+     * Returns `null` ONLY on a real 404 (no `pod_events` row yet — e.g.
+     * a parcel marked delivered manually without going through the rider
+     * POD flow). Auth, network, and 5xx errors propagate as
+     * [ApiException] so the iOS UI can render a meaningful banner instead
+     * of silently showing "No proof of delivery recorded yet" for what
+     * is actually a session-expired or server error
+     * (see feedback_skie_bridging.md — Result/runCatching swallows real
+     * failures across the SKIE bridge).
      */
-    suspend fun fetchPod(orderId: String): com.thapsus.cargo.data.dto.PodDetailDto? =
-        runCatching {
-            api.get<com.thapsus.cargo.data.dto.PodDetailResponse>("/orders/$orderId/pod").pod
-        }.getOrNull()
+    suspend fun fetchPod(orderId: String): com.thapsus.cargo.data.dto.PodDetailDto? = try {
+        api.get<com.thapsus.cargo.data.dto.PodDetailResponse>("/orders/$orderId/pod").pod
+    } catch (e: ApiException) {
+        if (e.status == 404) null else throw e
+    }
 }

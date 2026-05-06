@@ -33,6 +33,9 @@ struct ParcelDetailView: View {
     /// past the view's lifetime.
     @State private var pod: PodDetailDto? = nil
     @State private var podError: String? = nil
+    /// Distinguishes "fetch returned nil (404 — no POD recorded)" from
+    /// "still loading" so the missing-POD UI doesn't flash on first appear.
+    @State private var podMissing: Bool = false
 
     var body: some View {
         ScrollView {
@@ -225,33 +228,69 @@ struct ParcelDetailView: View {
                         Text(notes).font(.caption).foregroundStyle(.secondary)
                     }
                 } else if let podError {
-                    Text(podError).font(.caption).foregroundStyle(.secondary)
+                    // Real failure (auth expired, network, 5xx) — bubbles up
+                    // now that OrdersRepository.fetchPod re-throws non-404s.
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(podError).font(.caption).foregroundStyle(.secondary)
+                        Button {
+                            Task { await reloadPod(p) }
+                        } label: {
+                            Label("Try again", systemImage: "arrow.clockwise")
+                                .font(.caption.weight(.semibold))
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(Brand.ink)
+                    }
+                } else if podMissing {
+                    // 404 — parcel is marked delivered but no POD row was
+                    // captured (admin set status manually, or rider POD
+                    // upload silently failed). Still useful to confirm the
+                    // recorded delivery date so the customer doesn't think
+                    // the screen is broken.
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("No delivery photo on file for this parcel.")
+                            .font(.subheadline).foregroundStyle(Brand.ink)
+                        if let when = p.updatedAt {
+                            Text("Recorded as delivered \(when).")
+                                .font(.caption.monospacedDigit())
+                                .foregroundStyle(.secondary)
+                        }
+                        Text("If you didn't receive this parcel, contact support — the rider POD capture may have failed to upload.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                 } else {
                     HStack { ProgressView().tint(Brand.ink); Text("Loading proof of delivery…").font(.caption).foregroundStyle(.secondary) }
                 }
             }
         }
         .task(id: p.id) {
-            // Re-fetch on parcel change so the same view bound to a
-            // different deep-link id refreshes its POD too. Signed URLs
-            // also expire in ~5 min so a stale `pod` from a previous
-            // visit shouldn't be reused.
-            pod = nil
-            podError = nil
-            // PackageDto.id is the `packages.id` row; POD events are
-            // keyed against `pod_events.parcel_id` which references
-            // `orders.id`. Fall back to pkg.id only if orderId is
-            // somehow missing (legacy rows pre-orders/packages split).
-            let lookupId: String = {
-                if let oid = p.orderId, !oid.isEmpty { return oid }
-                return p.id
-            }()
-            do {
-                pod = try await ThapsusSdk.shared.orders().fetchPod(orderId: lookupId)
-                if pod == nil { podError = "No proof of delivery recorded yet." }
-            } catch {
-                podError = "Couldn't load proof of delivery: \(error.localizedDescription)"
-            }
+            await reloadPod(p)
+        }
+    }
+
+    /// Re-fetch on parcel change so the same view bound to a different
+    /// deep-link id refreshes its POD too. Signed URLs expire in ~5 min so
+    /// a stale `pod` from a previous visit shouldn't be reused.
+    private func reloadPod(_ p: PackageDto) async {
+        pod = nil
+        podError = nil
+        podMissing = false
+        // PackageDto.id is the `packages.id` row; POD events are keyed
+        // against `pod_events.parcel_id` which references `orders.id`.
+        // Fall back to pkg.id only if orderId is somehow missing (legacy
+        // rows pre-orders/packages split).
+        let lookupId: String = {
+            if let oid = p.orderId, !oid.isEmpty { return oid }
+            return p.id
+        }()
+        do {
+            let result = try await ThapsusSdk.shared.orders().fetchPod(orderId: lookupId)
+            pod = result
+            podMissing = (result == nil)
+        } catch {
+            // OrdersRepository.fetchPod re-throws non-404s as ApiException
+            // — feedback_skie_bridging.md.
+            podError = "Couldn't load proof of delivery: \(error.localizedDescription)"
         }
     }
 

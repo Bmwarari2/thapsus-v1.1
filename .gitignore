@@ -37,3 +37,4 @@ Thumbs.db
 
 # Local DB / migration backups (may contain user data)
 .backups/
+.claude/
