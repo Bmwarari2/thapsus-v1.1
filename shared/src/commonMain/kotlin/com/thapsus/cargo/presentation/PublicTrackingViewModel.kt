@@ -2,6 +2,7 @@ package com.thapsus.cargo.presentation
 
 import com.thapsus.cargo.data.dto.TrackingDto
 import com.thapsus.cargo.data.repository.TrackingRepository
+import com.thapsus.cargo.util.loggingExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -15,7 +16,7 @@ import kotlinx.coroutines.launch
 class PublicTrackingViewModel(
     private val repo: TrackingRepository
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + loggingExceptionHandler)
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
