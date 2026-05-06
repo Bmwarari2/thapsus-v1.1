@@ -21,6 +21,7 @@ struct CustomerDashboardView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                topBar
                 header
                 CutoffBannerView()
                 warehouseCard
@@ -49,22 +50,7 @@ struct CustomerDashboardView: View {
         }
         .scrollContentBackground(.hidden)
         .background(LiquidGlassBackground())
-        .navigationTitle("Home")
-        .glassNavigationBar()
-        .toolbar {
-            ToolbarItem(placement: .topBarLeading) {
-                BrandWordmark(size: .small)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink {
-                    NotificationInboxView()
-                } label: {
-                    Image(systemName: "bell")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(LG.fg)
-                }
-            }
-        }
+        .toolbar(.hidden, for: .navigationBar)
         .overlay(alignment: .top) { NotificationBannerView() }
         .npsAutoPrompt()
         .sheet(isPresented: $showingNewOrder) {
@@ -79,6 +65,33 @@ struct CustomerDashboardView: View {
             dashVM?.clear(); dashVM = nil; dashObs = nil
             warehouseVM = nil; warehouseObs = nil
         }
+    }
+
+    // MARK: - Top bar (logo + bell)
+
+    private var topBar: some View {
+        HStack(spacing: 0) {
+            BrandWordmark(size: .medium)
+            Spacer(minLength: 8)
+            NavigationLink {
+                NotificationInboxView()
+            } label: {
+                Image(systemName: "bell")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(LG.fg)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        ZStack {
+                            Circle().fill(.ultraThinMaterial)
+                            Circle().fill(LG.glassBgStrong)
+                        }
+                    )
+                    .overlay(Circle().strokeBorder(LG.glassBorder, lineWidth: 1))
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
     }
 
     // MARK: - Header (greeting)
