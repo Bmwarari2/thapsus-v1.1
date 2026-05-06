@@ -1,7 +1,6 @@
 // CustomerDashboardView.swift
-// Customer Home tab — mirrors the webapp dashboard's "Welcome, X" + warehouse-
-// address terminal as the primary surface. The dense stats grid + recent
-// shipments now live behind the Track tab so the home stays editorial.
+// Customer Home tab — liquid-glass redesign.
+// Hi-greeting · cut-off banner · warehouse terminal · quick actions · stat tiles.
 
 import SwiftUI
 import ThapsusShared
@@ -15,99 +14,79 @@ struct CustomerDashboardView: View {
     @State private var dashObs: StateFlowObserver<DashboardState>? = nil
 
     @State private var copied: Bool = false
-    /// Mirrors the webapp Home — the "How it works" guide is always visible.
-    @State private var showHowItWorks: Bool = true
+    @State private var showHowItWorks: Bool = false
     @State private var showingNewOrder = false
     @State private var showingBuyForMe = false
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                EyebrowPill(label: "Client Terminal", systemImage: "antenna.radiowaves.left.and.right", dotColor: .green)
-                EditorialHeader(
-                    title: "Welcome,\n\(firstName(env.session))",
-                    subtitle: "Your global logistics overview and active shipments pipeline."
-                )
-
+            VStack(alignment: .leading, spacing: 14) {
+                header
                 CutoffBannerView()
-
                 warehouseCard
-
-                quickStats
-
-                quickActions
-
-                Button(action: { showHowItWorks.toggle() }) {
-                    HStack(spacing: 8) {
-                        Image(systemName: showHowItWorks ? "chevron.up" : "questionmark.circle")
-                        Text(showHowItWorks ? "Hide guide" : "How it works")
-                    }
-                }
-                .buttonStyle(.bordered).tint(Brand.orange)
+                actionGrid
+                statsTiles
 
                 if showHowItWorks {
                     HowItWorksView()
                         .transition(.opacity.combined(with: .move(edge: .top)))
                 }
+
+                Button {
+                    withAnimation(LG.animation) { showHowItWorks.toggle() }
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: showHowItWorks ? "chevron.up" : "questionmark.circle")
+                        Text(showHowItWorks ? "Hide guide" : "How it works")
+                    }
+                }
+                .buttonStyle(LGGlassButtonStyle())
+                .padding(.top, 4)
             }
-            .padding(20)
-            .padding(.bottom, 80)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 100)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
         .scrollContentBackground(.hidden)
-        .liquidBackdrop()
+        .background(LiquidGlassBackground())
         .glassNavigationBar()
-        .brandToolbar()
-        .overlay(alignment: .top) {
-            NotificationBannerView()
+        .toolbar {
+            ToolbarItem(placement: .topBarLeading) {
+                HStack(spacing: 8) {
+                    LGLogoBlock(size: 26)
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("THAPSUS CARGO")
+                            .font(.body(10, weight: .heavy))
+                            .tracking(0.6)
+                            .foregroundStyle(LG.fg3)
+                        Text("Home")
+                            .font(.body(15, weight: .bold))
+                            .foregroundStyle(LG.fg)
+                    }
+                }
+            }
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink {
+                    NotificationInboxView()
+                } label: {
+                    Image(systemName: "bell")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(LG.fg)
+                        .frame(width: 40, height: 40)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                        .overlay(Capsule().fill(LG.glassBg).blendMode(.plusLighter))
+                        .overlay(Capsule().strokeBorder(LG.glassBorder, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
         }
+        .overlay(alignment: .top) { NotificationBannerView() }
         .npsAutoPrompt()
-        .overlay(alignment: .bottomTrailing) {
-            // No glassEffectID morph — the shared-element transition was
-            // claiming the FAB's hit region during the sheet's dismissal
-            // animation and swallowing the next tap. The button now just
-            // toggles `showingNewOrder` reliably; the sheet still uses
-            // glassSheet detents for the visual.
-            // Plus FAB now offers two flows: ship something to UK
-            // (NewOrderView) or ask us to buy something for them
-            // (BuyForMeView). Menu rather than confirmation dialog so each
-            // option can carry an icon and the choice surface is glass-y.
-            Menu {
-                Button {
-                    showingNewOrder = true
-                } label: {
-                    Label("New order", systemImage: "shippingbox.fill")
-                }
-                Button {
-                    showingBuyForMe = true
-                } label: {
-                    Label("Buy for me", systemImage: "wand.and.stars")
-                }
-            } label: {
-                Image(systemName: "plus")
-                    .font(.title2.weight(.semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: Layout.fabSize, height: Layout.fabSize)
-                    .contentShape(Circle())
-            }
-            .menuStyle(.button)
-            .glassEffect(.regular.tint(Brand.orange).interactive(), in: Circle())
-            .shadow(color: .black.opacity(0.18), radius: 18, x: 0, y: 10)
-            .accessibilityLabel(Text("Create"))
-            .padding(.trailing, 20)
-            .padding(.bottom, 24)
-        }
         .sheet(isPresented: $showingNewOrder) {
-            NavigationStack {
-                NewOrderView()
-            }
-            .glassSheet(detents: [.large, .medium])
+            NavigationStack { NewOrderView() }.glassSheet(detents: [.large, .medium])
         }
         .sheet(isPresented: $showingBuyForMe) {
-            NavigationStack {
-                BuyForMeView()
-            }
-            .glassSheet(detents: [.large, .medium])
+            NavigationStack { BuyForMeView() }.glassSheet(detents: [.large, .medium])
         }
         .refreshable { dashVM?.refresh(); warehouseVM?.load() }
         .task { bootstrap() }
@@ -117,140 +96,122 @@ struct CustomerDashboardView: View {
         }
     }
 
-    // MARK: - Warehouse address (the hero card)
+    // MARK: - Header (greeting)
+
+    private var header: some View {
+        let parcels = dashObs?.value.totalParcels ?? 0
+        let inFlight = dashObs?.value.inFlightParcels ?? 0
+        let summary: String = {
+            if inFlight > 0 { return "\(inFlight) parcel\(inFlight == 1 ? "" : "s") in transit" }
+            if parcels > 0 { return "\(parcels) parcel\(parcels == 1 ? "" : "s") on file" }
+            return "Ready when you are"
+        }()
+        return VStack(alignment: .leading, spacing: 4) {
+            Text("Hi \(firstName(env.session)) 👋")
+                .font(.display(28, weight: .heavy))
+                .foregroundStyle(LG.fg)
+            Text(summary)
+                .font(.body(14.5, weight: .medium))
+                .foregroundStyle(LG.fg3)
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 4)
+    }
+
+    // MARK: - Warehouse address card (matches mockup)
 
     @ViewBuilder
     private var warehouseCard: some View {
-        switch warehouseObs?.value {
-        case let loaded as WarehouseViewModelUiStateLoaded:
-            inkAddressCard(lines: loaded.addresses["UK"]?.lines ?? defaultLines)
-        case is WarehouseViewModelUiStateLoading:
-            ProgressView().frame(maxWidth: .infinity).padding(.vertical, 24)
-        default:
-            inkAddressCard(lines: defaultLines)
-        }
-    }
+        let auth = env.session as? AuthSessionAuthenticated
+        let userName = (auth?.profile?.fullName?.isEmpty == false) ? auth!.profile!.fullName! : "Customer"
+        let warehouseCode: String = {
+            if let id = auth?.profile?.warehouseId, !id.isEmpty { return id }
+            return "THP-XXXXXX"
+        }()
+        let lines: [String] = {
+            if case let loaded as WarehouseViewModelUiStateLoaded = warehouseObs?.value,
+               let uk = loaded.addresses["UK"]?.lines, !uk.isEmpty {
+                return uk
+            }
+            return ["Unit 12, Pinewood Court", "Stockport, SK6 1AA, UK"]
+        }()
 
-    private var defaultLines: [String] {
-        ["31 Collingwood Close", "Hazel Grove, Stockport", "SK7 4LB", "United Kingdom"]
-    }
-
-    private func inkAddressCard(lines: [String]) -> some View {
-        let userName = userFullName(env.session) ?? "Customer"
-        let warehouseCode = warehouseCodeFor(env.session) ?? "TC-XXXX"
-        return InkFeatureCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 8) {
-                    Image(systemName: "mappin.and.ellipse").foregroundStyle(Brand.orange)
-                    Text("YOUR WAREHOUSE ADDRESS")
-                        .font(.system(size: 13, weight: .heavy))
-                        .tracking(2)
-                        .foregroundStyle(Brand.cream)
+        GlassPanel(corner: LG.Radius.xl, padding: 18) {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack {
+                    LGEyebrow(text: "Your routing reference")
+                    Spacer()
+                    LGPill(text: "Active", tone: .ok)
                 }
-
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(userName)
-                        .font(.system(.title3, design: .monospaced).weight(.heavy))
-                        .foregroundStyle(Brand.orange)
-                    Text(warehouseCode)
-                        .font(.system(.title3, design: .monospaced).weight(.heavy))
-                        .foregroundStyle(Brand.orange)
+                Text(warehouseCode)
+                    .font(.mono(22, weight: .bold))
+                    .foregroundStyle(LG.fg)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Thapsus Cargo · \(warehouseCode)")
+                        .font(.body(13, weight: .semibold))
+                        .foregroundStyle(LG.fg2)
                     ForEach(lines, id: \.self) { line in
                         Text(line)
-                            .font(.system(.callout, design: .monospaced))
-                            .foregroundStyle(Brand.cream.opacity(0.85))
+                            .font(.body(13, weight: .medium))
+                            .foregroundStyle(LG.fg3)
                     }
                 }
-                .padding(14)
+                .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(.white.opacity(0.06))
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .stroke(.white.opacity(0.12), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: LG.Radius.md, style: .continuous)
+                        .fill(LG.line)
                 )
 
-                Button(action: { copy(name: userName, code: warehouseCode, lines: lines) }) {
+                Button {
+                    UIPasteboard.general.string = "\(userName)\n\(warehouseCode)\n" + lines.joined(separator: "\n")
+                    copied = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { copied = false }
+                } label: {
                     HStack(spacing: 8) {
                         Image(systemName: copied ? "checkmark.circle.fill" : "doc.on.doc")
                         Text(copied ? "Copied!" : "Copy address")
                     }
                 }
-                .buttonStyle(GlassSheenButtonStyle(fill: Brand.orange, foreground: .white))
+                .buttonStyle(LGGlassButtonStyle(compact: true))
             }
         }
     }
 
-    private func copy(name: String, code: String, lines: [String]) {
-        UIPasteboard.general.string = ([name, code] + lines).joined(separator: "\n")
-        copied = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { copied = false }
-    }
+    // MARK: - Action grid (New order / Buy for me)
 
-    // MARK: - Quick stats (compact)
-
-    @ViewBuilder
-    private var quickStats: some View {
-        let s = dashObs?.value
+    private var actionGrid: some View {
         HStack(spacing: 12) {
-            BigStatTile(
-                eyebrow: "Active orders",
-                value: "\(s?.totalParcels ?? 0)",
-                systemImage: "shippingbox.fill",
-                accent: Brand.orange
+            LGActionCard(
+                title: "New order",
+                subtitle: "Pre-register parcel",
+                systemImage: "plus",
+                tone: .accent,
+                action: { showingNewOrder = true }
             )
-            BigStatTile(
-                eyebrow: "In flight",
-                value: "\(s?.inFlightParcels ?? 0)",
-                systemImage: "airplane",
-                accent: .blue
+            LGActionCard(
+                title: "Buy for me",
+                subtitle: "Concierge purchase",
+                systemImage: "gift.fill",
+                action: { showingBuyForMe = true }
             )
         }
     }
 
-    // MARK: - Quick actions rail
+    // MARK: - Stats tiles
 
-    @ViewBuilder
-    private var quickActions: some View {
-        GradientBorderCard {
-            VStack(spacing: 10) {
-                NavigationLink {
-                    TrackingView()
-                } label: {
-                    actionRow(icon: "shippingbox.fill", title: "View my packages", tone: .ink)
-                }
-                .buttonStyle(.plain)
-                NavigationLink { CreditCenterView() } label: {
-                    actionRow(icon: "gift.fill", title: "My credit & referrals", tone: .orange)
-                }
-                .buttonStyle(.plain)
+    private var statsTiles: some View {
+        let s = dashObs?.value
+        return VStack(alignment: .leading, spacing: 10) {
+            LGEyebrow(text: "This month")
+                .padding(.leading, 4)
+                .padding(.top, 6)
+            HStack(spacing: 10) {
+                LGStatTile(label: "Parcels", value: "\(s?.totalParcels ?? 0)")
+                LGStatTile(label: "In transit", value: "\(s?.inFlightParcels ?? 0)", accent: true)
+                LGStatTile(label: "Out for delivery", value: "\(s?.outForDelivery ?? 0)")
             }
         }
-    }
-
-    private enum ActionTone { case ink, orange }
-
-    private func actionRow(icon: String, title: String, tone: ActionTone) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.headline)
-                .foregroundStyle(tone == .ink ? Brand.cream : .white)
-                .frame(width: 32)
-            Text(title.uppercased())
-                .font(.system(size: 12, weight: .heavy))
-                .tracking(2)
-                .foregroundStyle(tone == .ink ? Brand.cream : .white)
-            Spacer()
-            Image(systemName: "arrow.up.right")
-                .foregroundStyle((tone == .ink ? Brand.cream : .white).opacity(0.7))
-        }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                .fill(tone == .ink ? Brand.ink : Brand.orange)
-        )
     }
 
     // MARK: - Helpers
@@ -274,22 +235,8 @@ struct CustomerDashboardView: View {
             if let name = auth.profile?.fullName, !name.isEmpty {
                 return name.split(separator: " ").first.map(String.init) ?? name
             }
-            return auth.email ?? "there"
+            return auth.email?.split(separator: "@").first.map(String.init) ?? "there"
         }
         return "there"
-    }
-
-    private func userFullName(_ session: any AuthSession) -> String? {
-        if let auth = session as? AuthSessionAuthenticated, let name = auth.profile?.fullName, !name.isEmpty {
-            return name
-        }
-        return nil
-    }
-
-    private func warehouseCodeFor(_ session: any AuthSession) -> String? {
-        if let auth = session as? AuthSessionAuthenticated, let id = auth.profile?.warehouseId, !id.isEmpty {
-            return id
-        }
-        return nil
     }
 }

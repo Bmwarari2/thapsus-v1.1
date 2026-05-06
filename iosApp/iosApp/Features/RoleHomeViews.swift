@@ -115,6 +115,7 @@ struct OperatorHomeView: View {
                     AccountLink("Support tickets", "questionmark.bubble.fill", AnyView(TicketsListView())),
                 ])
                 AccountSection(title: "Account", links: [
+                    AccountLink("Appearance", "circle.lefthalf.filled", AnyView(AppearanceSettingsView())),
                     AccountLink("Edit profile", "pencil.circle", AnyView(ProfileEditView())),
                 ])
                 Button("Sign out", role: .destructive) { env.signOut() }
@@ -147,6 +148,7 @@ struct AgentHomeView: View {
                     AccountLink("Support tickets", "questionmark.bubble.fill", AnyView(TicketsListView())),
                 ])
                 AccountSection(title: "Account", links: [
+                    AccountLink("Appearance", "circle.lefthalf.filled", AnyView(AppearanceSettingsView())),
                     AccountLink("Edit profile", "pencil.circle", AnyView(ProfileEditView())),
                 ])
                 Button("Sign out", role: .destructive) { env.signOut() }
@@ -188,6 +190,7 @@ struct AdminHomeView: View {
                     AccountLink("Notifications", "bell.fill", AnyView(NotificationInboxView())),
                 ])
                 AccountSection(title: "Account", links: [
+                    AccountLink("Appearance", "circle.lefthalf.filled", AnyView(AppearanceSettingsView())),
                     AccountLink("Edit profile", "pencil.circle", AnyView(ProfileEditView())),
                 ])
 

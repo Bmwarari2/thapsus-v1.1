@@ -1,6 +1,7 @@
 // CustomerHomeView.swift
-// "More" hub on the Profile tab — links every Phase 1 customer feature into
-// a single discoverable list, matching the webapp's nav drawer.
+// Liquid-glass redesign of the customer Account hub.
+// Profile card, referral-credit hero, link list cards, sign-out.
+// Adds an "Appearance" entry that links to AppearanceSettingsView.
 
 import SwiftUI
 import ThapsusShared
@@ -10,132 +11,225 @@ struct CustomerHomeView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                EyebrowPill(label: "Account", systemImage: "person.crop.circle")
-                EditorialHeader(title: "Account",
-                                subtitle: env.currentRole.map { _ in "Manage profile, orders and support." } ?? "Sign in to access your account.")
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Account")
+                    .font(.display(28, weight: .heavy))
+                    .foregroundStyle(LG.fg)
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
 
                 CutoffBannerView()
 
                 profileCard
 
-                section(title: "Send & ship", links: [
-                    Link("New order", "shippingbox.fill", AnyView(NewOrderView())),
-                    Link("Buy for me", "wand.and.stars", AnyView(BuyForMeView())),
-                    Link("Warehouse", "mappin.and.ellipse", AnyView(WarehouseAddressView())),
-                    Link("Prohibited items", "exclamationmark.shield", AnyView(ProhibitedSearchView())),
+                creditHero
+
+                linkCard(rows: [
+                    Row(title: "Warehouse address",
+                        subtitle: warehouseSubtitle,
+                        systemImage: "building.2.fill",
+                        destination: AnyView(WarehouseAddressView())),
+                    Row(title: "Notifications",
+                        subtitle: "Updates on your shipments",
+                        systemImage: "bell.fill",
+                        destination: AnyView(NotificationInboxView())),
+                    Row(title: "Prohibited items",
+                        subtitle: "What you can't ship",
+                        systemImage: "exclamationmark.shield.fill",
+                        destination: AnyView(ProhibitedSearchView())),
+                    Row(title: "Refer friends",
+                        subtitle: "Earn KES 600 per referral",
+                        systemImage: "gift.fill",
+                        destination: AnyView(ReferralView())),
+                ])
+
+                linkCard(rows: [
+                    Row(title: "New order",
+                        subtitle: "Pre-register a parcel",
+                        systemImage: "shippingbox.fill",
+                        destination: AnyView(NewOrderView())),
+                    Row(title: "Buy for me",
+                        subtitle: "Concierge purchase",
+                        systemImage: "wand.and.stars",
+                        destination: AnyView(BuyForMeView())),
+                ])
+
+                linkCard(rows: [
+                    Row(title: "Appearance",
+                        subtitle: "Light, dark, or system",
+                        systemImage: "circle.lefthalf.filled",
+                        destination: AnyView(AppearanceSettingsView())),
+                    Row(title: "Edit profile",
+                        subtitle: "Name, phone, address",
+                        systemImage: "person.crop.circle.fill",
+                        destination: AnyView(ProfileEditView())),
+                    Row(title: "Support",
+                        subtitle: "Tickets and help",
+                        systemImage: "questionmark.bubble.fill",
+                        destination: AnyView(TicketsListView())),
+                    Row(title: "Data rights (GDPR)",
+                        subtitle: "Export or delete data",
+                        systemImage: "lock.shield.fill",
+                        destination: AnyView(DsarView())),
                 ])
 
                 WhatsAppSupportButton()
+                    .padding(.top, 8)
 
-                section(title: "Account", links: [
-                    Link("Notifications", "bell.fill", AnyView(NotificationInboxView())),
-                    Link("Support", "questionmark.bubble.fill", AnyView(TicketsListView())),
-                    Link("Referrals", "person.2.fill", AnyView(ReferralView())),
-                    Link("Edit profile", "pencil.circle", AnyView(ProfileEditView())),
-                    Link("Data rights", "lock.shield", AnyView(DsarView())),
-                ])
-
-                Button("Sign out", role: .destructive) { env.signOut() }
-                    .buttonStyle(GlassSheenButtonStyle(fill: .red, foreground: .white))
-                    .padding(.top, 12)
+                Button(action: env.signOut) { Text("Sign out") }
+                    .buttonStyle(InkButtonStyle(solid: true))
+                    .padding(.top, 6)
             }
-            .padding(20)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 100)
         }
         .scrollContentBackground(.hidden)
-        .liquidBackdrop()
+        .background(LiquidGlassBackground())
         .navigationTitle("Account")
         .glassNavigationBar()
-        .overlay(alignment: .top) {
-            NotificationBannerView()
-        }
+        .overlay(alignment: .top) { NotificationBannerView() }
         .npsAutoPrompt()
     }
 
+    // MARK: - Profile
+
     private var profileCard: some View {
         let auth = env.session as? AuthSessionAuthenticated
-        return InkFeatureCard {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    Text("SIGNED IN")
-                        .font(.system(size: 10, weight: .heavy)).tracking(2)
-                        .foregroundStyle(Brand.cream.opacity(0.6))
-                    Spacer()
-                    if let role = env.currentRole {
-                        Text(roleLabel(role).uppercased())
-                            .font(.system(size: 10, weight: .heavy)).tracking(2)
-                            .foregroundStyle(Brand.orange)
-                            .padding(.horizontal, 8).padding(.vertical, 4)
-                            .background(Capsule().fill(Brand.orange.opacity(0.18)))
+        let initial = String((auth?.profile?.fullName ?? "?").prefix(1)).uppercased()
+        return GlassPanel(corner: LG.Radius.xl, padding: 18) {
+            HStack(spacing: 14) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(LG.accentGradient)
+                    Text(initial)
+                        .font(.heading(22, weight: .heavy))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 56, height: 56)
+                .shadow(color: LG.accent2.opacity(0.40), radius: 12, x: 0, y: 6)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(auth?.profile?.fullName ?? "Welcome")
+                        .font(.body(17, weight: .bold))
+                        .foregroundStyle(LG.fg)
+                    if let email = auth?.email, !email.isEmpty {
+                        Text(email)
+                            .font(.body(13, weight: .medium))
+                            .foregroundStyle(LG.fg3)
                     }
                 }
-                Text(auth?.profile?.fullName ?? "—")
-                    .font(.system(size: 22, weight: .heavy))
-                    .foregroundStyle(Brand.cream)
-                if let email = auth?.email, !email.isEmpty {
-                    Text(email)
-                        .font(.subheadline)
-                        .foregroundStyle(Brand.cream.opacity(0.75))
+
+                Spacer(minLength: 8)
+
+                NavigationLink {
+                    ProfileEditView()
+                } label: {
+                    Text("Edit")
+                        .font(.body(13, weight: .semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule().fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            Capsule().fill(LG.glassBgStrong).blendMode(.plusLighter)
+                        )
+                        .overlay(
+                            Capsule().strokeBorder(LG.glassBorder, lineWidth: 1)
+                        )
+                        .foregroundStyle(LG.fg)
                 }
-                if let warehouseId = auth?.profile?.warehouseId, !warehouseId.isEmpty {
-                    Text(warehouseId)
-                        .font(.system(.caption, design: .monospaced))
-                        .foregroundStyle(Brand.orange)
-                }
+                .buttonStyle(.plain)
             }
         }
     }
 
-    private struct Link {
+    private var warehouseSubtitle: String {
+        let auth = env.session as? AuthSessionAuthenticated
+        let id = auth?.profile?.warehouseId
+        return (id?.isEmpty == false ? id! : "Stockport") + " · UK warehouse"
+    }
+
+    // MARK: - Credit hero
+
+    private var creditHero: some View {
+        GlassPanel(corner: LG.Radius.xl, padding: 18, tint: LG.accentSoft) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 4) {
+                    LGEyebrow(text: "Referral credit", tone: .accent)
+                    Text("KES —")
+                        .font(.mono(26, weight: .bold))
+                        .foregroundStyle(LG.fg)
+                    Text("Auto-applies on next payment")
+                        .font(.body(12, weight: .medium))
+                        .foregroundStyle(LG.fg3)
+                }
+                Spacer()
+                NavigationLink {
+                    ReferralView()
+                } label: {
+                    Text("Invite")
+                        .font(.body(13, weight: .semibold))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 10)
+                        .background(Capsule().fill(.ultraThinMaterial))
+                        .overlay(Capsule().fill(LG.glassBgStrong).blendMode(.plusLighter))
+                        .overlay(Capsule().strokeBorder(LG.glassBorder, lineWidth: 1))
+                        .foregroundStyle(LG.fg)
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    // MARK: - Link list
+
+    private struct Row {
         let title: String
-        let icon: String
+        let subtitle: String
+        let systemImage: String
         let destination: AnyView
-
-        init(_ title: String, _ icon: String, _ destination: AnyView) {
-            self.title = title
-            self.icon = icon
-            self.destination = destination
-        }
     }
 
-    private func section(title: String, links: [Link]) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionHeader(title: title)
-            CrystalCard {
-                VStack(spacing: 0) {
-                    ForEach(Array(links.enumerated()), id: \.offset) { idx, link in
-                        if idx > 0 { Divider().background(Brand.ink.opacity(0.08)) }
-                        NavigationLink(destination: link.destination) {
-                            HStack(spacing: 14) {
-                                Image(systemName: link.icon)
-                                    .font(.headline)
-                                    .foregroundStyle(Brand.orange)
-                                    .frame(width: 28)
-                                Text(link.title)
-                                    .font(.subheadline.weight(.semibold))
-                                    .foregroundStyle(Brand.ink)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(.caption.weight(.bold))
-                                    .foregroundStyle(.secondary)
+    private func linkCard(rows: [Row]) -> some View {
+        GlassPanel(corner: LG.Radius.xl, padding: 4) {
+            VStack(spacing: 0) {
+                ForEach(Array(rows.enumerated()), id: \.offset) { idx, row in
+                    NavigationLink(destination: row.destination) {
+                        HStack(spacing: 14) {
+                            ZStack {
+                                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                                    .fill(LG.glassBgStrong)
+                                Image(systemName: row.systemImage)
+                                    .font(.system(size: 15, weight: .semibold))
+                                    .foregroundStyle(LG.accent2)
                             }
-                            .padding(.vertical, 12)
+                            .frame(width: 36, height: 36)
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(row.title)
+                                    .font(.body(14.5, weight: .bold))
+                                    .foregroundStyle(LG.fg)
+                                Text(row.subtitle)
+                                    .font(.body(12.5, weight: .medium))
+                                    .foregroundStyle(LG.fg3)
+                            }
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(LG.fgMute)
                         }
-                        .buttonStyle(.plain)
+                        .padding(12)
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    if idx < rows.count - 1 {
+                        Rectangle()
+                            .fill(LG.line)
+                            .frame(height: 1)
+                            .padding(.horizontal, 14)
                     }
                 }
             }
-        }
-    }
-
-    private func roleLabel(_ r: UserRole) -> String {
-        switch r {
-        case .customer: return "Customer"
-        case .`operator`: return "Operator"
-        case .clearingAgent: return "Clearing agent"
-        case .rider: return "Rider"
-        case .admin: return "Admin"
-        @unknown default: return "—"
         }
     }
 }

@@ -14,6 +14,8 @@
 		1A0001000000000000000005 /* StateFlowObserver.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000005 /* StateFlowObserver.swift */; };
 		1A0001000000000000000006 /* GlassDesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000006 /* GlassDesignSystem.swift */; };
 		1A0001000000000000000007 /* GlassChrome.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000007 /* GlassChrome.swift */; };
+		1A0001000000000000000999 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000999 /* LiquidGlass.swift */; };
+		1A0001000000000000000998 /* AppearanceSettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000998 /* AppearanceSettingsView.swift */; };
 		1A0001000000000000000008 /* CustomerDashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000008 /* CustomerDashboardView.swift */; };
 		1A0001000000000000000009 /* ParcelDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000009 /* ParcelDetailView.swift */; };
 		1A000100000000000000000A /* QuoteCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000200000000000000000A /* QuoteCalculatorView.swift */; };
@@ -93,6 +95,8 @@
 		1A0002000000000000000005 /* StateFlowObserver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StateFlowObserver.swift; sourceTree = "<group>"; };
 		1A0002000000000000000006 /* GlassDesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassDesignSystem.swift; sourceTree = "<group>"; };
 		1A0002000000000000000007 /* GlassChrome.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlassChrome.swift; sourceTree = "<group>"; };
+		1A0002000000000000000999 /* LiquidGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
+		1A0002000000000000000998 /* AppearanceSettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppearanceSettingsView.swift; sourceTree = "<group>"; };
 		1A0002000000000000000008 /* CustomerDashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomerDashboardView.swift; sourceTree = "<group>"; };
 		1A0002000000000000000009 /* ParcelDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParcelDetailView.swift; sourceTree = "<group>"; };
 		1A000200000000000000000A /* QuoteCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteCalculatorView.swift; sourceTree = "<group>"; };
@@ -221,6 +225,8 @@
 		1A0004000000000000000004 /* DesignSystem */ = {
 			isa = PBXGroup;
 			children = (
+				1A0002000000000000000999 /* LiquidGlass.swift */,
+				1A0002000000000000000998 /* AppearanceSettingsView.swift */,
 				1A0002000000000000000006 /* GlassDesignSystem.swift */,
 				1A0002000000000000000007 /* GlassChrome.swift */,
 				1A0002000000000000000021 /* WebappPrimitives.swift */,
@@ -424,6 +430,8 @@
 				1A0001000000000000000003 /* RootTabView.swift in Sources */,
 				1A0001000000000000000004 /* AppEnvironment.swift in Sources */,
 				1A0001000000000000000005 /* StateFlowObserver.swift in Sources */,
+				1A0001000000000000000999 /* LiquidGlass.swift in Sources */,
+				1A0001000000000000000998 /* AppearanceSettingsView.swift in Sources */,
 				1A0001000000000000000006 /* GlassDesignSystem.swift in Sources */,
 				1A0001000000000000000007 /* GlassChrome.swift in Sources */,
 				1A0001000000000000000008 /* CustomerDashboardView.swift in Sources */,
