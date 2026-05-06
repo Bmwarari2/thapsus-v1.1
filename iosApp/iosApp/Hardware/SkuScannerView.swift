@@ -200,6 +200,12 @@ final class AVCaptureBarcodeViewController: UIViewController, @preconcurrency AV
     private let session = AVCaptureSession()
     private var preview: AVCaptureVideoPreviewLayer?
     private var lastFiredAt: Date = .distantPast
+    // Serial queue used for both setup-graph mutations and stopRunning, so
+    // commitConfiguration / _buildAndRunGraph never runs on the main thread.
+    // (Hang report 2026-05-04 02:50 — `AVCaptureVideoPreviewLayer dealloc`
+    // was triggering `commitConfiguration` synchronously inside the CA
+    // transaction commit, blocking main for ~1.1s.)
+    private let sessionQueue = DispatchQueue(label: "uk.thapsus.cargo.barcode-session", qos: .userInitiated)
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -226,7 +232,7 @@ final class AVCaptureBarcodeViewController: UIViewController, @preconcurrency AV
         self.preview = layer
 
         let captureSession = session
-        DispatchQueue.global(qos: .userInitiated).async {
+        sessionQueue.async {
             captureSession.startRunning()
         }
     }
@@ -238,7 +244,43 @@ final class AVCaptureBarcodeViewController: UIViewController, @preconcurrency AV
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        if session.isRunning { session.stopRunning() }
+        teardown()
+    }
+
+    deinit {
+        // Belt-and-braces: if the VC is torn down without viewWillDisappear
+        // firing (rare, but possible during rapid push/pop or app-quit),
+        // the preview layer's own dealloc would otherwise commit a config
+        // change synchronously on whatever thread runs the CA transaction.
+        teardownSync()
+    }
+
+    /// Detach the preview from the view + session immediately on the main
+    /// thread (cheap), then dispatch the actual `stopRunning` and graph
+    /// teardown to a background queue so commitConfiguration never blocks main.
+    private func teardown() {
+        guard let preview else { return }
+        preview.removeFromSuperlayer()
+        preview.session = nil
+        self.preview = nil
+
+        let captureSession = session
+        sessionQueue.async {
+            if captureSession.isRunning { captureSession.stopRunning() }
+            captureSession.beginConfiguration()
+            captureSession.inputs.forEach { captureSession.removeInput($0) }
+            captureSession.outputs.forEach { captureSession.removeOutput($0) }
+            captureSession.commitConfiguration()
+        }
+    }
+
+    /// Synchronous fallback for `deinit` — we can't capture `self` in an
+    /// async block here, but detaching the preview from the view layer and
+    /// session on the calling thread is enough to keep CA's dealloc cheap.
+    private func teardownSync() {
+        preview?.removeFromSuperlayer()
+        preview?.session = nil
+        preview = nil
     }
 
     func metadataOutput(_ output: AVCaptureMetadataOutput,
