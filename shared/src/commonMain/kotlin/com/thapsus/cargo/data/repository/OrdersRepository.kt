@@ -108,16 +108,27 @@ class OrdersRepository(
      *
      * Returns `null` ONLY on a real 404 (no `pod_events` row yet — e.g.
      * a parcel marked delivered manually without going through the rider
-     * POD flow). Auth, network, and 5xx errors propagate as
-     * [ApiException] so the iOS UI can render a meaningful banner instead
-     * of silently showing "No proof of delivery recorded yet" for what
-     * is actually a session-expired or server error
-     * (see feedback_skie_bridging.md — Result/runCatching swallows real
-     * failures across the SKIE bridge).
+     * POD flow). Every other failure is rewrapped as [ApiException] so it
+     * rides the same SKIE bridge the iOS `do/catch` block in
+     * `ParcelDetailView.reloadPod` already handles.
+     *
+     * Why catch [Throwable] explicitly: a previous customer crash on the
+     * POD card surfaced as `kotlinx.coroutines.internal.propagateExceptionFinalResort`
+     * → `Kotlin_processUnhandledException` (the K/N abort path). The
+     * pre-fix code only caught [ApiException], so any other throwable
+     * raised during `api.get` — Ktor IO error, JSON deserialization
+     * mismatch, supabase-kt internal — escaped through the SKIE
+     * suspend bridge into the runtime's terminate handler. Rewrapping
+     * everything except [CancellationException] keeps the Swift call
+     * site as the single recovery point.
      */
     suspend fun fetchPod(orderId: String): com.thapsus.cargo.data.dto.PodDetailDto? = try {
         api.get<com.thapsus.cargo.data.dto.PodDetailResponse>("/orders/$orderId/pod").pod
+    } catch (e: kotlinx.coroutines.CancellationException) {
+        throw e
     } catch (e: ApiException) {
         if (e.status == 404) null else throw e
+    } catch (e: Throwable) {
+        throw ApiException(0, e.message ?: "Couldn't load proof of delivery")
     }
 }
