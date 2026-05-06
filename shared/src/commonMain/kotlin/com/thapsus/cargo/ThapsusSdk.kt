@@ -59,6 +59,7 @@ import com.thapsus.cargo.presentation.RunStopsViewModel
 import com.thapsus.cargo.presentation.TicketDetailViewModel
 import com.thapsus.cargo.presentation.TicketsListViewModel
 import com.thapsus.cargo.presentation.WarehouseViewModel
+import com.thapsus.cargo.util.installUnhandledExceptionHook
 import io.github.jan.supabase.SupabaseClient
 import org.koin.core.KoinApplication
 import org.koin.core.context.startKoin
@@ -80,6 +81,11 @@ object ThapsusSdk {
         secureSettings: SecureSettings
     ) {
         if (application != null) return
+        // Install BEFORE Koin / repos / scopes are created so any throw during
+        // bootstrap (corrupt secure-settings, bad Koin module, etc.) lands as
+        // a logged Kotlin exception in the Xcode console instead of an opaque
+        // K/N abort with only `Kotlin_processUnhandledException` in the trace.
+        installUnhandledExceptionHook()
         val configModule = module {
             single(ThapsusKoin.SUPABASE_URL) { supabaseUrl }
             single(ThapsusKoin.SUPABASE_KEY) { supabaseAnonKey }
