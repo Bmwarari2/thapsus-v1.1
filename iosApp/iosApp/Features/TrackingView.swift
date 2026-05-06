@@ -42,6 +42,10 @@ struct TrackingView: View {
     /// Pay-invoice sheet target (BFM or customer-consolidation). Set when
     /// the customer taps Accept & buy / Pay invoice → launches PayInvoiceView.
     @State private var payTarget: PayTarget?
+    /// When the customer taps a multi-parcel stage card, this carries
+    /// the stage's id so we can render a sheet listing the individual
+    /// parcels in that bucket.
+    @State private var expandedStageId: String? = nil
 
     var body: some View {
         ScrollView {
@@ -130,12 +134,15 @@ struct TrackingView: View {
                     }
                 }
 
-                SectionHeader(
-                    title: active.isEmpty ? "No active shipments" : "Active shipments",
-                    subtitle: active.isEmpty ? nil : "Tap a parcel for the full timeline."
-                )
-
-                if active.isEmpty {
+                // Recent activity — every parcel that's either still
+                // in motion OR delivered in the last 14 days, bucketed
+                // by lifecycle stage so 5 parcels all "out for delivery"
+                // collapse into a single card. Each card carries a
+                // progress bar showing where in the UK→Kenya pipeline
+                // that bucket sits, so the customer reads the screen at
+                // a glance without scrolling through 12 individual rows.
+                if recentActivityStages.isEmpty {
+                    SectionHeader(title: "No active shipments")
                     SoftCard {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Nothing in flight").font(.headline).foregroundStyle(Brand.ink)
@@ -144,30 +151,12 @@ struct TrackingView: View {
                         }
                     }
                 } else {
-                    ForEach(active, id: \.id) { p in
-                        NavigationLink {
-                            ParcelDetailView(parcelID: p.id)
-                        } label: {
-                            ActiveShipmentRow(pkg: p)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                // Recent deliveries — top 3 of the past-deliveries
-                // groups, surfaced inline so a customer who delivered
-                // something yesterday doesn't have to scroll. A "group"
-                // is parcels delivered together by the same rider POD
-                // capture, so a 3-parcel bundle shows as ONE row not
-                // three (audit followup: "Group orders from the same
-                // delivery together").
-                if !recentDeliveryGroups.isEmpty {
                     SectionHeader(
-                        title: "Recent deliveries",
-                        subtitle: "Tap a delivery to see the proof of delivery."
+                        title: "Recent activity",
+                        subtitle: "Parcels grouped by where they are in the journey. Tap to see details."
                     )
-                    ForEach(recentDeliveryGroups, id: \.id) { g in
-                        deliveryGroupRow(g)
+                    ForEach(recentActivityStages, id: \.id) { group in
+                        stageGroupRow(group)
                     }
                 }
 
@@ -232,6 +221,18 @@ struct TrackingView: View {
                 targetTitle: target.title,
                 amountKesGross: target.amountKes
             )
+        }
+        .sheet(isPresented: Binding(
+            get: { expandedStageId != nil },
+            set: { if !$0 { expandedStageId = nil } }
+        )) {
+            if let id = expandedStageId,
+               let group = recentActivityStages.first(where: { $0.id == id }) {
+                NavigationStack {
+                    StageDetailSheet(group: group)
+                }
+                .glassSheet(detents: [.large, .medium])
+            }
         }
         .scrollContentBackground(.hidden)
         .appBackground()
@@ -429,20 +430,6 @@ struct TrackingView: View {
         }
     }
 
-    /// The active-shipments list still uses substring filtering on the query
-    /// — it's a "narrow my list" affordance, not an authoritative match.
-    private var active: [PackageDto] {
-        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
-        let inFlight = parcels.filter { isActive($0.status) }
-        guard !q.isEmpty else { return inFlight }
-        return inFlight.filter { p in
-            p.id.lowercased().contains(q) ||
-            (p.trackingNumber?.lowercased().contains(q) ?? false) ||
-            (p.barcode?.lowercased().contains(q) ?? false) ||
-            (p.description_?.lowercased().contains(q) ?? false)
-        }
-    }
-
     private func isActive(_ s: PackageStatus) -> Bool {
         switch s {
         case .delivered, .abandoned: return false
@@ -472,10 +459,31 @@ struct TrackingView: View {
         groupDeliveries(pastDeliveries).prefix(30).map { $0 }
     }
 
-    /// Top-3 hot list of recent deliveries — surfaced above the full
-    /// archive so the customer sees yesterday's drop without scrolling.
-    private var recentDeliveryGroups: [DeliveryGroup] {
-        Array(pastDeliveryGroups.prefix(3))
+    /// Recent activity feed: every active parcel + every parcel
+    /// delivered in the last 14 days, bucketed by `LifecycleStage`.
+    /// Stages with zero members are dropped, so the rendered list
+    /// only shows the buckets the customer actually has parcels in.
+    /// Sorted by stage's pipeline rank (latest stage first — delivered
+    /// at the top, then out-for-delivery, then customs, etc.) so the
+    /// most-actionable groups land near the top of the screen.
+    private var recentActivityStages: [StageGroup] {
+        let cutoff: Date = Calendar.current.date(byAdding: .day, value: -14, to: Date()) ?? Date.distantPast
+        let recent = parcels.filter { p in
+            // Active parcels always; delivered only if recent.
+            guard let stage = LifecycleStage(p.status) else { return false }
+            if stage == .delivered {
+                return parsedDate(p.updatedAt ?? p.createdAt).map { $0 >= cutoff } ?? false
+            }
+            return true
+        }
+        var bucket: [LifecycleStage: [PackageDto]] = [:]
+        for p in recent {
+            guard let stage = LifecycleStage(p.status) else { continue }
+            bucket[stage, default: []].append(p)
+        }
+        return bucket
+            .map { StageGroup(stage: $0.key, members: $0.value) }
+            .sorted { $0.stage.rank > $1.stage.rank }
     }
 
     /// Bucket parcels by shared delivery time. Two parcels with the
@@ -498,6 +506,45 @@ struct TrackingView: View {
             }
         }
         return groups
+    }
+
+    /// Robust date parser for the various ISO timestamp shapes the
+    /// server emits (`updated_at` on `packages` is sometimes
+    /// `2026-04-12T08:14:33.123456Z`, sometimes plain `2026-04-12`).
+    /// Used to gate the 14-day recent-activity window on Delivered.
+    private func parsedDate(_ raw: String?) -> Date? {
+        guard let raw, !raw.isEmpty else { return nil }
+        let isoFractional = ISO8601DateFormatter()
+        isoFractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = isoFractional.date(from: raw) { return d }
+        let iso = ISO8601DateFormatter()
+        if let d = iso.date(from: raw) { return d }
+        let dayOnly = DateFormatter()
+        dayOnly.dateFormat = "yyyy-MM-dd"
+        return dayOnly.date(from: String(raw.prefix(10)))
+    }
+
+    /// Tap behaviour: singletons jump straight to the parcel detail;
+    /// multi-parcel stages open a list sheet so the customer can pick
+    /// which one to inspect (still a one-tap path to detail). The
+    /// list-sheet variant is rendered below via `.sheet(item:)`.
+    @ViewBuilder
+    private func stageGroupRow(_ g: StageGroup) -> some View {
+        if g.members.count == 1, let only = g.members.first {
+            NavigationLink {
+                ParcelDetailView(parcelID: only.id)
+            } label: {
+                StageProgressCard(group: g)
+            }
+            .buttonStyle(.plain)
+        } else {
+            Button {
+                expandedStageId = g.id
+            } label: {
+                StageProgressCard(group: g)
+            }
+            .buttonStyle(.plain)
+        }
     }
 
     @ViewBuilder
@@ -1144,5 +1191,257 @@ struct PayTarget: Identifiable, Hashable {
             title: "Shipping invoice",
             amountKes: Int64(amount.rounded())
         )
+    }
+}
+
+// MARK: - Lifecycle stage grouping (Recent activity)
+
+/// Coarse pipeline buckets used to group customer parcels in the
+/// Recent activity feed. We deliberately collapse the 12 raw
+/// PackageStatus values down to 5 happy-path stages + Held + Abandoned,
+/// because a customer reads the feed top-to-bottom asking "where is my
+/// stuff", and the difference between e.g. `weighed` and `screened` is
+/// not meaningful at that altitude.
+enum LifecycleStage: Int, CaseIterable, Identifiable {
+    case atUkHub        // pre_registered, received_at_warehouse, photographed, weighed, screened
+    case onAFlight      // manifested, in_transit
+    case atJkia         // jkia_arrived, awaiting_duty_payment, released
+    case outForDelivery
+    case delivered
+    case held           // held, held_at_nairobi_hub — action needed
+
+    var id: Int { rawValue }
+
+    init?(_ status: PackageStatus) {
+        switch status {
+        case .preRegistered, .receivedAtWarehouse, .photographed, .weighed, .screened:
+            self = .atUkHub
+        case .manifested, .inTransit:
+            self = .onAFlight
+        case .jkiaArrived, .awaitingDutyPayment, .released:
+            self = .atJkia
+        case .outForDelivery:
+            self = .outForDelivery
+        case .delivered:
+            self = .delivered
+        case .held, .heldAtNairobiHub:
+            self = .held
+        default:
+            return nil
+        }
+    }
+
+    /// Sort key for the feed — higher = closer to delivered, so the
+    /// most-recent / most-actionable stages render first. `held` is
+    /// pinned to the top regardless because it always needs attention.
+    var rank: Int {
+        switch self {
+        case .held: return 100
+        case .delivered: return 5
+        case .outForDelivery: return 4
+        case .atJkia: return 3
+        case .onAFlight: return 2
+        case .atUkHub: return 1
+        }
+    }
+
+    /// 0…1 progress through the UK→Kenya pipeline. Held has no
+    /// meaningful progress value (we render it as an alert card
+    /// instead), so we pin it to 0 — the card hides the bar.
+    var progress: Double {
+        switch self {
+        case .held: return 0
+        case .atUkHub: return 0.20
+        case .onAFlight: return 0.40
+        case .atJkia: return 0.60
+        case .outForDelivery: return 0.80
+        case .delivered: return 1.00
+        }
+    }
+
+    var title: String {
+        switch self {
+        case .atUkHub:        return "At Stockport hub"
+        case .onAFlight:      return "On a flight to Nairobi"
+        case .atJkia:         return "Customs at JKIA"
+        case .outForDelivery: return "Out for delivery"
+        case .delivered:      return "Delivered"
+        case .held:           return "Held — action needed"
+        }
+    }
+
+    var iconSystemName: String {
+        switch self {
+        case .atUkHub:        return "shippingbox.fill"
+        case .onAFlight:      return "airplane"
+        case .atJkia:         return "checkmark.shield.fill"
+        case .outForDelivery: return "scooter"
+        case .delivered:      return "checkmark.circle.fill"
+        case .held:           return "exclamationmark.triangle.fill"
+        }
+    }
+
+    var accentColor: Color {
+        switch self {
+        case .delivered:      return .green
+        case .outForDelivery: return Brand.orange
+        case .held:           return .red
+        default:              return Brand.ink
+        }
+    }
+}
+
+/// One bucket in the Recent activity feed. `members` order mirrors the
+/// underlying `parcels` array so the cache's most-recent-first ordering
+/// shows through.
+struct StageGroup: Identifiable {
+    let stage: LifecycleStage
+    let members: [PackageDto]
+    var id: String { "stage-\(stage.rawValue)" }
+}
+
+/// Card surfaced in the Recent activity feed. Shows the stage name, a
+/// parcel count + brief description list, and a 5-checkpoint progress
+/// bar with labelled milestones underneath. Tapping a singleton card
+/// jumps to detail; tapping a multi-parcel card opens a list sheet.
+struct StageProgressCard: View {
+    let group: StageGroup
+
+    var body: some View {
+        SoftCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .top, spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(group.stage.accentColor)
+                            .frame(width: 44, height: 44)
+                        VStack(spacing: 0) {
+                            Image(systemName: group.stage.iconSystemName)
+                                .font(.headline).foregroundStyle(.white)
+                            if group.members.count > 1 {
+                                Text("\(group.members.count)×")
+                                    .font(.system(size: 9, weight: .heavy))
+                                    .foregroundStyle(.white)
+                            }
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(group.stage.title)
+                            .font(.headline).foregroundStyle(Brand.ink)
+                            .lineLimit(1)
+                        Text(parcelSummary)
+                            .font(.subheadline).foregroundStyle(.secondary)
+                            .lineLimit(2)
+                        if !trackingChips.isEmpty {
+                            HStack(spacing: 6) {
+                                ForEach(trackingChips, id: \.self) { t in
+                                    Text(t)
+                                        .font(.caption2.monospaced())
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                                .fill(Brand.cream.opacity(0.8))
+                                        )
+                                        .foregroundStyle(Brand.orange)
+                                }
+                                if group.members.count > trackingChips.count {
+                                    Text("+\(group.members.count - trackingChips.count)")
+                                        .font(.caption2.monospaced())
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right").foregroundStyle(.tertiary)
+                }
+                if group.stage != .held {
+                    progressTrack
+                }
+            }
+        }
+    }
+
+    /// "Nike trainers, iPhone case + 1 more" — fall back to count when
+    /// no parcel has a description / retailer.
+    private var parcelSummary: String {
+        let names = group.members
+            .compactMap { $0.description_ ?? $0.retailer }
+            .filter { !$0.isEmpty }
+        let label = group.members.count == 1 ? "parcel" : "parcels"
+        if names.isEmpty {
+            return "\(group.members.count) \(label)"
+        }
+        let head = names.prefix(2).joined(separator: ", ")
+        let extra = names.count > 2 ? " + \(names.count - 2) more" : ""
+        return "\(group.members.count) \(label) · \(head)\(extra)"
+    }
+
+    /// Up to 3 tracking-number chips, monospaced.
+    private var trackingChips: [String] {
+        Array(group.members.prefix(3).compactMap { $0.trackingNumber })
+    }
+
+    /// 5-checkpoint progress track. Filled segments use the brand
+    /// gradient; empty segments are tinted ink. Labels underneath
+    /// help orient the customer at a glance.
+    private var progressTrack: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            LGProgressBar(value: group.stage.progress, height: 8)
+            HStack(spacing: 0) {
+                stageLabel("UK", reached: group.stage.progress >= 0.20)
+                Spacer(minLength: 0)
+                stageLabel("Air", reached: group.stage.progress >= 0.40)
+                Spacer(minLength: 0)
+                stageLabel("JKIA", reached: group.stage.progress >= 0.60)
+                Spacer(minLength: 0)
+                stageLabel("Out", reached: group.stage.progress >= 0.80)
+                Spacer(minLength: 0)
+                stageLabel("Done", reached: group.stage.progress >= 1.00)
+            }
+        }
+    }
+
+    private func stageLabel(_ text: String, reached: Bool) -> some View {
+        Text(text)
+            .font(.caption2.weight(reached ? .semibold : .regular))
+            .foregroundStyle(reached ? Brand.ink : .secondary)
+    }
+}
+
+/// Sheet surfaced when the customer taps a multi-parcel stage card —
+/// lists every parcel in the bucket so they can drill into one.
+struct StageDetailSheet: View {
+    let group: StageGroup
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 14) {
+                StageProgressCard(group: group)
+                SectionHeader(
+                    title: "\(group.members.count) \(group.members.count == 1 ? "parcel" : "parcels")",
+                    subtitle: "Tap one to see the timeline."
+                )
+                ForEach(group.members, id: \.id) { p in
+                    NavigationLink {
+                        ParcelDetailView(parcelID: p.id)
+                    } label: {
+                        ActiveShipmentRow(pkg: p)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(20)
+        }
+        .navigationTitle(group.stage.title)
+        .glassNavigationBar(displayMode: .inline)
+        .scrollContentBackground(.hidden)
+        .appBackground()
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Done") { dismiss() }
+            }
+        }
     }
 }
