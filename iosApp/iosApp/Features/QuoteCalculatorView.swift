@@ -1,7 +1,7 @@
 // QuoteCalculatorView.swift
 // Liquid-glass redesign of the customer-facing shipping calculator.
-// Dimensions card (steppers via mono number + stepper) · surcharges card
-// with glass toggles · hero quote card with monospaced total.
+// Editable number fields (no +/- steppers) for weight + dimensions, glass
+// surcharge toggles, hero quote card with monospaced total.
 
 import SwiftUI
 import ThapsusShared
@@ -16,6 +16,16 @@ struct QuoteCalculatorView: View {
     @State private var actualKg: Double = 2.0
     @State private var declaredValuePence: Int64 = 5_000
     @State private var channel: PricingChannel = .ukAir
+
+    // String shadows so the user can type freely (and clear the field
+    // mid-edit) without the value snapping back to a formatted string.
+    @State private var weightText: String = "2.00"
+    @State private var lengthText: String = "30"
+    @State private var widthText: String = "20"
+    @State private var heightText: String = "20"
+
+    @FocusState private var focusedField: NumberField?
+    private enum NumberField: Hashable { case weight, length, width, height }
 
     @State private var includesPhone: Bool = false
     @State private var includesLaptop: Bool = false
@@ -63,6 +73,14 @@ struct QuoteCalculatorView: View {
         .glassNavigationBar()
         .scrollContentBackground(.hidden)
         .background(LiquidGlassBackground())
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focusedField = nil }
+                    .fontWeight(.semibold)
+                    .foregroundStyle(LG.accent2)
+            }
+        }
         .task {
             guard vm == nil else { return }
             let v = ThapsusSdk.shared.quoteViewModel()
@@ -80,15 +98,33 @@ struct QuoteCalculatorView: View {
     private var dimensionsCard: some View {
         GlassPanel(corner: LG.Radius.xl, padding: 18) {
             VStack(spacing: 0) {
-                dimRow(label: "Weight", suffix: "kg", value: $actualKg, range: 0.1...80, step: 0.1, format: "%.2f")
+                numberRow(
+                    label: "Weight", suffix: "kg",
+                    text: $weightText, focus: .weight,
+                    range: 0.1...80, format: "%.2f",
+                    commit: { actualKg = clamp(parse($0), 0.1, 80, fallback: actualKg) }
+                )
                 divider
-                dimRow(label: "Length", suffix: "cm", value: $lengthCm, range: 1...300, step: 1, format: "%.0f")
+                numberRow(
+                    label: "Length", suffix: "cm",
+                    text: $lengthText, focus: .length,
+                    range: 1...300, format: "%.0f",
+                    commit: { lengthCm = clamp(parse($0), 1, 300, fallback: lengthCm) }
+                )
                 divider
-                HStack(spacing: 12) {
-                    dimRow(label: "Width", suffix: "cm", value: $widthCm, range: 1...300, step: 1, format: "%.0f", inline: true)
-                    dimRow(label: "Height", suffix: "cm", value: $heightCm, range: 1...300, step: 1, format: "%.0f", inline: true)
-                }
-                .padding(.vertical, 6)
+                numberRow(
+                    label: "Width", suffix: "cm",
+                    text: $widthText, focus: .width,
+                    range: 1...300, format: "%.0f",
+                    commit: { widthCm = clamp(parse($0), 1, 300, fallback: widthCm) }
+                )
+                divider
+                numberRow(
+                    label: "Height", suffix: "cm",
+                    text: $heightText, focus: .height,
+                    range: 1...300, format: "%.0f",
+                    commit: { heightCm = clamp(parse($0), 1, 300, fallback: heightCm) }
+                )
             }
         }
     }
@@ -98,49 +134,51 @@ struct QuoteCalculatorView: View {
     }
 
     @ViewBuilder
-    private func dimRow(
+    private func numberRow(
         label: String,
         suffix: String,
-        value: Binding<Double>,
+        text: Binding<String>,
+        focus: NumberField,
         range: ClosedRange<Double>,
-        step: Double,
         format: String,
-        inline: Bool = false
+        commit: @escaping (String) -> Void
     ) -> some View {
-        if inline {
-            VStack(alignment: .leading, spacing: 6) {
-                Text(label.uppercased())
-                    .font(.body(11, weight: .bold))
-                    .tracking(0.6)
+        HStack(spacing: 12) {
+            Text(label)
+                .font(.body(14, weight: .semibold))
+                .foregroundStyle(LG.fg2)
+            Spacer()
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                TextField("", text: text)
+                    .keyboardType(.decimalPad)
+                    .multilineTextAlignment(.trailing)
+                    .font(.mono(22, weight: .bold))
+                    .foregroundStyle(LG.fg)
+                    .focused($focusedField, equals: focus)
+                    .frame(minWidth: 80)
+                    .onSubmit { commit(text.wrappedValue) }
+                    .onChange(of: focusedField) { _, new in
+                        if new != focus {
+                            commit(text.wrappedValue)
+                            text.wrappedValue = String(format: format, parse(text.wrappedValue))
+                        }
+                    }
+                Text(suffix)
+                    .font(.mono(12, weight: .medium))
                     .foregroundStyle(LG.fg3)
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(String(format: format, value.wrappedValue))
-                        .font(.mono(22, weight: .bold))
-                        .foregroundStyle(LG.fg)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(suffix)
-                        .font(.mono(12, weight: .medium))
-                        .foregroundStyle(LG.fg3)
-                    Stepper("", value: value, in: range, step: step).labelsHidden()
-                }
-            }
-        } else {
-            HStack {
-                Text(label)
-                    .font(.body(13.5, weight: .semibold))
-                    .foregroundStyle(LG.fg2)
-                Spacer()
-                HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(String(format: format, value.wrappedValue))
-                        .font(.mono(22, weight: .bold))
-                        .foregroundStyle(LG.fg)
-                    Text(suffix)
-                        .font(.mono(12, weight: .medium))
-                        .foregroundStyle(LG.fg3)
-                }
-                Stepper("", value: value, in: range, step: step).labelsHidden()
             }
         }
+        .contentShape(Rectangle())
+        .onTapGesture { focusedField = focus }
+    }
+
+    private func parse(_ text: String) -> Double {
+        Double(text.replacingOccurrences(of: ",", with: ".")) ?? 0
+    }
+
+    private func clamp(_ value: Double, _ low: Double, _ high: Double, fallback: Double) -> Double {
+        guard value > 0 else { return fallback }
+        return min(max(value, low), high)
     }
 
     // MARK: - Surcharges
@@ -226,6 +264,13 @@ struct QuoteCalculatorView: View {
     }
 
     private func compute() {
+        // Make sure any in-flight edit is committed before pricing.
+        actualKg = clamp(parse(weightText), 0.1, 80, fallback: actualKg)
+        lengthCm = clamp(parse(lengthText), 1, 300, fallback: lengthCm)
+        widthCm  = clamp(parse(widthText),  1, 300, fallback: widthCm)
+        heightCm = clamp(parse(heightText), 1, 300, fallback: heightCm)
+        focusedField = nil
+
         let dims = ParcelDimensions(
             lengthCm: lengthCm, widthCm: widthCm, heightCm: heightCm, actualKg: actualKg
         )

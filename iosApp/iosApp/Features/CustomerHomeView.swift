@@ -19,33 +19,14 @@ struct CustomerHomeView: View {
                 creditHero
 
                 linkCard(rows: [
-                    Row(title: "Warehouse address",
-                        subtitle: warehouseSubtitle,
-                        systemImage: "building.2.fill",
-                        destination: AnyView(WarehouseAddressView())),
-                    Row(title: "Notifications",
-                        subtitle: "Updates on your shipments",
-                        systemImage: "bell.fill",
-                        destination: AnyView(NotificationInboxView())),
                     Row(title: "Prohibited items",
                         subtitle: "What you can't ship",
                         systemImage: "exclamationmark.shield.fill",
                         destination: AnyView(ProhibitedSearchView())),
                     Row(title: "Refer friends",
-                        subtitle: "Earn KES 600 per referral",
+                        subtitle: "Earn KES 50 per referral",
                         systemImage: "gift.fill",
                         destination: AnyView(ReferralView())),
-                ])
-
-                linkCard(rows: [
-                    Row(title: "New order",
-                        subtitle: "Pre-register a parcel",
-                        systemImage: "shippingbox.fill",
-                        destination: AnyView(NewOrderView())),
-                    Row(title: "Buy for me",
-                        subtitle: "Concierge purchase",
-                        systemImage: "wand.and.stars",
-                        destination: AnyView(BuyForMeView())),
                 ])
 
                 linkCard(rows: [
@@ -53,10 +34,6 @@ struct CustomerHomeView: View {
                         subtitle: "Light, dark, or system",
                         systemImage: "circle.lefthalf.filled",
                         destination: AnyView(AppearanceSettingsView())),
-                    Row(title: "Edit profile",
-                        subtitle: "Name, phone, address",
-                        systemImage: "person.crop.circle.fill",
-                        destination: AnyView(ProfileEditView())),
                     Row(title: "Support",
                         subtitle: "Tickets and help",
                         systemImage: "questionmark.bubble.fill",
@@ -123,10 +100,10 @@ struct CustomerHomeView: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background(
-                            Capsule().fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            Capsule().fill(LG.glassBgStrong).blendMode(.plusLighter)
+                            ZStack {
+                                Capsule().fill(.ultraThinMaterial)
+                                Capsule().fill(LG.glassBgStrong)
+                            }
                         )
                         .overlay(
                             Capsule().strokeBorder(LG.glassBorder, lineWidth: 1)
@@ -136,12 +113,6 @@ struct CustomerHomeView: View {
                 .buttonStyle(.plain)
             }
         }
-    }
-
-    private var warehouseSubtitle: String {
-        let auth = env.session as? AuthSessionAuthenticated
-        let id = auth?.profile?.warehouseId
-        return (id?.isEmpty == false ? id! : "Stockport") + " · UK warehouse"
     }
 
     // MARK: - Credit hero
@@ -166,8 +137,12 @@ struct CustomerHomeView: View {
                         .font(.body(13, weight: .semibold))
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
-                        .background(Capsule().fill(.ultraThinMaterial))
-                        .overlay(Capsule().fill(LG.glassBgStrong).blendMode(.plusLighter))
+                        .background(
+                            ZStack {
+                                Capsule().fill(.ultraThinMaterial)
+                                Capsule().fill(LG.glassBgStrong)
+                            }
+                        )
                         .overlay(Capsule().strokeBorder(LG.glassBorder, lineWidth: 1))
                         .foregroundStyle(LG.fg)
                 }

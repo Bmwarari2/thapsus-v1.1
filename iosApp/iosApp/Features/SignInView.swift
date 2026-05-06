@@ -19,7 +19,6 @@ struct SignInView: View {
     @State private var presentingForgot: Bool = false
 
     private let countries: [(code: String, label: String)] = [
-        ("", "Country (optional)"),
         ("KE", "Kenya"),
         ("UG", "Uganda"),
         ("TZ", "Tanzania"),
@@ -104,7 +103,7 @@ struct SignInView: View {
                             text: $email, keyboard: .emailAddress, capitalization: .never)
 
                 if isSignUp {
-                    LGTextField(label: "Phone (optional)", placeholder: "+254…",
+                    LGTextField(label: "Phone", placeholder: "+254…",
                                 text: $phone, keyboard: .phonePad, capitalization: .never)
                     countryPicker
                 }
@@ -153,7 +152,7 @@ struct SignInView: View {
                 }
             } label: {
                 HStack {
-                    Text(countries.first { $0.code == country }?.label ?? "Country (optional)")
+                    Text(countries.first { $0.code == country }?.label ?? "Select country")
                         .foregroundStyle(country.isEmpty ? LG.fgMute : LG.fg)
                     Spacer()
                     Image(systemName: "chevron.down")
@@ -164,14 +163,13 @@ struct SignInView: View {
                 .padding(.vertical, 13)
                 .padding(.horizontal, 16)
                 .background(
-                    RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
-                        .fill(LG.glassBg)
-                        .blendMode(.plusLighter)
-                        .allowsHitTesting(false)
+                    ZStack {
+                        RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                            .fill(LG.glassBg)
+                    }
+                    .allowsHitTesting(false)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
