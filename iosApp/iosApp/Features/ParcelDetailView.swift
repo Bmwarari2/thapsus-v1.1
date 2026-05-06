@@ -217,12 +217,38 @@ struct ParcelDetailView: View {
                                 EmptyView()
                             }
                         }
+                    } else {
+                        // POD record exists but the server returned no photo URL.
+                        // Two real causes today: (a) the rider captured POD
+                        // without a photo, (b) backend signed-URL generation
+                        // failed silently. Either way the customer should see
+                        // something rather than empty space.
+                        RoundedRectangle(cornerRadius: 14, style: .continuous)
+                            .fill(Brand.cream.opacity(0.5))
+                            .frame(height: 160)
+                            .overlay(
+                                VStack(spacing: 6) {
+                                    Image(systemName: "photo")
+                                        .font(.title2)
+                                        .foregroundStyle(.secondary)
+                                    Text("Delivery photo not available")
+                                        .font(.caption.weight(.semibold))
+                                        .foregroundStyle(Brand.ink)
+                                    Text("The rider's photo couldn't be fetched. The delivery is still confirmed below.")
+                                        .font(.caption2)
+                                        .multilineTextAlignment(.center)
+                                        .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 16)
+                                }
+                            )
                     }
                     if let recipient = pod.recipientName, !recipient.isEmpty {
                         Text("Received by \(recipient)").font(.subheadline).foregroundStyle(Brand.ink)
                     }
                     if let when = pod.capturedAt {
-                        Text(when).font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                        Text(formatPodCapturedAt(when))
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
                     }
                     if let notes = pod.notes, !notes.isEmpty {
                         Text(notes).font(.caption).foregroundStyle(.secondary)
@@ -266,6 +292,21 @@ struct ParcelDetailView: View {
         .task(id: p.id) {
             await reloadPod(p)
         }
+    }
+
+    /// Server hands back `captured_at` as an ISO-8601 string with optional
+    /// fractional seconds (`2026-05-04T04:14:13.303Z`). Render it in the
+    /// customer's locale so the POD card doesn't show a raw timestamp.
+    /// Falls back to the raw string if parsing fails so a malformed value
+    /// stays visible for triage rather than disappearing entirely.
+    private func formatPodCapturedAt(_ raw: String) -> String {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        let plain = ISO8601DateFormatter()
+        plain.formatOptions = [.withInternetDateTime]
+        let date = withFraction.date(from: raw) ?? plain.date(from: raw)
+        guard let date else { return raw }
+        return date.formatted(date: .abbreviated, time: .shortened)
     }
 
     /// Re-fetch on parcel change so the same view bound to a different
