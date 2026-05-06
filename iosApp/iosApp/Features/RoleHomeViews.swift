@@ -176,7 +176,6 @@ struct AdminHomeView: View {
                 AccountHeader(env: env)
 
                 AccountSection(title: "Console", links: [
-                    AccountLink("Admin dashboard", "chart.bar.doc.horizontal", AnyView(AdminDashboardView())),
                     AccountLink("Users", "person.2.fill", AnyView(AdminUsersView())),
                     AccountLink("Orders", "shippingbox.fill", AnyView(AdminOrdersView())),
                     AccountLink("Pending payments", "creditcard.fill", AnyView(AdminPaymentsView())),

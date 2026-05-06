@@ -114,41 +114,113 @@ struct AdminCreateBuyForMeView: View {
     @ViewBuilder
     private var customerCard: some View {
         CrystalCard {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: 12) {
                 Text("Customer").font(.headline).foregroundStyle(Brand.ink)
-                TextField("Search by email, name, or warehouse ID", text: $search)
-                    .textFieldStyle(.roundedBorder)
-                    .autocorrectionDisabled(true)
-                    .textInputAutocapitalization(.never)
+
+                HStack(spacing: 10) {
+                    Image(systemName: "magnifyingglass")
+                        .foregroundStyle(LG.fgMute)
+                    TextField("Search by email, name, or warehouse ID", text: $search)
+                        .textFieldStyle(.plain)
+                        .autocorrectionDisabled(true)
+                        .textInputAutocapitalization(.never)
+                        .font(.body(15, weight: .medium))
+                        .foregroundStyle(LG.fg)
+                    if !search.isEmpty {
+                        Button {
+                            search = ""
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(LG.fgMute)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.vertical, 12)
+                .padding(.horizontal, 14)
+                .background(
+                    ZStack {
+                        RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                            .fill(.ultraThinMaterial)
+                        RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                            .fill(LG.glassBg)
+                    }
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                        .strokeBorder(LG.glassBorder, lineWidth: 1)
+                )
+
                 let users = filteredUsers
                 if users.isEmpty {
-                    Text("No matching customers.").font(.caption).foregroundStyle(.secondary)
+                    Text(search.isEmpty
+                         ? "Start typing to find a customer."
+                         : "No matching customers.")
+                        .font(.body(13, weight: .medium))
+                        .foregroundStyle(LG.fg3)
+                        .padding(.vertical, 8)
                 } else {
+                    let resultCount = "\(users.count) result\(users.count == 1 ? "" : "s")"
+                    Text(search.isEmpty ? "Recent customers" : resultCount)
+                        .font(.body(11, weight: .heavy))
+                        .tracking(0.6)
+                        .foregroundStyle(LG.fg3)
+                        .padding(.top, 2)
+
                     VStack(spacing: 0) {
-                        ForEach(users.prefix(8), id: \.id) { u in
+                        ForEach(Array(users.prefix(8).enumerated()), id: \.element.id) { idx, u in
                             Button { selectedUserId = u.id } label: {
-                                HStack {
+                                HStack(spacing: 10) {
                                     VStack(alignment: .leading, spacing: 2) {
-                                        Text(u.name.isEmpty ? u.email : u.name)
-                                            .font(.subheadline.weight(.semibold)).foregroundStyle(Brand.ink)
-                                        Text(u.email).font(.caption2).foregroundStyle(.secondary)
+                                        highlightedText(
+                                            u.name.isEmpty ? u.email : u.name,
+                                            query: search
+                                        )
+                                        .font(.body(14, weight: .semibold))
+                                        .foregroundStyle(Brand.ink)
+                                        Text(u.email)
+                                            .font(.caption2)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
                                     }
                                     Spacer()
                                     if selectedUserId == u.id {
-                                        Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(LG.accent2)
                                     }
                                 }
-                                .padding(8)
-                                .background(selectedUserId == u.id ? Color.orange.opacity(0.08) : Color.clear,
-                                            in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                                .padding(.vertical, 10)
+                                .padding(.horizontal, 8)
+                                .background(
+                                    selectedUserId == u.id
+                                        ? AnyShapeStyle(LG.accentSoft)
+                                        : AnyShapeStyle(Color.clear),
+                                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                                )
                             }
                             .buttonStyle(.plain)
-                            Divider()
+                            if idx < min(users.count, 8) - 1 {
+                                Rectangle().fill(LG.line).frame(height: 1)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    /// Highlight characters in `text` that match the search query so the
+    /// admin sees why each result was kept.
+    private func highlightedText(_ text: String, query: String) -> Text {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty,
+              let range = text.range(of: q, options: .caseInsensitive) else {
+            return Text(text)
+        }
+        let pre = String(text[..<range.lowerBound])
+        let hit = String(text[range])
+        let post = String(text[range.upperBound...])
+        return Text(pre) + Text(hit).foregroundStyle(LG.accent2).bold() + Text(post)
     }
 
     private var filteredUsers: [AdminUserDto] {
