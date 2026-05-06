@@ -19,6 +19,7 @@ import io.github.jan.supabase.realtime.PostgresAction
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.realtime.realtime
+import com.thapsus.cargo.util.loggingExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -33,7 +34,7 @@ class BuyForMeRepository(
     private val api: ThapsusApiClient,
     private val supabase: SupabaseClient
 ) {
-    private val realtimeScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val realtimeScope = CoroutineScope(SupervisorJob() + Dispatchers.Default + loggingExceptionHandler)
     private val realtimeJson = Json { ignoreUnknownKeys = true }
 
     suspend fun list(): Result<List<BuyForMeOrderDto>> = runCatching {

@@ -20,6 +20,7 @@ import io.github.jan.supabase.realtime.RealtimeChannel
 import io.github.jan.supabase.realtime.channel
 import io.github.jan.supabase.realtime.postgresChangeFlow
 import io.github.jan.supabase.realtime.realtime
+import com.thapsus.cargo.util.loggingExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -48,7 +49,7 @@ class TicketsRepository(
     private val cache: ThapsusLocalCache,
     private val json: Json = Json { ignoreUnknownKeys = true }
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + loggingExceptionHandler)
 
     // ── Customer mine list ──────────────────────────────────────
     fun observeMine(userId: String): Flow<List<TicketDto>> = callbackFlow {

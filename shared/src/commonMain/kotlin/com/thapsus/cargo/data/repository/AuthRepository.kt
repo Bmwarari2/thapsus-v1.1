@@ -17,6 +17,7 @@ import com.thapsus.cargo.data.remote.SecureKeys
 import com.thapsus.cargo.data.remote.SecureSettings
 import com.thapsus.cargo.data.remote.ThapsusApiClient
 import com.thapsus.cargo.domain.model.UserRole
+import com.thapsus.cargo.util.loggingExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -44,7 +45,7 @@ class AuthRepository(
     private val settings: SecureSettings,
     private val cache: ThapsusLocalCache
 ) {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default + loggingExceptionHandler)
     private val json = Json { ignoreUnknownKeys = true; explicitNulls = false }
 
     private val _state = MutableStateFlow<AuthSession>(AuthSession.Initializing)
@@ -57,7 +58,18 @@ class AuthRepository(
     fun currentSupabaseToken(): String? = settings.getString(SecureKeys.SUPABASE_TOKEN)
 
     init {
-        scope.launch { rehydrate() }
+        // Defensive try/catch — `rehydrate` reads SecureSettings + decodes
+        // a cached profile; a corrupted blob or settings backend hiccup
+        // (rare on iOS, more common after a wipe-app-data cycle) would
+        // otherwise propagate to the K/N abort handler at app start.
+        scope.launch {
+            try {
+                rehydrate()
+            } catch (e: Throwable) {
+                _state.value = AuthSession.SignedOut
+                println("[AuthRepository] rehydrate failed: ${e::class.simpleName}: ${e.message}")
+            }
+        }
     }
 
     // ----- Public API -----
