@@ -118,9 +118,12 @@ struct OpsBuyForMeQueueView: View {
                     draftMarkup = String(Int(o.markupPct))
                     draftNotes  = o.notes ?? ""
                 } label: {
-                    Label(buttonLabel(for: o.status), systemImage: "paperplane.fill")
+                    HStack(spacing: 8) {
+                        Image(systemName: "paperplane.fill")
+                        Text(buttonLabel(for: o.status))
+                    }
                 }
-                .buttonStyle(GlassSheenButtonStyle(fill: Brand.ink, foreground: .white))
+                .buttonStyle(LGPrimaryButtonStyle())
             }
         }
     }

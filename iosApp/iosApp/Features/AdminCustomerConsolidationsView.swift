@@ -227,14 +227,14 @@ private struct AdminConsolidationCard: View {
     private var actionButton: some View {
         switch row.status {
         case "pending":
-            Button("Set invoice", action: onSetInvoice)
-                .buttonStyle(.borderedProminent).tint(Brand.orange)
+            Button(action: onSetInvoice) { Text("Set invoice") }
+                .buttonStyle(LGPrimaryButtonStyle(compact: true))
         case "invoiced":
-            Button("Mark paid", action: onMarkPaid)
-                .buttonStyle(.borderedProminent).tint(.green)
+            Button(action: onMarkPaid) { Text("Mark paid") }
+                .buttonStyle(LGPrimaryButtonStyle(compact: true))
         case "paid":
-            Button("Attach to shipping", action: onAttachShipping)
-                .buttonStyle(.borderedProminent).tint(Brand.ink)
+            Button(action: onAttachShipping) { Text("Attach to shipping") }
+                .buttonStyle(LGPrimaryButtonStyle(compact: true))
         default:
             EmptyView()
         }
