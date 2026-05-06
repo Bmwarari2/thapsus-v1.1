@@ -257,6 +257,10 @@ struct PayInvoiceView: View {
         config.merchantDisplayName = "Thapsus Cargo"
         config.allowsDelayedPaymentMethods = false
         // No Apple Pay (per project decision) → leave config.applePay nil.
+        // Suppress Stripe Link inline-signup. We don't integrate Link, and
+        // building `LinkInlineSignupElement` was the dominant cost in the
+        // 306ms PaymentSheet construction hang (report 2026-05-03 13:55).
+        config.link.display = .never
         let sheet = PaymentSheet(paymentIntentClientSecret: clientSecret, configuration: config)
         self.paymentSheet = sheet
 
