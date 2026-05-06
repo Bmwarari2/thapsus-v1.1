@@ -143,6 +143,23 @@ class ConsolidationRepository(
     }
 
     /**
+     * Page-limited variant of [refreshAll]. Used by the admin
+     * "Attach to shipping" sheet to surface only the most recent N
+     * consolidations (default 5) as picker rows, instead of asking the
+     * admin to remember a UUID. Server clamps `limit` to [1, 100].
+     *
+     * Throws on failure rather than wrapping in `Result<…>` so SKIE
+     * exposes it as a plain `throws` async function on the Swift side
+     * (no manual unwrap dance).
+     */
+    suspend fun refreshRecent(limit: Int = 5): List<ConsolidationDto> {
+        val now = Clock.System.now().toEpochMilliseconds()
+        val rows = api.get<ConsolidationListResponse>("/consolidations?limit=$limit").consolidations
+        rows.forEach { cache.upsertConsolidation(it, now) }
+        return rows
+    }
+
+    /**
      * Generic partial update. Routes through Express
      * (`PATCH /api/consolidations/:id`); the previous direct PostgREST path
      * was 403'd by the 2026-04-30 RLS lockdown (no UPDATE policy on
