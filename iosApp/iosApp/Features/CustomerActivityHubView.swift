@@ -11,11 +11,11 @@ struct CustomerActivityHubView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                EyebrowPill(label: "Activity", systemImage: "tray.full.fill")
-                EditorialHeader(
-                    title: "My activity",
-                    subtitle: "Invoices, transactions, and Buy-for-me requests in one place."
-                )
+                Text("Invoices, transactions, and Buy-for-me requests in one place.")
+                    .font(.body(14, weight: .medium))
+                    .foregroundStyle(LG.fg3)
+                    .padding(.top, 4)
+                    .padding(.bottom, 4)
 
                 NavigationLink { TrackingView() } label: {
                     HubCard(

@@ -31,16 +31,11 @@ struct QuoteCalculatorView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Quote")
-                        .font(.display(28, weight: .heavy))
-                        .foregroundStyle(LG.fg)
-                    Text("Same engine that prices your final shipment.")
-                        .font(.body(14, weight: .medium))
-                        .foregroundStyle(LG.fg3)
-                }
-                .padding(.top, 8)
-                .padding(.bottom, 8)
+                Text("Same engine that prices your final shipment.")
+                    .font(.body(14, weight: .medium))
+                    .foregroundStyle(LG.fg3)
+                    .padding(.top, 4)
+                    .padding(.bottom, 4)
 
                 dimensionsCard
                 surchargesCard

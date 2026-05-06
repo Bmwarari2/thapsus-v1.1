@@ -77,33 +77,21 @@ struct CrystalCard<Content: View>: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(LG.glassBg)
-                    .blendMode(.plusLighter)
-                    .allowsHitTesting(false)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.30), .clear],
-                            startPoint: .top,
-                            endPoint: .center
-                        )
-                    )
-                    .blendMode(.plusLighter)
-                    .allowsHitTesting(false)
+                ZStack {
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .fill(LG.glassBg)
+                }
+                .allowsHitTesting(false)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: corner, style: .continuous)
                     .strokeBorder(LG.glassBorder, lineWidth: 1)
+                    .allowsHitTesting(false)
             )
-            .shadow(color: .black.opacity(0.10), radius: 24, x: 0, y: 12)
-            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
+            .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
 }
 

@@ -49,35 +49,20 @@ struct CustomerDashboardView: View {
         }
         .scrollContentBackground(.hidden)
         .background(LiquidGlassBackground())
+        .navigationTitle("Home")
         .glassNavigationBar()
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                HStack(spacing: 8) {
-                    LGLogoBlock(size: 26)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("THAPSUS CARGO")
-                            .font(.body(10, weight: .heavy))
-                            .tracking(0.6)
-                            .foregroundStyle(LG.fg3)
-                        Text("Home")
-                            .font(.body(15, weight: .bold))
-                            .foregroundStyle(LG.fg)
-                    }
-                }
+                LGLogoBlock(size: 28)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink {
                     NotificationInboxView()
                 } label: {
                     Image(systemName: "bell")
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(LG.fg)
-                        .frame(width: 40, height: 40)
-                        .background(Capsule().fill(.ultraThinMaterial))
-                        .overlay(Capsule().fill(LG.glassBg).blendMode(.plusLighter))
-                        .overlay(Capsule().strokeBorder(LG.glassBorder, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
             }
         }
         .overlay(alignment: .top) { NotificationBannerView() }

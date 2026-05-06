@@ -85,37 +85,22 @@ struct SoftCard<Content: View>: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                    .fill(LG.glassBg)
-                    .blendMode(.plusLighter)
-                    .allowsHitTesting(false)
-            )
-            .overlay(
-                tint.map {
+                ZStack {
                     RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                        .fill($0)
-                        .allowsHitTesting(false)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
+                        .fill(LG.glassBg)
+                    if let tint {
+                        RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
+                            .fill(tint)
+                    }
                 }
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.30), .clear],
-                            startPoint: .top,
-                            endPoint: .center
-                        )
-                    )
-                    .blendMode(.plusLighter)
-                    .allowsHitTesting(false)
+                .allowsHitTesting(false)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
                     .strokeBorder(LG.glassBorder, lineWidth: 1)
+                    .allowsHitTesting(false)
             )
             .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
             .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)

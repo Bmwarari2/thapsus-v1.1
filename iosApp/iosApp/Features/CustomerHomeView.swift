@@ -12,12 +12,6 @@ struct CustomerHomeView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Account")
-                    .font(.display(28, weight: .heavy))
-                    .foregroundStyle(LG.fg)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
-
                 CutoffBannerView()
 
                 profileCard

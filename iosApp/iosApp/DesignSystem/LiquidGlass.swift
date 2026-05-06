@@ -68,20 +68,24 @@ enum LG {
     static let blobWarm = Color.dynamic(light: 0xF8C68A, dark: 0xC76A2E, lightAlpha: 0.55, darkAlpha: 0.35)
     static let blobCool = Color.dynamic(light: 0x9DCAD8, dark: 0x4F7589, lightAlpha: 0.55, darkAlpha: 0.45)
 
-    // Foreground / text
-    static let fg       = Color.dynamic(light: 0x2A2722, dark: 0xF4F2EE)
-    static let fg2      = Color.dynamic(light: 0x5C564E, dark: 0xD3CFC9)
-    static let fg3      = Color.dynamic(light: 0x897F70, dark: 0xA5A099)
-    static let fgMute   = Color.dynamic(light: 0xABA39A, dark: 0x807A73)
+    // Foreground / text — bumped contrast so dim labels stay readable on the
+    // glass cards. Light tones run darker; dark tones run brighter.
+    static let fg       = Color.dynamic(light: 0x1B1816, dark: 0xF6F4F0)
+    static let fg2      = Color.dynamic(light: 0x3F3A33, dark: 0xDED9D2)
+    static let fg3      = Color.dynamic(light: 0x665E52, dark: 0xB6B0A6)
+    static let fgMute   = Color.dynamic(light: 0x8C8273, dark: 0x8E867B)
 
     // Lines / dividers
-    static let line     = Color.dynamic(light: 0x2A2722, dark: 0xFFFFFF, lightAlpha: 0.08, darkAlpha: 0.08)
-    static let lineStrong = Color.dynamic(light: 0x2A2722, dark: 0xFFFFFF, lightAlpha: 0.14, darkAlpha: 0.16)
+    static let line     = Color.dynamic(light: 0x2A2722, dark: 0xFFFFFF, lightAlpha: 0.10, darkAlpha: 0.10)
+    static let lineStrong = Color.dynamic(light: 0x2A2722, dark: 0xFFFFFF, lightAlpha: 0.18, darkAlpha: 0.18)
 
-    // Glass surfaces
-    static let glassBg       = Color.dynamic(light: 0xFFFFFF, dark: 0x4A4540, lightAlpha: 0.55, darkAlpha: 0.45)
-    static let glassBgStrong = Color.dynamic(light: 0xFFFFFF, dark: 0x534E48, lightAlpha: 0.72, darkAlpha: 0.65)
-    static let glassBorder   = Color.dynamic(light: 0xFFFFFF, dark: 0xFFFFFF, lightAlpha: 0.65, darkAlpha: 0.12)
+    // Glass surfaces — tuned so text on top of `.ultraThinMaterial` stays
+    // legible. Light fills sit at low opacity (the material itself supplies
+    // the frosted look); dark fills are warmer and more opaque so dim text
+    // doesn't disappear.
+    static let glassBg       = Color.dynamic(light: 0xFFFFFF, dark: 0x3A3530, lightAlpha: 0.18, darkAlpha: 0.55)
+    static let glassBgStrong = Color.dynamic(light: 0xFFFFFF, dark: 0x44403A, lightAlpha: 0.40, darkAlpha: 0.70)
+    static let glassBorder   = Color.dynamic(light: 0xFFFFFF, dark: 0xFFFFFF, lightAlpha: 0.30, darkAlpha: 0.10)
 
     // Accent (logo orange)
     static let accent   = Color(hex: 0xE58D40) // oklch(0.72 0.18 52)
@@ -245,41 +249,25 @@ struct GlassPanel<Content: View>: View {
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(strong ? LG.glassBgStrong : LG.glassBg)
-                    .blendMode(.plusLighter)
-                    .allowsHitTesting(false)
-            )
-            .overlay(
-                tint.map {
+                ZStack {
                     RoundedRectangle(cornerRadius: corner, style: .continuous)
-                        .fill($0)
-                        .allowsHitTesting(false)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .fill(strong ? LG.glassBgStrong : LG.glassBg)
+                    if let tint {
+                        RoundedRectangle(cornerRadius: corner, style: .continuous)
+                            .fill(tint)
+                    }
                 }
+                .allowsHitTesting(false)
             )
             .overlay(
-                // top-light refraction
                 RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [Color.white.opacity(0.35), .clear],
-                            startPoint: .top,
-                            endPoint: .center
-                        )
-                    )
-                    .blendMode(.plusLighter)
+                    .strokeBorder(LG.glassBorder, lineWidth: 1)
                     .allowsHitTesting(false)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .stroke(LG.glassBorder, lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.10), radius: 24, x: 0, y: 12)
-            .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 2)
+            .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
+            .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
 }
 
@@ -321,13 +309,10 @@ struct LGGlassButtonStyle: ButtonStyle {
             .padding(.vertical, compact ? 11 : 14)
             .padding(.horizontal, 18)
             .background(
-                Capsule(style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                Capsule(style: .continuous)
-                    .fill(LG.glassBgStrong)
-                    .blendMode(.plusLighter)
+                ZStack {
+                    Capsule(style: .continuous).fill(.ultraThinMaterial)
+                    Capsule(style: .continuous).fill(LG.glassBgStrong)
+                }
             )
             .overlay(
                 Capsule(style: .continuous)
@@ -450,14 +435,11 @@ struct LGDock: View {
         }
         .padding(8)
         .background(
-            Capsule(style: .continuous)
-                .fill(.ultraThinMaterial)
-        )
-        .overlay(
-            Capsule(style: .continuous)
-                .fill(LG.glassBgStrong)
-                .blendMode(.plusLighter)
-                .allowsHitTesting(false)
+            ZStack {
+                Capsule(style: .continuous).fill(.ultraThinMaterial)
+                Capsule(style: .continuous).fill(LG.glassBgStrong)
+            }
+            .allowsHitTesting(false)
         )
         .overlay(
             Capsule(style: .continuous)
@@ -567,14 +549,13 @@ struct LGTextField: View {
             .padding(.vertical, 13)
             .padding(.horizontal, 16)
             .background(
-                RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
-                    .fill(.ultraThinMaterial)
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
-                    .fill(LG.glassBg)
-                    .blendMode(.plusLighter)
-                    .allowsHitTesting(false)
+                ZStack {
+                    RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                        .fill(LG.glassBg)
+                }
+                .allowsHitTesting(false)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
@@ -644,16 +625,14 @@ struct LGActionCard: View {
                         RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
                             .fill(LG.accentGradient)
                     } else {
-                        RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
-                            .fill(.ultraThinMaterial)
+                        ZStack {
+                            RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
+                                .fill(.ultraThinMaterial)
+                            RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
+                                .fill(LG.glassBg)
+                        }
                     }
                 }
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
-                    .fill(tone == .accent ? Color.clear : LG.glassBg)
-                    .blendMode(.plusLighter)
-                    .allowsHitTesting(false)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
