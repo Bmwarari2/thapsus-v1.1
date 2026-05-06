@@ -29,7 +29,7 @@ enum Brand {
 }
 
 enum Layout {
-    static let cardCorner: CGFloat = 22
+    static let cardCorner: CGFloat = 28
     static let chipCorner: CGFloat = 18
     static let fabSize: CGFloat = 60
     static let modalCorner: CGFloat = 30
@@ -55,22 +55,17 @@ extension Font {
 
 // MARK: - Backgrounds
 
-/// Full-bleed cream→peach gradient. Auto-adapts in dark mode (defined in the
-/// asset catalog colour entries themselves).
+/// Full-bleed liquid-glass background — radial beige→mint gradient with two
+/// ambient color blobs. Light mode gets warm beige + mint blue; dark mode
+/// gets warm charcoal + cool slate. Implementation lives in
+/// `LiquidGlassBackground` (see LiquidGlass.swift).
 struct AppBackground: View {
-    var body: some View {
-        LinearGradient(
-            colors: [Brand.cream, Brand.peach],
-            startPoint: .top,
-            endPoint: .bottom
-        )
-        .ignoresSafeArea()
-    }
+    var body: some View { LiquidGlassBackground() }
 }
 
 extension View {
-    /// Drop-in replacement for `.background(...)` that applies the brand gradient
-    /// behind the screen content and is happy to live behind a NavigationStack.
+    /// Drop-in replacement for `.background(...)` that applies the liquid-glass
+    /// background behind the screen content. Safe behind a NavigationStack.
     func appBackground() -> some View {
         background(AppBackground())
     }
@@ -78,9 +73,9 @@ extension View {
 
 // MARK: - Content cards (NOT glass — material/ink)
 
-/// Soft material card for dense content (forms, lists, breakdowns).
-/// Uses `.regularMaterial` so the gradient bleeds through subtly without the
-/// stacking-blur hit that Liquid Glass would cost on every row.
+/// Soft glass card for dense content (forms, lists, breakdowns).
+/// Now backed by the v1.1 liquid-glass surface: ultraThinMaterial + a tinted
+/// translucent fill, edge-light refraction, and a soft drop shadow.
 struct SoftCard<Content: View>: View {
     var tint: Color? = nil
     @ViewBuilder let content: () -> Content
@@ -90,23 +85,25 @@ struct SoftCard<Content: View>: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                    .fill(.regularMaterial)
+                ZStack {
+                    RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
+                        .fill(LG.glassBg)
+                    if let tint {
+                        RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
+                            .fill(tint)
+                    }
+                }
+                .allowsHitTesting(false)
             )
             .overlay(
-                // Tint is purely decorative — without `.allowsHitTesting(false)`,
-                // the filled rectangle swallows every tap inside the card,
-                // which is how the customer Calculator's Phone/Laptop toggles
-                // ended up unresponsive (audit follow-up 2026-04-30).
                 RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                    .fill(tint ?? .clear)
+                    .strokeBorder(LG.glassBorder, lineWidth: 1)
                     .allowsHitTesting(false)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: Layout.cardCorner, style: .continuous)
-                    .stroke(Brand.ink.opacity(0.06), lineWidth: 1)
-                    .allowsHitTesting(false)
-            )
+            .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
+            .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
 }
 
@@ -409,39 +406,57 @@ struct GlassCard<Content: View>: View {
 
 // MARK: - Primary action button
 
-/// Dark, editorial primary CTA — solid Brand.ink with cream text, matches the
-/// webapp "Track" / "Get Quote" buttons.
+/// Primary CTA — orange gradient capsule with a soft accent glow. Ink + cream
+/// is preserved as a fallback via `solid: true` for places where we want a
+/// dark editorial CTA (sign-out, destructive actions).
 struct InkButtonStyle: ButtonStyle {
+    var solid: Bool = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
-            .foregroundStyle(Brand.cream)
+            .font(.body(15, weight: .bold))
+            .foregroundStyle(solid ? Brand.cream : Color.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Brand.ink)
+                Capsule(style: .continuous)
+                    .fill(solid ? AnyShapeStyle(Brand.ink) : AnyShapeStyle(LG.accentGradient))
             )
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+            .overlay(
+                Capsule(style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.30), lineWidth: 1)
+                    .blendMode(.plusLighter)
+            )
+            .shadow(color: solid ? .black.opacity(0.18) : LG.accent2.opacity(0.40), radius: 18, x: 0, y: 8)
+            .shadow(color: solid ? .black.opacity(0.06) : LG.accent2.opacity(0.20), radius: 4, x: 0, y: 2)
+            .opacity(configuration.isPressed ? 0.92 : 1)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }
 
-/// Vibrant orange CTA — secondary CTA / "Copy Address" / "Get a quote" action.
+/// Vibrant orange CTA — historically the brighter brand button. Now points
+/// at the same accent-gradient capsule as InkButtonStyle so the two are
+/// visually consistent (the design system collapsed to a single primary CTA).
 struct OrangeButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.headline)
+            .font(.body(15, weight: .bold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(
-                RoundedRectangle(cornerRadius: 16, style: .continuous)
-                    .fill(Brand.orange)
+                Capsule(style: .continuous)
+                    .fill(LG.accentGradient)
             )
-            .opacity(configuration.isPressed ? 0.85 : 1)
-            .scaleEffect(configuration.isPressed ? 0.98 : 1)
-            .animation(.easeOut(duration: 0.1), value: configuration.isPressed)
+            .overlay(
+                Capsule(style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.30), lineWidth: 1)
+                    .blendMode(.plusLighter)
+            )
+            .shadow(color: LG.accent2.opacity(0.40), radius: 18, x: 0, y: 8)
+            .shadow(color: LG.accent2.opacity(0.20), radius: 4, x: 0, y: 2)
+            .opacity(configuration.isPressed ? 0.92 : 1)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
     }
 }

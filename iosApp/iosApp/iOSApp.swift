@@ -8,6 +8,7 @@ import ThapsusShared
 @main
 struct ThapsusCargoApp: App {
     @State private var environment = AppEnvironment()
+    @State private var appearance = AppearanceSettings()
 
     init() {
         let info = Bundle.main.infoDictionary
@@ -55,6 +56,8 @@ struct ThapsusCargoApp: App {
         WindowGroup {
             RootView()
                 .environment(environment)
+                .environment(appearance)
+                .preferredColorScheme(appearance.theme.colorScheme)
                 .tint(Brand.orange)
         }
     }

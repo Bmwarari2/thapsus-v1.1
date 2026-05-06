@@ -1,6 +1,7 @@
 // SignInView.swift
-// Real Supabase Auth flow. Phase 3 binds this to AuthViewModel; the dev role-pick
-// is gone — sign in or create an account.
+// Liquid-glass redesign of the sign-in front door. Centered orange logo block,
+// "Welcome back" headline, glass card with email/password fields, primary CTA,
+// secondary "Create account" toggle. Forgot-password link is preserved.
 
 import SwiftUI
 import ThapsusShared
@@ -17,8 +18,6 @@ struct SignInView: View {
     @State private var formObserver: StateFlowObserver<AuthViewModelFormState>?
     @State private var presentingForgot: Bool = false
 
-    /// Country list mirrors the webapp dropdown — keep the pair in sync when
-    /// adding a new market. The empty entry lets users skip the field.
     private let countries: [(code: String, label: String)] = [
         ("", "Country (optional)"),
         ("KE", "Kenya"),
@@ -32,108 +31,152 @@ struct SignInView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 24) {
-                VStack(alignment: .leading, spacing: 16) {
-                    BrandWordmark(size: .medium)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    EyebrowPill(label: "Welcome", systemImage: "airplane.departure")
-                    Text("UK → Kenya,\nin one weekly flight.")
-                        .font(.editorialDisplay)
-                        .foregroundStyle(Brand.ink)
-                        .lineLimit(2)
-                    Text("Sign in to track your shipments and manage your wallet.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.top, 40)
+            VStack(spacing: 0) {
+                heroBlock
+                    .padding(.top, 60)
+                    .padding(.bottom, 28)
 
-                SoftCard {
-                    VStack(spacing: 14) {
-                        if isSignUp {
-                            inputField("Full name", text: $fullName)
-                                .textInputAutocapitalization(.words)
-                        }
-
-                        inputField("Email", text: $email)
-                            .keyboardType(.emailAddress)
-                            .textInputAutocapitalization(.never)
-
-                        if isSignUp {
-                            inputField("Phone (optional)", text: $phone)
-                                .keyboardType(.phonePad)
-                            countryPicker
-                        }
-
-                        SecureField("Password", text: $password)
-                            .textFieldStyle(.plain)
-                            .padding(12)
-                            .background(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .fill(Brand.cream.opacity(0.6))
-                            )
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                                    .stroke(Brand.ink.opacity(0.08), lineWidth: 1)
-                            )
-
-                        if let busy = formObserver?.value, busy is AuthViewModelFormStateSubmitting {
-                            ProgressView().tint(Brand.ink)
-                                .padding(.vertical, 4)
-                        } else {
-                            Button(action: submit) {
-                                Text(isSignUp ? "Create account" : "Sign in")
-                            }
-                            .buttonStyle(InkButtonStyle())
-                        }
-
-                        Button(isSignUp ? "Already have an account? Sign in" : "Create an account") {
-                            isSignUp.toggle()
-                        }
-                        .font(.footnote)
-                        .foregroundStyle(Brand.orange)
-
-                        if !isSignUp {
-                            // Audit §2.6 / S0-10: forgot-password used to be
-                            // reachable only from the authenticated profile
-                            // screen, locking out anyone who'd actually
-                            // forgotten their credentials. The reset email is
-                            // sent by /auth/forgot-password — the deep-link
-                            // handler for /reset/<token> is a separate
-                            // follow-up that needs server AASA work.
-                            Button("Forgot password?") { presentingForgot = true }
-                                .font(.footnote)
-                                .foregroundStyle(.secondary)
-                        }
-                    }
-                }
+                formCard
+                    .padding(.horizontal, 18)
 
                 if let err = formObserver?.value as? AuthViewModelFormStateError {
-                    ErrorBanner(title: "Couldn't sign you in", message: err.message)
+                    LGStatusBanner(tone: .err, title: "Couldn't sign you in", message: err.message)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 14)
                 } else if let sent = formObserver?.value as? AuthViewModelFormStateSent {
-                    CalloutBanner(
-                        icon: "envelope.badge",
-                        title: "Check your inbox",
-                        message: sent.message
-                    )
+                    LGStatusBanner(tone: .info, title: "Check your inbox", message: sent.message)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 14)
                 }
 
-                HowItWorksView()
-                    .padding(.top, 16)
+                HStack(spacing: 6) {
+                    Text(isSignUp ? "Already have an account?" : "New here?")
+                        .foregroundStyle(LG.fg3)
+                    Button(isSignUp ? "Sign in" : "Create account") {
+                        withAnimation(LG.animation) { isSignUp.toggle() }
+                    }
+                    .foregroundStyle(LG.accent2)
+                    .fontWeight(.bold)
+                }
+                .font(.body(14, weight: .medium))
+                .padding(.top, 28)
             }
-            .padding(.horizontal, 20)
             .padding(.bottom, 40)
         }
         .scrollContentBackground(.hidden)
-        .liquidBackdrop()
+        .background(LiquidGlassBackground())
         .sheet(isPresented: $presentingForgot) {
             NavigationStack { ForgotPasswordView() }
         }
         .task {
             env.bootstrap()
             guard let vm = env.authVM, formObserver == nil else { return }
-            formObserver = StateFlowObserver(initial: vm.form.value) {
-                vm.form
+            formObserver = StateFlowObserver(initial: vm.form.value) { vm.form }
+        }
+    }
+
+    private var heroBlock: some View {
+        VStack(spacing: 24) {
+            LGLogoBlock(size: 72)
+            VStack(spacing: 8) {
+                Text(isSignUp ? "Create account" : "Welcome back")
+                    .font(.display(30, weight: .heavy))
+                    .foregroundStyle(LG.fg)
+                Text(isSignUp
+                     ? "Sign up to start shipping with Thapsus."
+                     : "Sign in to your Thapsus Cargo account")
+                    .font(.body(15, weight: .medium))
+                    .foregroundStyle(LG.fg3)
+                    .multilineTextAlignment(.center)
+            }
+        }
+    }
+
+    private var formCard: some View {
+        GlassPanel(corner: LG.Radius.xl, padding: 18) {
+            VStack(spacing: 12) {
+                if isSignUp {
+                    LGTextField(label: "Full name", placeholder: "Alex Mwangi",
+                                text: $fullName, capitalization: .words)
+                }
+
+                LGTextField(label: "Email", placeholder: "you@email.com",
+                            text: $email, keyboard: .emailAddress, capitalization: .never)
+
+                if isSignUp {
+                    LGTextField(label: "Phone (optional)", placeholder: "+254…",
+                                text: $phone, keyboard: .phonePad, capitalization: .never)
+                    countryPicker
+                }
+
+                LGTextField(label: "Password", placeholder: "••••••••",
+                            text: $password, capitalization: .never, isSecure: true)
+
+                if !isSignUp {
+                    HStack {
+                        Spacer()
+                        Button("Forgot password?") { presentingForgot = true }
+                            .font(.body(13, weight: .semibold))
+                            .foregroundStyle(LG.accent2)
+                    }
+                    .padding(.top, -2)
+                }
+
+                if let busy = formObserver?.value, busy is AuthViewModelFormStateSubmitting {
+                    HStack { Spacer(); ProgressView().tint(LG.accent); Spacer() }
+                        .padding(.vertical, 8)
+                } else {
+                    Button(action: submit) {
+                        HStack(spacing: 6) {
+                            Text(isSignUp ? "Create account" : "Sign in")
+                            Image(systemName: "arrow.right")
+                                .font(.system(size: 13, weight: .bold))
+                        }
+                    }
+                    .buttonStyle(LGPrimaryButtonStyle())
+                    .padding(.top, 6)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var countryPicker: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("COUNTRY")
+                .font(.body(11, weight: .bold))
+                .tracking(0.6)
+                .foregroundStyle(LG.fg3)
+            Menu {
+                ForEach(countries, id: \.code) { c in
+                    Button(c.label) { country = c.code }
+                }
+            } label: {
+                HStack {
+                    Text(countries.first { $0.code == country }?.label ?? "Country (optional)")
+                        .foregroundStyle(country.isEmpty ? LG.fgMute : LG.fg)
+                    Spacer()
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(LG.fgMute)
+                }
+                .font(.body(15, weight: .medium))
+                .padding(.vertical, 13)
+                .padding(.horizontal, 16)
+                .background(
+                    RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                        .fill(LG.glassBg)
+                        .blendMode(.plusLighter)
+                        .allowsHitTesting(false)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                        .strokeBorder(LG.glassBorder, lineWidth: 1)
+                )
             }
         }
     }
@@ -141,9 +184,6 @@ struct SignInView: View {
     private func submit() {
         guard let vm = env.authVM else { return }
         if isSignUp {
-            // Forward optional fields to AuthRepository; server's RegisterRequest
-            // accepts name/phone/country_of_residence, used to populate the
-            // public.users row + future M-Pesa SMS / customs declarations.
             vm.signUp(
                 email: email,
                 password: password,
@@ -155,40 +195,58 @@ struct SignInView: View {
             vm.signIn(email: email, password: password)
         }
     }
+}
 
-    @ViewBuilder
-    private func inputField(_ placeholder: String, text: Binding<String>) -> some View {
-        TextField(placeholder, text: text)
-            .textFieldStyle(.plain)
-            .padding(12)
-            .background(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(Brand.cream.opacity(0.6))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(Brand.ink.opacity(0.08), lineWidth: 1)
-            )
-    }
+/// Glass-tinted status banner used by sign-in (and other forms) for inline
+/// success / error feedback that doesn't need a sheet.
+struct LGStatusBanner: View {
+    let tone: PillTone
+    let title: String
+    let message: String
 
-    @ViewBuilder
-    private var countryPicker: some View {
-        Picker("Country", selection: $country) {
-            ForEach(countries, id: \.code) { c in
-                Text(c.label).tag(c.code)
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: icon)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(toneColor)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title)
+                    .font(.body(14, weight: .bold))
+                    .foregroundStyle(LG.fg)
+                Text(message)
+                    .font(.body(13, weight: .regular))
+                    .foregroundStyle(LG.fg2)
             }
+            Spacer()
         }
-        .pickerStyle(.menu)
-        .tint(Brand.ink)
-        .padding(12)
+        .padding(14)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Brand.cream.opacity(0.6))
+            RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                .fill(toneColor.opacity(0.14))
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Brand.ink.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: LG.Radius.lg, style: .continuous)
+                .strokeBorder(toneColor.opacity(0.30), lineWidth: 1)
         )
+    }
+
+    private var icon: String {
+        switch tone {
+        case .err: return "exclamationmark.triangle.fill"
+        case .ok: return "checkmark.circle.fill"
+        case .warn: return "exclamationmark.circle.fill"
+        case .info, .accent, .neutral: return "info.circle.fill"
+        }
+    }
+    private var toneColor: Color {
+        switch tone {
+        case .err: return LG.err
+        case .ok: return LG.ok
+        case .warn: return LG.warn
+        case .info: return LG.info
+        case .accent: return LG.accent2
+        case .neutral: return LG.fg3
+        }
     }
 }

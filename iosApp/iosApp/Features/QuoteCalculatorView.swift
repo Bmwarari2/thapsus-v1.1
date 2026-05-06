@@ -1,12 +1,7 @@
 // QuoteCalculatorView.swift
-// Customer-facing shipping calculator. Calls the same QuoteEngine the server
-// uses (via QuoteViewModel) so the number a customer sees here matches what
-// they'll be charged at intake.
-//
-// Adds a dedicated "Electronics & Special Handling" card with toggles for the
-// two surcharges customers most often forget about (phone £75, laptop £65).
-// These are shown in the breakdown and added to the displayed total — the same
-// surcharge is enforced server-side at intake.
+// Liquid-glass redesign of the customer-facing shipping calculator.
+// Dimensions card (steppers via mono number + stepper) · surcharges card
+// with glass toggles · hero quote card with monospaced total.
 
 import SwiftUI
 import ThapsusShared
@@ -35,42 +30,39 @@ struct QuoteCalculatorView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                EditorialHeader(
-                    eyebrow: "What will it cost?",
-                    title: "Shipping\nCalculator",
-                    subtitle: "Estimate before you buy. Same engine as our intake desk."
-                )
-
-                CalloutBanner(
-                    icon: "bolt.heart.fill",
-                    title: "Electronics & Special Handling",
-                    message: "Phones, laptops, and lithium-cell devices need extra screening — toggle below so your quote reflects the real handling fee."
-                )
+            VStack(alignment: .leading, spacing: 14) {
+                Text("Same engine that prices your final shipment.")
+                    .font(.body(14, weight: .medium))
+                    .foregroundStyle(LG.fg3)
+                    .padding(.top, 4)
+                    .padding(.bottom, 4)
 
                 dimensionsCard
-                electronicsCard
+                surchargesCard
 
                 Button(action: compute) {
-                    Text("Calculate")
+                    HStack(spacing: 6) {
+                        Text("Calculate")
+                        Image(systemName: "arrow.right")
+                            .font(.system(size: 13, weight: .bold))
+                    }
                 }
-                .buttonStyle(InkButtonStyle())
+                .buttonStyle(LGPrimaryButtonStyle())
 
                 if let q = quoteObserver?.value {
                     quoteCard(q)
                 }
                 if let error = errorObserver?.value ?? nil {
-                    ErrorBanner(title: "Couldn't price", message: error)
+                    LGStatusBanner(tone: .err, title: "Couldn't price", message: error)
                 }
-
-                Color.clear.frame(height: 24)
             }
-            .padding(20)
+            .padding(.horizontal, 18)
+            .padding(.bottom, 100)
         }
-        .navigationTitle("Calculator")
+        .navigationTitle("Quote")
         .glassNavigationBar()
         .scrollContentBackground(.hidden)
-        .appBackground()
+        .background(LiquidGlassBackground())
         .task {
             guard vm == nil else { return }
             let v = ThapsusSdk.shared.quoteViewModel()
@@ -82,40 +74,90 @@ struct QuoteCalculatorView: View {
         .onDisappear { vm?.clear(); vm = nil; quoteObserver = nil; errorObserver = nil }
     }
 
+    // MARK: - Dimensions
+
     @ViewBuilder
     private var dimensionsCard: some View {
-        SoftCard {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Parcel dimensions").font(.headline).foregroundStyle(Brand.ink)
-                stepper("Length", suffix: "cm", value: $lengthCm, range: 1...300)
-                stepper("Width", suffix: "cm", value: $widthCm, range: 1...300)
-                stepper("Height", suffix: "cm", value: $heightCm, range: 1...300)
-                stepper("Mass", suffix: "kg", value: $actualKg, range: 0.1...80, step: 0.1, format: "%.1f")
+        GlassPanel(corner: LG.Radius.xl, padding: 18) {
+            VStack(spacing: 0) {
+                dimRow(label: "Weight", suffix: "kg", value: $actualKg, range: 0.1...80, step: 0.1, format: "%.2f")
+                divider
+                dimRow(label: "Length", suffix: "cm", value: $lengthCm, range: 1...300, step: 1, format: "%.0f")
+                divider
+                HStack(spacing: 12) {
+                    dimRow(label: "Width", suffix: "cm", value: $widthCm, range: 1...300, step: 1, format: "%.0f", inline: true)
+                    dimRow(label: "Height", suffix: "cm", value: $heightCm, range: 1...300, step: 1, format: "%.0f", inline: true)
+                }
+                .padding(.vertical, 6)
             }
         }
     }
 
-    @ViewBuilder
-    private var electronicsCard: some View {
-        SoftCard(tint: Brand.orange.opacity(0.06)) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack(spacing: 8) {
-                    Image(systemName: "cpu.fill").foregroundStyle(Brand.orange)
-                    Text("Special handling").font(.headline).foregroundStyle(Brand.ink)
-                }
+    private var divider: some View {
+        Rectangle().fill(LG.line).frame(height: 1).padding(.vertical, 12)
+    }
 
-                handlingToggle(
-                    title: "Phone",
-                    subtitle: "Lithium-cell screening + foam pack",
-                    price: "+£75",
-                    icon: "iphone",
+    @ViewBuilder
+    private func dimRow(
+        label: String,
+        suffix: String,
+        value: Binding<Double>,
+        range: ClosedRange<Double>,
+        step: Double,
+        format: String,
+        inline: Bool = false
+    ) -> some View {
+        if inline {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(label.uppercased())
+                    .font(.body(11, weight: .bold))
+                    .tracking(0.6)
+                    .foregroundStyle(LG.fg3)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(String(format: format, value.wrappedValue))
+                        .font(.mono(22, weight: .bold))
+                        .foregroundStyle(LG.fg)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text(suffix)
+                        .font(.mono(12, weight: .medium))
+                        .foregroundStyle(LG.fg3)
+                    Stepper("", value: value, in: range, step: step).labelsHidden()
+                }
+            }
+        } else {
+            HStack {
+                Text(label)
+                    .font(.body(13.5, weight: .semibold))
+                    .foregroundStyle(LG.fg2)
+                Spacer()
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
+                    Text(String(format: format, value.wrappedValue))
+                        .font(.mono(22, weight: .bold))
+                        .foregroundStyle(LG.fg)
+                    Text(suffix)
+                        .font(.mono(12, weight: .medium))
+                        .foregroundStyle(LG.fg3)
+                }
+                Stepper("", value: value, in: range, step: step).labelsHidden()
+            }
+        }
+    }
+
+    // MARK: - Surcharges
+
+    @ViewBuilder
+    private var surchargesCard: some View {
+        GlassPanel(corner: LG.Radius.xl, padding: 16) {
+            VStack(spacing: 0) {
+                surchargeRow(
+                    title: "Phone surcharge",
+                    subtitle: "Lithium battery handling · £75",
                     isOn: $includesPhone
                 )
-                handlingToggle(
-                    title: "Laptop",
-                    subtitle: "Cushioned crate + reinforced corners",
-                    price: "+£65",
-                    icon: "laptopcomputer",
+                divider
+                surchargeRow(
+                    title: "Laptop surcharge",
+                    subtitle: "Lithium battery handling · £65",
                     isOn: $includesLaptop
                 )
             }
@@ -123,137 +165,75 @@ struct QuoteCalculatorView: View {
     }
 
     @ViewBuilder
-    private func handlingToggle(
-        title: String,
-        subtitle: String,
-        price: String,
-        icon: String,
-        isOn: Binding<Bool>
-    ) -> some View {
-        Toggle(isOn: isOn) {
-            HStack(spacing: 12) {
-                Image(systemName: icon)
-                    .font(.title3)
-                    .foregroundStyle(Brand.cream)
-                    .frame(width: 38, height: 38)
-                    .background(
-                        RoundedRectangle(cornerRadius: 10, style: .continuous)
-                            .fill(Brand.ink)
-                    )
-                VStack(alignment: .leading, spacing: 2) {
-                    HStack {
-                        Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(Brand.ink)
-                        Text(price)
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(Brand.orange)
+    private func surchargeRow(title: String, subtitle: String, isOn: Binding<Bool>) -> some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.body(14, weight: .semibold))
+                    .foregroundStyle(LG.fg)
+                Text(subtitle)
+                    .font(.body(12.5, weight: .medium))
+                    .foregroundStyle(LG.fg3)
+            }
+            Spacer()
+            LGToggle(isOn: isOn)
+        }
+    }
+
+    // MARK: - Quote hero
+
+    @ViewBuilder
+    private func quoteCard(_ q: QuoteEngine.Quote) -> some View {
+        let surchargeMajor = Double(surchargePence) / 100
+        let totalWithSurchargeMajor = q.total.major + surchargeMajor
+        GlassPanel(corner: LG.Radius.xl, padding: 20, tint: LG.accentSoft) {
+            VStack(alignment: .leading, spacing: 14) {
+                LGEyebrow(text: "Estimated total", tone: .accent)
+                Text(String(format: "£%.2f", totalWithSurchargeMajor))
+                    .font(.mono(38, weight: .bold))
+                    .foregroundStyle(LG.fg)
+                    .contentTransition(.numericText())
+
+                VStack(spacing: 6) {
+                    line("Chargeable weight", String(format: "%.2f kg", q.volumetric.chargeableKg))
+                    line("Base shipping", String(format: "£%.2f", q.freight.major))
+                    if q.handling.major > 0 {
+                        line("UK handling", String(format: "£%.2f", q.handling.major))
                     }
-                    Text(subtitle).font(.caption).foregroundStyle(.secondary)
+                    if q.perKgFee.major > 0 {
+                        line("Trunking", String(format: "£%.2f", q.perKgFee.major))
+                    }
+                    if includesPhone { line("Phone surcharge", "£75.00", emphasis: true) }
+                    if includesLaptop { line("Laptop surcharge", "£65.00", emphasis: true) }
+                    if q.processingFee.major > 0 {
+                        line("Card processing", String(format: "£%.2f", q.processingFee.major))
+                    }
                 }
             }
         }
-        .toggleStyle(SwitchToggleStyle(tint: Brand.orange))
+    }
+
+    private func line(_ k: String, _ v: String, emphasis: Bool = false) -> some View {
+        HStack {
+            Text(k)
+                .font(.body(13, weight: .medium))
+                .foregroundStyle(emphasis ? LG.accent2 : LG.fg3)
+            Spacer()
+            Text(v)
+                .font(.mono(13, weight: .semibold))
+                .foregroundStyle(emphasis ? LG.accent2 : LG.fg)
+        }
     }
 
     private func compute() {
         let dims = ParcelDimensions(
             lengthCm: lengthCm, widthCm: widthCm, heightCm: heightCm, actualKg: actualKg
         )
-        // Insurance offering removed 2026-04-30 — pass `.standard` (no premium)
-        // so the QuoteEngine signature stays satisfied without surfacing tiers.
         vm?.computeQuote(
             dims: dims,
             channel: channel,
             insurance: InsuranceTier.standard,
             declaredValuePence: declaredValuePence
         )
-    }
-
-    @ViewBuilder
-    private func stepper(
-        _ label: String,
-        suffix: String,
-        value: Binding<Double>,
-        range: ClosedRange<Double>,
-        step: Double = 1,
-        format: String = "%.0f"
-    ) -> some View {
-        HStack {
-            Text(label).foregroundStyle(Brand.ink)
-            Spacer()
-            HStack(spacing: 6) {
-                Text(String(format: format, value.wrappedValue))
-                    .font(.subheadline.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(Brand.ink)
-                    .frame(minWidth: 48, alignment: .trailing)
-                Text(suffix).font(.caption).foregroundStyle(.secondary)
-            }
-            Stepper("", value: value, in: range, step: step).labelsHidden()
-        }
-    }
-
-    @ViewBuilder
-    private func quoteCard(_ q: QuoteEngine.Quote) -> some View {
-        let surchargeMajor = Double(surchargePence) / 100
-        let totalWithSurchargeMajor = q.total.major + surchargeMajor
-
-        InkCard {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack {
-                    Text("Total").font(.eyebrow).foregroundStyle(Brand.cream.opacity(0.7))
-                    Spacer()
-                    Text("Inc. VAT").font(.caption).foregroundStyle(Brand.cream.opacity(0.5))
-                }
-                Text(String(format: "£%.2f", totalWithSurchargeMajor))
-                    .font(.system(size: 48, weight: .bold, design: .rounded))
-                    .foregroundStyle(Brand.cream)
-                    .contentTransition(.numericText())
-
-                Divider().background(Brand.cream.opacity(0.18))
-
-                line("Chargeable", String(format: "%.2f kg", q.volumetric.chargeableKg))
-                line("Freight", String(format: "£%.2f", q.freight.major))
-                line("UK handling", String(format: "£%.2f", q.handling.major))
-
-                // Trunking (per-kg fee). Hidden when zero so the breakdown
-                // stays tidy for the common case, but rendered when set so
-                // the line items reconcile against the headline total — the
-                // 2026-04-30 customer-facing bug was a £75 trunking fee
-                // hiding inside `q.perKgFee` without ever rendering, leaving
-                // the customer staring at a £104 total backed by a £29
-                // visible breakdown.
-                if q.perKgFee.major > 0 {
-                    line("Trunking", String(format: "£%.2f", q.perKgFee.major))
-                }
-
-                // Insurance offering removed 2026-04-30 (S1-0); we still
-                // surface a non-zero premium if the engine somehow returns
-                // one so the totals always reconcile.
-                if q.insurancePremium.major > 0 {
-                    line("Insurance", String(format: "£%.2f", q.insurancePremium.major))
-                }
-
-                if includesPhone {
-                    line("Phone surcharge", "+£75.00", emphasis: true)
-                }
-                if includesLaptop {
-                    line("Laptop surcharge", "+£65.00", emphasis: true)
-                }
-
-                line("Card processing", String(format: "£%.2f", q.processingFee.major))
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func line(_ k: String, _ v: String, emphasis: Bool = false) -> some View {
-        HStack {
-            Text(k)
-                .font(.subheadline)
-                .foregroundStyle(emphasis ? Brand.orange : Brand.cream.opacity(0.7))
-            Spacer()
-            Text(v)
-                .font(.subheadline.monospacedDigit().weight(.semibold))
-                .foregroundStyle(emphasis ? Brand.orange : Brand.cream)
-        }
     }
 }

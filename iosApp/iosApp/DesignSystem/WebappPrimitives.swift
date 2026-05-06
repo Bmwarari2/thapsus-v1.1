@@ -47,24 +47,12 @@ struct MorphingBlob: View {
     }
 }
 
-/// Pre-arranged blob backdrop matching the webapp's hero pages (orange + blue).
+/// Liquid-glass backdrop for hero pages. Delegates to LiquidGlassBackground
+/// (gradient + ambient blobs) so the whole app shares one background system.
+/// The legacy MorphingBlob animation is dropped — it added three offscreen
+/// passes per frame and clashed with the new static gradient.
 struct LiquidBackdrop: View {
-    var body: some View {
-        ZStack {
-            AppBackground()
-            GeometryReader { geo in
-                MorphingBlob(color: Color.blue.opacity(0.35), diameter: geo.size.width * 0.95)
-                    .position(x: geo.size.width * 0.0, y: geo.size.height * 0.10)
-                MorphingBlob(color: Brand.orange.opacity(0.45), diameter: geo.size.width * 0.85, duration: 18)
-                    .position(x: geo.size.width * 1.0, y: geo.size.height * 0.85)
-            }
-            // Soft frost on top so content stays legible.
-            Color.white.opacity(0.18)
-                .background(.ultraThinMaterial)
-                .ignoresSafeArea()
-        }
-        .ignoresSafeArea()
-    }
+    var body: some View { LiquidGlassBackground() }
 }
 
 extension View {
@@ -81,7 +69,7 @@ extension View {
 /// `bg-white/40 backdrop-blur-2xl rounded-[2.5rem] border border-white/40`.
 /// Use it as the primary surface for marketing-style customer screens.
 struct CrystalCard<Content: View>: View {
-    var corner: CGFloat = 28
+    var corner: CGFloat = LG.Radius.xl
     @ViewBuilder let content: () -> Content
 
     var body: some View {
@@ -89,26 +77,21 @@ struct CrystalCard<Content: View>: View {
             .padding(20)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(.ultraThinMaterial)
+                ZStack {
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: corner, style: .continuous)
+                        .fill(LG.glassBg)
+                }
+                .allowsHitTesting(false)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .fill(
-                        LinearGradient(
-                            colors: [.white.opacity(0.35), .clear],
-                            startPoint: .topLeading,
-                            endPoint: .bottomTrailing
-                        )
-                    )
-                    .blendMode(.plusLighter)
+                    .strokeBorder(LG.glassBorder, lineWidth: 1)
                     .allowsHitTesting(false)
             )
-            .overlay(
-                RoundedRectangle(cornerRadius: corner, style: .continuous)
-                    .stroke(.white.opacity(0.55), lineWidth: 1)
-            )
-            .shadow(color: .black.opacity(0.06), radius: 24, x: 0, y: 10)
+            .shadow(color: .black.opacity(0.08), radius: 18, x: 0, y: 10)
+            .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
     }
 }
 
