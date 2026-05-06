@@ -352,19 +352,62 @@ private struct ShippingIdInputSheet: View {
     let onSubmit: (String) -> Void
     let onCancel: () -> Void
 
-    @State private var text: String = ""
+    @State private var manualText: String = ""
+    @State private var recent: [ConsolidationDto] = []
+    @State private var loading: Bool = false
+    @State private var errorMessage: String?
+    @State private var selectedId: String?
+
+    private var resolvedId: String {
+        if let selectedId, !selectedId.isEmpty { return selectedId }
+        return manualText.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
 
     var body: some View {
         NavigationStack {
             Form {
-                Section("Shipping consolidation ID") {
-                    TextField("uuid", text: $text)
+                Section {
+                    if loading && recent.isEmpty {
+                        HStack { Spacer(); ProgressView(); Spacer() }
+                    } else if let errorMessage {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Couldn't load recent shipping consolidations")
+                                .font(.subheadline.weight(.semibold))
+                            Text(errorMessage)
+                                .font(.caption).foregroundStyle(.secondary)
+                            Button("Retry") { Task { await load() } }
+                                .font(.caption.weight(.semibold))
+                        }
+                    } else if recent.isEmpty {
+                        Text("No open or recent shipping consolidations yet. Open one from the operator board, or paste a uuid below.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    } else {
+                        ForEach(recent, id: \.id) { c in
+                            Button { select(c.id) } label: {
+                                shippingRow(c, selected: selectedId == c.id)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                } header: {
+                    Text("Recent shipping consolidations")
+                } footer: {
+                    Text("Shows the 5 most recent. Tap one to attach this customer consolidation to it.")
+                        .font(.caption2)
+                }
+
+                Section {
+                    TextField("uuid", text: $manualText)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                }
-                Section {
-                    Text("Find the id from /api/consolidations or the operator board.")
-                        .font(.caption).foregroundStyle(.secondary)
+                        .onChange(of: manualText) { _, _ in
+                            if !manualText.isEmpty { selectedId = nil }
+                        }
+                } header: {
+                    Text("Or paste an id")
+                } footer: {
+                    Text("Use this if the consolidation isn't in the recent list above.")
+                        .font(.caption2)
                 }
             }
             .navigationTitle(title)
@@ -372,12 +415,86 @@ private struct ShippingIdInputSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel", action: onCancel) }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Attach") {
-                        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
-                        if !trimmed.isEmpty { onSubmit(trimmed) }
+                        let id = resolvedId
+                        if !id.isEmpty { onSubmit(id) }
                     }
-                    .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .disabled(resolvedId.isEmpty)
                 }
             }
+            .task { await load() }
         }
+    }
+
+    private func shippingRow(_ c: ConsolidationDto, selected: Bool) -> some View {
+        HStack(alignment: .center, spacing: 12) {
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Text(c.weekStart)
+                        .font(.subheadline.weight(.semibold))
+                    statusBadge(c.status)
+                }
+                Text(c.id)
+                    .font(.system(.caption, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                Text("\(Int(c.totalParcels)) parcel\(c.totalParcels == 1 ? "" : "s") · cut-off \(formatDate(c.cutoffAt))")
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
+            Spacer()
+            Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                .foregroundStyle(selected ? Brand.orange : .secondary)
+        }
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private func statusBadge(_ status: ConsolidationStatus) -> some View {
+        let (label, color): (String, Color) = {
+            switch status {
+            case .open:           return ("OPEN", .green)
+            case .cutoffLocked:   return ("LOCKED", .orange)
+            case .manifested:     return ("MANIFESTED", .orange)
+            case .handedToTudor:  return ("HANDED OFF", .blue)
+            case .inTransit:      return ("IN TRANSIT", .blue)
+            case .jkiaArrived:    return ("ARRIVED", .blue)
+            case .cleared:        return ("CLEARED", .green)
+            case .closed:         return ("CLOSED", .gray)
+            default:              return ("\(status)".uppercased(), .gray)
+            }
+        }()
+        Text(label)
+            .font(.system(size: 9, weight: .heavy)).tracking(1.5)
+            .foregroundStyle(color)
+            .padding(.horizontal, 6).padding(.vertical, 2)
+            .background(Capsule().fill(color.opacity(0.16)))
+    }
+
+    private func formatDate(_ iso: String) -> String {
+        let f = ISO8601DateFormatter()
+        f.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let d = f.date(from: iso) ?? ISO8601DateFormatter().date(from: iso) {
+            let out = DateFormatter()
+            out.dateFormat = "d MMM"
+            return out.string(from: d)
+        }
+        return iso
+    }
+
+    private func select(_ id: String) {
+        selectedId = id
+        manualText = ""
+    }
+
+    @MainActor
+    private func load() async {
+        loading = true
+        errorMessage = nil
+        do {
+            recent = try await ThapsusSdk.shared.consolidations().refreshRecent(limit: 5)
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        loading = false
     }
 }
