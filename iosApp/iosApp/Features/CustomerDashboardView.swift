@@ -53,7 +53,7 @@ struct CustomerDashboardView: View {
         .glassNavigationBar()
         .toolbar {
             ToolbarItem(placement: .topBarLeading) {
-                LGLogoBlock(size: 28)
+                BrandWordmark(size: .small)
             }
             ToolbarItem(placement: .topBarTrailing) {
                 NavigationLink {
