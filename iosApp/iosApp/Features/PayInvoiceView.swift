@@ -45,6 +45,15 @@ struct PayInvoiceView: View {
     @State private var actionObs: StateFlowObserver<PaymentsViewModelActionState>? = nil
 
     @State private var presentingMpesaSubmit: PaymentDto? = nil
+    /// Drives the celebratory overlay when the action transitions to
+    /// `Done`. Set on the same code path that produces the Done state
+    /// so we know whether money has actually moved (.received) or the
+    /// customer has just reported a manual transfer that admins still
+    /// need to review (.submitted) — the two cases share an
+    /// `ActionState.Done` on the Kotlin side but need different copy
+    /// + tint + haptic on iOS so the customer's mental model stays
+    /// accurate.
+    @State private var pendingConfirmationVariant: PaymentConfirmationOverlay.Variant? = nil
     #if canImport(StripePaymentSheet)
     @State private var paymentSheet: PaymentSheet? = nil
     @State private var paymentSheetResult: PaymentSheetResult? = nil
@@ -82,6 +91,14 @@ struct PayInvoiceView: View {
                 MpesaSubmitSheet(
                     payment: payment,
                     onSubmit: { sms in
+                        // M-Pesa submission produces an `ActionState.Done`
+                        // whose meaning is "report received, awaiting admin
+                        // review" — explicitly NOT money in. Tag the
+                        // pending variant BEFORE the action transitions so
+                        // the overlay renders the amber clock copy when it
+                        // appears (the action change handler reads this
+                        // variant to decide which overlay to present).
+                        pendingConfirmationVariant = .submitted
                         vm?.submitMpesaConfirmation(paymentId: payment.id, messageRaw: sms)
                         presentingMpesaSubmit = nil
                     }
@@ -91,6 +108,52 @@ struct PayInvoiceView: View {
             .onChange(of: actionStateKey) { _, _ in handleActionChange() }
         }
         .glassSheet(detents: [.large, .medium])
+        .overlay {
+            // Overlay sits OUTSIDE the NavigationStack so it covers the
+            // sheet's full chrome (including the nav bar) — that's the
+            // whole point of the redesign, the customer must not be left
+            // looking at the same Pay screen wondering if the tap landed.
+            if let variant = pendingConfirmationVariant,
+               actionObs?.value is PaymentsViewModelActionStateDone {
+                PaymentConfirmationOverlay(
+                    variant: variant,
+                    subtitle: confirmationSubtitle(for: variant),
+                    amountKesGross: amountKesGross,
+                    onDismiss: {
+                        // Reset the VM action so a re-presentation of
+                        // this sheet from elsewhere doesn't immediately
+                        // re-show the overlay; then close the sheet so
+                        // the caller (BFM accept, consolidation invoice
+                        // card, …) refreshes its own state.
+                        vm?.resetAction()
+                        pendingConfirmationVariant = nil
+                        dismiss()
+                    }
+                )
+                .transition(.opacity)
+                .zIndex(1)
+            }
+        }
+        .animation(.easeOut(duration: 0.25), value: pendingConfirmationVariant != nil
+                   && actionObs?.value is PaymentsViewModelActionStateDone)
+    }
+
+    /// Server-supplied message lives in `ActionState.Done.message` and is
+    /// already customer-friendly ("Payment received. Thanks!" /
+    /// "Submitted for review." / "Covered by your credit. Thanks!").
+    /// Fall back to a sensible default per variant if the message ever
+    /// arrives empty so the overlay never shows blank space.
+    private func confirmationSubtitle(for variant: PaymentConfirmationOverlay.Variant) -> String {
+        if let done = actionObs?.value as? PaymentsViewModelActionStateDone,
+           !done.message.isEmpty {
+            return done.message
+        }
+        switch variant {
+        case .received:
+            return "Your payment has cleared. The invoice has been settled."
+        case .submitted:
+            return "We've got your M-Pesa confirmation. An admin will review and clear the invoice shortly."
+        }
     }
 
     // MARK: - Subviews
@@ -139,11 +202,13 @@ struct PayInvoiceView: View {
         switch actionObs?.value {
         case is PaymentsViewModelActionStateCreating, is PaymentsViewModelActionStateSubmitting:
             ProgressView().frame(maxWidth: .infinity)
-        case let done as PaymentsViewModelActionStateDone:
-            CalloutBanner(icon: "checkmark.circle.fill", title: "Done", message: done.message)
         case let err as PaymentsViewModelActionStateError:
             ErrorBanner(title: "Couldn't proceed", message: err.message)
         default:
+            // ActionState.Done is handled by the full-screen
+            // PaymentConfirmationOverlay rendered by the parent — the
+            // small inline banner used to live here, but customers
+            // were missing it on the busy Pay screen and re-paying.
             EmptyView()
         }
     }
@@ -152,8 +217,12 @@ struct PayInvoiceView: View {
     private var methodChooser: some View {
         let due = amountKesGross - min(creditBalanceKes, amountKesGross)
         if due == 0 {
-            // Credit fully covers — single button to confirm.
+            // Credit fully covers — single button to confirm. The
+            // server short-circuits to ActionState.Done immediately
+            // (no Stripe round-trip, no M-Pesa ticket), so this is a
+            // real settlement path → received variant.
             Button {
+                pendingConfirmationVariant = .received
                 vm?.create(targetKind: targetKind, targetId: targetId, method: "stripe", applyCredit: true)
             } label: {
                 Label("Apply credit & confirm", systemImage: "checkmark.circle.fill")
@@ -271,6 +340,11 @@ struct PayInvoiceView: View {
         sheet.present(from: presenter) { result in
             switch result {
             case .completed:
+                // Stripe is real-money settlement → received variant.
+                // Tag BEFORE marking the VM done so the overlay's
+                // .onChange-driven render reads a non-nil variant on
+                // the same tick the Done state lands.
+                pendingConfirmationVariant = .received
                 // SKIE doesn't bridge Kotlin default arguments
                 // (feedback_skie_default_args.md) — pass the message explicitly.
                 vm?.markStripeCompleted(message: "Payment received. Thanks!")
