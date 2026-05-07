@@ -52,7 +52,13 @@ struct CustomerDashboardView: View {
         .background(LiquidGlassBackground())
         .toolbar(.hidden, for: .navigationBar)
         .overlay(alignment: .top) { NotificationBannerView() }
-        .npsAutoPrompt()
+        // NPS post-delivery survey auto-prompt deliberately disabled
+        // — customer feedback: the pop-up firing right after every
+        // delivered parcel was intrusive. The `npsAutoPrompt`
+        // modifier and `NpsSurveyView` themselves stay in the
+        // codebase so this can be re-enabled with a one-line add
+        // if/when we want a less aggressive trigger (once per N
+        // deliveries, or only via the email link).
         .sheet(isPresented: $showingNewOrder) {
             NavigationStack { NewOrderView() }.glassSheet(detents: [.large, .medium])
         }
