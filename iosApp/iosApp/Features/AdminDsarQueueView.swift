@@ -12,7 +12,6 @@ struct AdminDsarQueueView: View {
     @State private var errorMessage: String?
     @State private var actionBanner: ActionBanner?
     @State private var exportingIds: Set<String> = []
-    @Environment(\.openURL) private var openURL
 
     private struct ActionBanner: Identifiable {
         let id = UUID()
@@ -182,15 +181,14 @@ struct AdminDsarQueueView: View {
     private func runExport(_ r: DsarRequestDto) async {
         await MainActor.run { exportingIds.insert(r.id) }
         do {
-            let url = try await ThapsusSdk.shared.dsar().export(id: r.id)
+            let confirmation = try await ThapsusSdk.shared.dsar().export(id: r.id)
             await MainActor.run {
                 exportingIds.remove(r.id)
                 actionBanner = ActionBanner(
-                    title: "Export ready",
-                    message: "Tap the download link on the row to fetch the bundle.",
+                    title: "Export emailed",
+                    message: confirmation,
                     isError: false
                 )
-                if let dl = URL(string: url) { openURL(dl) }
             }
             await load()
         } catch {
