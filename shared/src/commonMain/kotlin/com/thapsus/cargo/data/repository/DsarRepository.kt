@@ -37,11 +37,15 @@ class DsarRepository(private val api: ThapsusApiClient) {
     }
 
     /**
-     * Admin packages the user's data and returns a download URL. Server stores
-     * the export under the user's storage path and returns a signed URL.
+     * Admin triggers the export — the server sanitises the user's data,
+     * emails it to them as a JSON attachment, and marks the request fulfilled.
+     * Returns the human-readable confirmation the server produced (e.g.
+     * "Export emailed to alice@example.com.").
      */
-    suspend fun export(id: String): String =
-        api.post<DsarExportResponse, Unit>("/dsar/$id/export", Unit)
-            .exportUrl
-            ?: error("DSAR export: server returned no URL")
+    suspend fun export(id: String): String {
+        val resp = api.post<DsarExportResponse, Unit>("/dsar/$id/export", Unit)
+        return resp.message
+            ?: resp.exportUrl
+            ?: "Export emailed to the customer."
+    }
 }
