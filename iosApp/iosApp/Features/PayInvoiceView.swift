@@ -45,6 +45,11 @@ struct PayInvoiceView: View {
     @State private var actionObs: StateFlowObserver<PaymentsViewModelActionState>? = nil
 
     @State private var presentingMpesaSubmit: PaymentDto? = nil
+    /// Lipana STK flow: when true, the LipanaStkSheet is mounted. Tap
+    /// of "Pay via M-Pesa" with provider='lipana' flips this; the sheet
+    /// handles the phone-entry → STK init → awaiting-PIN stages itself
+    /// by observing the live action state passed in.
+    @State private var presentingLipanaStk: Bool = false
     /// Drives the celebratory overlay when the action transitions to
     /// `Done`. Set on the same code path that produces the Done state
     /// so we know whether money has actually moved (.received) or the
@@ -101,6 +106,44 @@ struct PayInvoiceView: View {
                         pendingConfirmationVariant = .submitted
                         vm?.submitMpesaConfirmation(paymentId: payment.id, messageRaw: sms)
                         presentingMpesaSubmit = nil
+                    }
+                )
+            }
+            .sheet(isPresented: $presentingLipanaStk) {
+                LipanaStkSheet(
+                    targetKind:      targetKind,
+                    targetId:        targetId,
+                    amountKesGross:  amountKesGross,
+                    prefilledPhone:  prefilledPhone,
+                    actionState:     actionObs?.value,
+                    mpesaTillNumber: methodMpesaTill,
+                    onInitiate: { phone in
+                        // STK flow ends in real money in once the webhook
+                        // settles, so tag .received now — the overlay
+                        // condition (variant != nil && action is Done)
+                        // means it stays dormant until the poll/webhook
+                        // flips status to paid.
+                        pendingConfirmationVariant = .received
+                        vm?.create(
+                            targetKind:  targetKind,
+                            targetId:    targetId,
+                            method:      "mpesa",
+                            applyCredit: true,
+                            phone:       phone
+                        )
+                    },
+                    onFallbackManual: { till in
+                        // Customer couldn't complete the PIN prompt —
+                        // hand off to the legacy paste-the-SMS sheet.
+                        // Switch the variant since the manual flow lands
+                        // in 'awaiting_review', not 'paid'.
+                        pendingConfirmationVariant = .submitted
+                        vm?.fallbackToManualMpesa(tillNumber: till)
+                        presentingLipanaStk = false
+                    },
+                    onCancel: {
+                        vm?.resetAction()
+                        pendingConfirmationVariant = nil
                     }
                 )
             }
@@ -223,7 +266,7 @@ struct PayInvoiceView: View {
             // real settlement path → received variant.
             Button {
                 pendingConfirmationVariant = .received
-                vm?.create(targetKind: targetKind, targetId: targetId, method: "stripe", applyCredit: true)
+                vm?.create(targetKind: targetKind, targetId: targetId, method: "stripe", applyCredit: true, phone: nil)
             } label: {
                 Label("Apply credit & confirm", systemImage: "checkmark.circle.fill")
                     .frame(maxWidth: .infinity)
@@ -245,7 +288,7 @@ struct PayInvoiceView: View {
                 }
                 if methodStripeEnabled {
                     Button {
-                        vm?.create(targetKind: targetKind, targetId: targetId, method: "stripe", applyCredit: true)
+                        vm?.create(targetKind: targetKind, targetId: targetId, method: "stripe", applyCredit: true, phone: nil)
                     } label: {
                         methodLabel(icon: "creditcard.fill",
                                     title: "Pay with card",
@@ -254,17 +297,35 @@ struct PayInvoiceView: View {
                     .buttonStyle(GlassSheenButtonStyle(fill: Brand.orange, foreground: .white))
                 }
                 if methodMpesaEnabled {
-                    Button {
-                        vm?.create(targetKind: targetKind, targetId: targetId, method: "mpesa", applyCredit: true)
-                    } label: {
-                        methodLabel(icon: "phone.fill",
-                                    title: "Pay via M-Pesa",
-                                    subtitle: "Till \(methodMpesaTill) · admin review")
+                    if methodMpesaProvider == "lipana" {
+                        Button {
+                            // STK flow: open the LipanaStkSheet which
+                            // captures the phone, fires create() with
+                            // it, and listens to the action state to
+                            // drive the awaiting-PIN stage.
+                            presentingLipanaStk = true
+                        } label: {
+                            methodLabel(icon: "phone.fill",
+                                        title: "Pay via M-Pesa",
+                                        subtitle: "STK push · enter PIN on your phone")
+                        }
+                        .buttonStyle(GlassSheenButtonStyle(
+                            fill: Color.green.opacity(0.18),
+                            foreground: .green
+                        ))
+                    } else {
+                        Button {
+                            vm?.create(targetKind: targetKind, targetId: targetId, method: "mpesa", applyCredit: true, phone: nil)
+                        } label: {
+                            methodLabel(icon: "phone.fill",
+                                        title: "Pay via M-Pesa",
+                                        subtitle: "Till \(methodMpesaTill) · admin review")
+                        }
+                        .buttonStyle(GlassSheenButtonStyle(
+                            fill: Color.green.opacity(0.18),
+                            foreground: .green
+                        ))
                     }
-                    .buttonStyle(GlassSheenButtonStyle(
-                        fill: Color.green.opacity(0.18),
-                        foreground: .green
-                    ))
                 }
             }
         }
@@ -305,7 +366,19 @@ struct PayInvoiceView: View {
             presentStripeSheet(clientSecret: stripeReady.clientSecret, payment: stripeReady.payment)
         #endif
         case let mpesa as PaymentsViewModelActionStateMpesaReady:
+            // Could be a fresh manual-mpesa create, or the customer
+            // tapping "Pay manually instead" inside LipanaStkSheet —
+            // either way, hand off to MpesaSubmitSheet.
+            presentingLipanaStk = false
             presentingMpesaSubmit = mpesa.payment
+        case is PaymentsViewModelActionStateDone where presentingLipanaStk:
+            // STK landed paid → close the sheet so the parent's
+            // PaymentConfirmationOverlay (.received) can show.
+            presentingLipanaStk = false
+        case is PaymentsViewModelActionStateError where presentingLipanaStk:
+            // Poll timed out / failed — close the STK sheet, the
+            // parent's actionBanner renders the error.
+            presentingLipanaStk = false
         default:
             break
         }
@@ -385,6 +458,16 @@ struct PayInvoiceView: View {
     private var methodMpesaTill: String {
         (stateObs?.value as? PaymentsViewModelUiStateReady)?.mpesaTillNumber ?? "5530500"
     }
+    /// Migration 038: 'manual' (paste-the-SMS) or 'lipana' (STK Push).
+    /// Drives which M-Pesa sheet PayInvoiceView mounts. Older servers
+    /// (no provider field) report 'manual' so the button still works.
+    private var methodMpesaProvider: String {
+        (stateObs?.value as? PaymentsViewModelUiStateReady)?.mpesaProvider ?? "manual"
+    }
+    /// Phone to seed LipanaStkSheet with. Currently nil — we don't yet
+    /// pull the user's saved phone into PaymentsViewModel state. The
+    /// sheet's input field is the canonical capture point.
+    private var prefilledPhone: String? { nil }
 
     private func formatKes(_ value: Int64) -> String {
         let f = NumberFormatter(); f.numberStyle = .decimal; f.maximumFractionDigits = 0
