@@ -59,7 +59,10 @@ struct CustomerHomeView: View {
         .navigationTitle("Account")
         .glassNavigationBar()
         .overlay(alignment: .top) { NotificationBannerView() }
-        .npsAutoPrompt()
+        // NPS auto-prompt disabled here too — see CustomerDashboardView
+        // for the longer comment. Both home / dashboard mounts have
+        // to be removed because either tab can be foreground when a
+        // delivery transitions to `delivered` and triggers the prompt.
     }
 
     // MARK: - Profile
