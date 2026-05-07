@@ -28,7 +28,6 @@ object Tables {
     const val NPS_RESPONSES = "nps_responses"
 
     // Web-side parity tables (added by the hybrid sync work)
-    const val WALLET = "wallet"
     const val TRANSACTIONS = "transactions"
     const val ORDERS = "orders"
 
