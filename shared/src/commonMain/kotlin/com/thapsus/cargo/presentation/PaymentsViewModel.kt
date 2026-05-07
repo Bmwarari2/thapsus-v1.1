@@ -4,6 +4,9 @@ import com.thapsus.cargo.data.dto.CreatePaymentResponse
 import com.thapsus.cargo.data.dto.PaymentDto
 import com.thapsus.cargo.data.dto.UserCreditDto
 import com.thapsus.cargo.data.repository.PaymentsRepository
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -11,12 +14,15 @@ import kotlinx.coroutines.launch
 
 /**
  * Drives the customer-facing pay flow that replaces the wallet:
- *  - bootstrap() → fetches Stripe publishable key + the user's KES credit.
- *  - create(targetKind, targetId, method) → server mints a payment row;
- *    Stripe response includes PaymentSheet client_secret, M-Pesa response
- *    includes Till + reference + due amount.
- *  - submitMpesaConfirmation(...) → after the customer pays via M-Pesa,
- *    they paste the SMS here; status flips to 'awaiting_review'.
+ *  - bootstrap() → fetches Stripe publishable key + credit + method matrix.
+ *  - create(targetKind, targetId, method, phone?) → server mints a payment row.
+ *      • stripe     → response.next.clientSecret powers PaymentSheet.
+ *      • mpesa, manual provider → response.next.paybill/account/amount_due_kes;
+ *                                  customer pastes the SMS afterwards.
+ *      • mpesa, lipana provider → server fires the STK push; ViewModel
+ *                                  transitions to LipanaStkInflight and
+ *                                  polls /payments/:id until paid/failed.
+ *  - submitMpesaConfirmation(...) → manual fallback for STK failures.
  *
  * The ViewModel is created PER target (each PayInvoice screen makes its
  * own) so the action state doesn't leak across unrelated payments.
@@ -37,7 +43,13 @@ class PaymentsViewModel(
             // server is older than PR F or /methods fetch fails).
             val stripeEnabled: Boolean = true,
             val mpesaEnabled:  Boolean = true,
-            val mpesaTillNumber: String = "5530500"
+            val mpesaTillNumber: String = "5530500",
+            /**
+             * Migration 038: 'manual' (paste-the-SMS) or 'lipana' (STK Push).
+             * Drives which sheet PayInvoiceView mounts when the customer
+             * picks M-Pesa.
+             */
+            val mpesaProvider: String = "manual"
         ) : UiState
     }
 
@@ -50,6 +62,18 @@ class PaymentsViewModel(
             val paybill: String,
             val account: String,
             val amountDueKes: Long
+        ) : ActionState
+        /**
+         * Lipana STK has been fired; the customer's phone is showing the
+         * PIN prompt. iOS renders the awaiting-PIN sheet and the VM
+         * polls /payments/:id every ~2s for the next ~90s.
+         */
+        data class LipanaStkInflight(
+            val payment: PaymentDto,
+            val lipanaTransactionId: String?,
+            val lipanaCheckoutRequestId: String?,
+            val amountDueKes: Long,
+            val phone: String?
         ) : ActionState
         data object Submitting : ActionState
         data class Done(val message: String) : ActionState
@@ -65,6 +89,9 @@ class PaymentsViewModel(
     /** Optional: most recently created payment for the current target. */
     private var _lastPayment: PaymentDto? = null
     fun lastPayment(): PaymentDto? = _lastPayment
+
+    /** Job for the current Lipana poll loop, if any. Cancelled on resetAction(). */
+    private var _pollJob: Job? = null
 
     fun bootstrap() {
         _state.value = UiState.Loading
@@ -83,7 +110,8 @@ class PaymentsViewModel(
                 creditBalanceKes = credit?.balanceKes ?: 0L,
                 stripeEnabled    = matrix?.stripe?.enabled ?: (legacyCfg != null),
                 mpesaEnabled     = matrix?.mpesa?.enabled ?: true,
-                mpesaTillNumber  = matrix?.mpesa?.tillNumber ?: "5530500"
+                mpesaTillNumber  = matrix?.mpesa?.tillNumber ?: "5530500",
+                mpesaProvider    = matrix?.mpesa?.provider ?: "manual"
             )
         }
     }
@@ -97,11 +125,22 @@ class PaymentsViewModel(
         }
     }
 
-    fun create(targetKind: String, targetId: String, method: String, applyCredit: Boolean = true) {
+    fun create(
+        targetKind: String,
+        targetId: String,
+        method: String,
+        applyCredit: Boolean = true,
+        phone: String? = null
+    ) {
+        _pollJob?.cancel()
         _action.value = ActionState.Creating
         scope.launch {
-            payments.create(targetKind, targetId, method, applyCredit)
-                .onSuccess { resp -> _action.value = mapNext(resp) }
+            payments.create(targetKind, targetId, method, applyCredit, phone)
+                .onSuccess { resp ->
+                    val next = mapNext(resp, phone)
+                    _action.value = next
+                    if (next is ActionState.LipanaStkInflight) startLipanaPoll(next)
+                }
                 .onFailure { _action.value = ActionState.Error(it.message ?: "Payment creation failed") }
         }
     }
@@ -115,14 +154,36 @@ class PaymentsViewModel(
         }
     }
 
-    fun resetAction() { _action.value = ActionState.Idle }
+    fun resetAction() {
+        _pollJob?.cancel()
+        _pollJob = null
+        _action.value = ActionState.Idle
+    }
 
     /** Called from Swift after PaymentSheet returns .completed. */
     fun markStripeCompleted(message: String = "Payment received. Thanks!") {
         _action.value = ActionState.Done(message)
     }
 
-    private fun mapNext(resp: CreatePaymentResponse): ActionState {
+    /**
+     * Manual fallback for the STK flow — customer taps "Pay manually
+     * instead" while the STK is in flight. Cancels the poll, re-uses
+     * the existing pending payment row and switches the action state
+     * to MpesaReady so the existing MpesaSubmitSheet can present.
+     * Server-side, the payment row stays 'pending' until the SMS lands.
+     */
+    fun fallbackToManualMpesa(tillNumber: String) {
+        val current = _action.value as? ActionState.LipanaStkInflight ?: return
+        _pollJob?.cancel()
+        _action.value = ActionState.MpesaReady(
+            payment      = current.payment,
+            paybill      = tillNumber,
+            account      = current.payment.id,
+            amountDueKes = current.amountDueKes
+        )
+    }
+
+    private fun mapNext(resp: CreatePaymentResponse, phone: String?): ActionState {
         val payment = resp.payment ?: return ActionState.Error("Server returned no payment")
         _lastPayment = payment
         if (resp.fullyCoveredByCredit) {
@@ -141,7 +202,80 @@ class PaymentsViewModel(
                 account      = next.account ?: payment.id,
                 amountDueKes = next.amountDueKes ?: payment.amountDueKes
             )
+            "mpesa_stk" -> ActionState.LipanaStkInflight(
+                payment                 = payment,
+                lipanaTransactionId     = next.lipanaTransactionId
+                                            ?: payment.lipanaTransactionId,
+                lipanaCheckoutRequestId = next.lipanaCheckoutRequestId
+                                            ?: payment.lipanaCheckoutRequestId,
+                amountDueKes            = next.amountDueKes ?: payment.amountDueKes,
+                phone                   = phone ?: payment.mpesaPhoneUsed
+            )
             else -> ActionState.Error("Unknown payment method '${next.kind}'")
+        }
+    }
+
+    /**
+     * Poll /payments/:id until status hits a terminal value or the
+     * deadline elapses. Webhook is canonical (it's what flips the row);
+     * polling is a UX safety net so the customer's spinner stops promptly.
+     *
+     * Per feedback_skie_bridging.md, throwing suspend funs need a
+     * per-call-site catch-all so an unmapped throwable doesn't crash
+     * the iOS process via the global unhandled-exception hook.
+     */
+    private fun startLipanaPoll(initial: ActionState.LipanaStkInflight) {
+        val paymentId = initial.payment.id
+        _pollJob?.cancel()
+        _pollJob = scope.launch {
+            try {
+                val deadlineTicks = 45      // 45 × 2s = 90s budget
+                var ticks = 0
+                while (ticks < deadlineTicks) {
+                    delay(2_000L)
+                    ticks += 1
+                    // Bail if the action state moved on (customer cancelled,
+                    // tapped "Pay manually instead", or another flow took over).
+                    if (_action.value !is ActionState.LipanaStkInflight) return@launch
+                    val res = payments.detail(paymentId)
+                    val payment = res.getOrNull() ?: continue
+                    when (payment.status) {
+                        "paid" -> {
+                            _action.value = ActionState.Done("Payment received. Thanks!")
+                            return@launch
+                        }
+                        "failed" -> {
+                            _action.value = ActionState.Error(
+                                "M-Pesa payment failed. Try again or use the manual option."
+                            )
+                            return@launch
+                        }
+                        "rejected", "cancelled" -> {
+                            _action.value = ActionState.Error(
+                                "M-Pesa payment was cancelled."
+                            )
+                            return@launch
+                        }
+                        else -> { /* still pending — keep polling */ }
+                    }
+                }
+                // Deadline elapsed — surface a clear error. The webhook can
+                // still settle later; the Transactions list will show paid
+                // on next pull.
+                if (_action.value is ActionState.LipanaStkInflight) {
+                    _action.value = ActionState.Error(
+                        "STK request timed out. Check your phone for the prompt, or use the manual option."
+                    )
+                }
+            } catch (ce: CancellationException) {
+                throw ce
+            } catch (t: Throwable) {
+                if (_action.value is ActionState.LipanaStkInflight) {
+                    _action.value = ActionState.Error(
+                        t.message ?: "Couldn't check payment status"
+                    )
+                }
+            }
         }
     }
 }
