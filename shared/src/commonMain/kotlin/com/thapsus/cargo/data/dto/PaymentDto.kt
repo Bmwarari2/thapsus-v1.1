@@ -27,6 +27,23 @@ data class PaymentDto(
     val stripeFxRateKesGbp: Double? = null,
     @SerialName("mpesa_reference") val mpesaReference: String? = null,
     @SerialName("mpesa_phone") val mpesaPhone: String? = null,
+    /**
+     * Which M-Pesa flow drove this row: 'manual' (paste-the-SMS) or
+     * 'lipana' (STK Push). Null on pre-038 rows. Drives client-side
+     * decisions like which confirmation overlay variant to use —
+     * lipana=.received (real money in), manual=.submitted (admin
+     * review pending).
+     */
+    @SerialName("mpesa_provider") val mpesaProvider: String? = null,
+    /** Phone number the STK push was sent to (254XXXXXXXXX). */
+    @SerialName("mpesa_phone_used") val mpesaPhoneUsed: String? = null,
+    /**
+     * Lipana TXN id — surfaces in receipts as the M-Pesa reference for
+     * STK-flow payments (replaces the 10-char SMS code).
+     */
+    @SerialName("lipana_transaction_id") val lipanaTransactionId: String? = null,
+    /** Lipana ws_CO_… checkout-request id — used for STK status polling. */
+    @SerialName("lipana_checkout_request_id") val lipanaCheckoutRequestId: String? = null,
     @SerialName("rejection_reason") val rejectionReason: String? = null,
     @SerialName("created_at") val createdAt: String? = null,
     @SerialName("paid_at") val paidAt: String? = null,
@@ -50,15 +67,27 @@ data class CreatePaymentRequest(
     @SerialName("target_kind") val targetKind: String,
     @SerialName("target_id") val targetId: String,
     @SerialName("method") val method: String,                    // 'stripe' | 'mpesa'
-    @SerialName("apply_credit") val applyCredit: Boolean = true
+    @SerialName("apply_credit") val applyCredit: Boolean = true,
+    /**
+     * Required when method='mpesa' AND the server's mpesa.provider is
+     * 'lipana'. Server normalises Kenyan formats (07…, +254…, 254…)
+     * but rejects with 400 invalid_phone if the value is missing or
+     * unparseable.
+     */
+    @SerialName("phone") val phone: String? = null
 )
 
 /**
  * Wraps the create-payment response. `next` is method-specific:
- *   stripe → { kind:'stripe', amount_pence_gbp, fx_rate_kes_gbp,
- *              client_secret? (server doesn't echo on subsequent retrieves —
- *              re-issue create if you've lost it) }
- *   mpesa  → { kind:'mpesa', paybill, account, amount_due_kes }
+ *   stripe     → { kind:'stripe', amount_pence_gbp, fx_rate_kes_gbp,
+ *                  client_secret? (server doesn't echo on subsequent
+ *                  retrieves — re-issue create if you've lost it) }
+ *   mpesa      → { kind:'mpesa', paybill, account, amount_due_kes }
+ *                  Manual paste-the-SMS flow.
+ *   mpesa_stk  → { kind:'mpesa_stk', amount_due_kes,
+ *                  lipana_transaction_id, lipana_checkout_request_id,
+ *                  message } — STK Push already fired; client polls
+ *                  the payment status until paid/failed.
  */
 @Serializable
 data class CreatePaymentResponse(
@@ -72,7 +101,7 @@ data class CreatePaymentResponse(
 
 @Serializable
 data class PaymentNextStep(
-    val kind: String,                                            // 'stripe' | 'mpesa'
+    val kind: String,                                            // 'stripe' | 'mpesa' | 'mpesa_stk'
     @SerialName("client_secret") val clientSecret: String? = null,
     @SerialName("amount_pence_gbp") val amountPenceGbp: Long? = null,
     @SerialName("fx_rate_kes_gbp")
@@ -80,7 +109,10 @@ data class PaymentNextStep(
     val fxRateKesGbp: Double? = null,
     val paybill: String? = null,
     val account: String? = null,
-    @SerialName("amount_due_kes") val amountDueKes: Long? = null
+    @SerialName("amount_due_kes") val amountDueKes: Long? = null,
+    @SerialName("lipana_transaction_id") val lipanaTransactionId: String? = null,
+    @SerialName("lipana_checkout_request_id") val lipanaCheckoutRequestId: String? = null,
+    val message: String? = null
 )
 
 @Serializable
@@ -142,7 +174,14 @@ data class StripeMethodConfig(
 @Serializable
 data class MpesaMethodConfig(
     val enabled: Boolean = true,
-    @SerialName("till_number") val tillNumber: String = "5530500"
+    @SerialName("till_number") val tillNumber: String = "5530500",
+    /**
+     * 'manual' (paste-the-SMS) or 'lipana' (STK Push). Drives which
+     * sheet the iOS client mounts when the customer taps "Pay via
+     * M-Pesa". Defaults to 'manual' so older servers (pre-038)
+     * keep the legacy flow.
+     */
+    val provider: String = "manual"
 )
 
 @Serializable

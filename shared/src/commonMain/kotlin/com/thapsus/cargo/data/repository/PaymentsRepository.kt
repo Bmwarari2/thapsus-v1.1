@@ -54,19 +54,28 @@ class PaymentsRepository(
     /**
      * Create a payment row + Stripe PaymentIntent (or M-Pesa instructions).
      *  - method = "stripe"  → response.next.clientSecret powers PaymentSheet
-     *  - method = "mpesa"   → response.next.paybill / account / amount_due_kes
+     *  - method = "mpesa", provider='manual'
+     *                       → response.next.paybill / account / amount_due_kes.
      *                         Customer pays via M-Pesa, then calls
      *                         submitMpesaConfirmation() with the SMS text.
+     *  - method = "mpesa", provider='lipana'
+     *                       → server fires the STK push; response.next.kind
+     *                         is 'mpesa_stk' with lipanaTransactionId +
+     *                         lipanaCheckoutRequestId. Client polls
+     *                         [detail] until status flips to paid/failed.
+     *                         `phone` is required (E.164-ish or 07…);
+     *                         server 400s if missing or invalid.
      */
     suspend fun create(
         targetKind: String,
         targetId: String,
         method: String,
-        applyCredit: Boolean = true
+        applyCredit: Boolean = true,
+        phone: String? = null
     ): Result<CreatePaymentResponse> = runCatching {
         api.post<CreatePaymentResponse, CreatePaymentRequest>(
             "/payments",
-            CreatePaymentRequest(targetKind, targetId, method, applyCredit)
+            CreatePaymentRequest(targetKind, targetId, method, applyCredit, phone)
         )
     }
 
