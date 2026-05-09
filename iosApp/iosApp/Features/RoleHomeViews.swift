@@ -60,19 +60,19 @@ private struct AccountHeader: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
                     Text("SIGNED IN")
-                        .font(.system(size: 10, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(Brand.cream.opacity(0.6))
                     Spacer()
                     if let role = env.currentRole {
                         Text(roleLabel(role).uppercased())
-                            .font(.system(size: 10, weight: .heavy)).tracking(2)
+                            .font(.caption2.weight(.heavy)).tracking(2)
                             .foregroundStyle(Brand.orange)
                             .padding(.horizontal, 8).padding(.vertical, 4)
                             .background(Capsule().fill(Brand.orange.opacity(0.18)))
                     }
                 }
                 Text(auth?.profile?.fullName ?? "—")
-                    .font(.system(size: 22, weight: .heavy))
+                    .font(.title2.weight(.heavy))
                     .foregroundStyle(Brand.cream)
                 if let email = auth?.email, !email.isEmpty {
                     Text(email)

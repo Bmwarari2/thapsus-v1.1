@@ -184,7 +184,7 @@ struct AdminPaymentsView: View {
 
     private func pill(label: String, value: String, tint: Color = Brand.ink) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label).font(.system(size: 9, weight: .heavy)).tracking(2)
+            Text(label).font(.caption2.weight(.heavy)).tracking(2)
                 .foregroundStyle(.secondary)
             Text(value).font(.caption.monospaced()).foregroundStyle(tint)
         }

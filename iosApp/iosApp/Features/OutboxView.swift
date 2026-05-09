@@ -12,6 +12,8 @@ struct OutboxView: View {
     @State private var lastFlushed: StateFlowObserver<KotlinInt?>?
     @State private var lastError: StateFlowObserver<String?>?
 
+    @ScaledMetric(relativeTo: .largeTitle) private var outboxPendingCountSize: CGFloat = 56
+
     var body: some View {
         ScrollView {
             GlassEffectContainer(spacing: 16) {
@@ -25,7 +27,7 @@ struct OutboxView: View {
                         VStack(alignment: .leading, spacing: 8) {
                             Text("Pending").font(.caption).foregroundStyle(.secondary)
                             Text("\(pending?.value.intValue ?? 0)")
-                                .font(.system(size: 56, weight: .bold, design: .rounded))
+                                .font(.system(size: outboxPendingCountSize, weight: .bold, design: .rounded))
                                 .contentTransition(.numericText())
                             // Always show the result of the last manual flush,
                             // including "0 sent" — riders need feedback that the

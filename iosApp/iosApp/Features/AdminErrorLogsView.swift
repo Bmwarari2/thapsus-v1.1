@@ -96,7 +96,7 @@ struct AdminErrorLogsView: View {
         CrystalCard {
             VStack(alignment: .leading, spacing: 4) {
                 Text(label.uppercased())
-                    .font(.system(size: 9, weight: .heavy)).tracking(2)
+                    .font(.caption2.weight(.heavy)).tracking(2)
                     .foregroundStyle(.secondary)
                 Text(value)
                     .font(.title3.weight(.heavy))
@@ -110,7 +110,7 @@ struct AdminErrorLogsView: View {
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
                     Text(log.level.uppercased())
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(badgeColor(log.level))
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(Capsule().fill(badgeColor(log.level).opacity(0.16)))

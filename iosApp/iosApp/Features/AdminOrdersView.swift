@@ -374,7 +374,7 @@ struct AdminOrdersView: View {
         default: color = .gray
         }
         return Text(status.replacingOccurrences(of: "_", with: " ").uppercased())
-            .font(.system(size: 9, weight: .heavy)).tracking(2)
+            .font(.caption2.weight(.heavy)).tracking(2)
             .foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(Capsule().fill(color.opacity(0.16)))
