@@ -154,11 +154,13 @@ struct LipanaStkSheet: View {
         }
     }
 
+    @ScaledMetric(relativeTo: .largeTitle) private var awaitingIconSize: CGFloat = 44
+
     private var awaitingCard: some View {
         CrystalCard {
             VStack(spacing: 16) {
                 Image(systemName: "iphone.gen3.radiowaves.left.and.right")
-                    .font(.system(size: 44, weight: .light))
+                    .font(.system(size: awaitingIconSize, weight: .light))
                     .foregroundStyle(Brand.orange)
                     .symbolEffect(.pulse, options: .repeating)
                 VStack(spacing: 6) {

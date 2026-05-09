@@ -57,9 +57,11 @@ struct MpesaSubmitSheet: View {
         }
     }
 
+    @ScaledMetric(relativeTo: .caption2) private var rowLabelSize: CGFloat = 9
+
     private func row(_ label: String, _ value: String, canCopy: Bool = false) -> some View {
         HStack {
-            Text(label.uppercased()).font(.system(size: 9, weight: .heavy)).tracking(2)
+            Text(label.uppercased()).font(.system(size: rowLabelSize, weight: .heavy)).tracking(2)
                 .foregroundStyle(.secondary)
             Spacer()
             Text(value).font(.subheadline.monospaced().weight(.semibold))

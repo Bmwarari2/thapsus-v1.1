@@ -102,10 +102,12 @@ struct SkuScannerView: View {
         }
     }
 
+    @ScaledMetric(relativeTo: .largeTitle) private var permissionIconSize: CGFloat = 38
+
     private var permissionDeniedView: some View {
         VStack(spacing: 12) {
             Image(systemName: "camera.fill.badge.ellipsis")
-                .font(.system(size: 38))
+                .font(.system(size: permissionIconSize))
                 .foregroundStyle(.white)
             Text("Camera access denied")
                 .font(.headline).foregroundStyle(.white)

@@ -144,6 +144,8 @@ struct BuyForMeView: View {
         }
     }
 
+    @ScaledMetric(relativeTo: .caption2) private var statusBadgeSize: CGFloat = 9
+
     private func statusBadge(_ status: String) -> some View {
         let map: [String: Color] = [
             "pending_quote": .orange, "quoted": .blue, "paid": .green,
@@ -152,7 +154,7 @@ struct BuyForMeView: View {
         ]
         let color = map[status] ?? .secondary
         return Text(status.replacingOccurrences(of: "_", with: " ").uppercased())
-            .font(.system(size: 9, weight: .heavy)).tracking(2)
+            .font(.system(size: statusBadgeSize, weight: .heavy)).tracking(2)
             .foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(Capsule().fill(color.opacity(0.16)))
