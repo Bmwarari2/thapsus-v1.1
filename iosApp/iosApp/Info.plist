@@ -59,11 +59,12 @@
         <key>UIApplicationSupportsMultipleScenes</key>
         <false/>
     </dict>
-    <key>UILaunchScreen</key>
-    <dict>
-        <key>UIColorName</key>
-        <string>BrandNavy</string>
-    </dict>
+    <!-- Launch screen — matches SplashView 1:1 (BrandCream bg, logo + wordmark).
+         Replaces the previous flat-navy UILaunchScreen color which painted a
+         dark blue panel during the multi-second cold dyld + Kotlin/Native
+         framework load on first launch. -->
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
     <key>UISupportedInterfaceOrientations</key>
     <array>
         <string>UIInterfaceOrientationPortrait</string>
