@@ -323,7 +323,10 @@ struct OpsSettingsView: View {
                         Spacer()
                         Button(role: .destructive, action: { vm?.removeProhibited(id: item.id) }) {
                             Image(systemName: "trash")
-                        }.buttonStyle(.bordered).tint(.red)
+                        }
+                        .buttonStyle(.bordered)
+                        .tint(.red)
+                        .accessibilityLabel("Remove \(item.term)")
                     }
                 }
             }

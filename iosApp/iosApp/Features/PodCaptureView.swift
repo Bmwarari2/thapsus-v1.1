@@ -88,6 +88,7 @@ struct PodCaptureView: View {
                                             .stroke(Brand.ink.opacity(0.08), lineWidth: 1)
                                     )
                             }
+                            .accessibilityLabel("Pick recipient from contacts")
                         }
 
                         TextField("4-digit OTP", text: $otp)

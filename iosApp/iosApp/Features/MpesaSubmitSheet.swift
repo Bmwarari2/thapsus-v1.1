@@ -71,6 +71,7 @@ struct MpesaSubmitSheet: View {
                     Image(systemName: "doc.on.doc").font(.caption)
                 }
                 .tint(Brand.orange)
+                .accessibilityLabel("Copy \(label.lowercased())")
             }
         }
     }

@@ -134,6 +134,7 @@ struct AdminCreateBuyForMeView: View {
                                 .foregroundStyle(LG.fgMute)
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel("Clear search")
                     }
                 }
                 .padding(.vertical, 12)

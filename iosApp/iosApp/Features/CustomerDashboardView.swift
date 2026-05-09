@@ -137,6 +137,7 @@ struct CustomerDashboardView: View {
                     .overlay(Circle().strokeBorder(LG.glassBorder, lineWidth: 1))
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Notifications")
         }
         .padding(.top, 8)
         .padding(.bottom, 4)

@@ -46,6 +46,7 @@ struct ProhibitedSearchView: View {
                 Button(action: { query = ""; vm?.reset() }) {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                 }
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(14)
