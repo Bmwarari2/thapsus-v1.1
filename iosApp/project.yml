@@ -1,0 +1,111 @@
+# XcodeGen manifest for the Thapsus Cargo iOS app.
+#
+# Status: scaffold / opt-in. The committed `iosApp.xcodeproj/project.pbxproj`
+# remains the canonical project file for now. This manifest exists so:
+#
+#   1. Adding a new Swift file no longer requires the four-UUID
+#      pbxproj surgery documented in
+#      `~/.claude/.../memory/reference_ios_pbxproj.md`.
+#   2. The project structure is captured in a human-readable file
+#      that diffs cleanly across PRs.
+#
+# Install once:
+#
+#   $ brew install xcodegen
+#
+# To use:
+#
+#   $ cd iosApp
+#   $ xcodegen generate                  # rewrites iosApp.xcodeproj
+#   $ open iosApp.xcodeproj               # if Xcode is open, restart it
+#
+# WARNING: regenerating overwrites the committed pbxproj. Until the team
+# has agreed to flip the source of truth, do NOT commit the regenerated
+# project.pbxproj — it will lose author-assigned UUIDs, file ordering,
+# and any manually-curated build settings that aren't expressed in
+# this YAML. See XCODEGEN.md for the migration plan.
+
+name: iosApp
+options:
+  bundleIdPrefix: uk.thapsus
+  deploymentTarget:
+    iOS: "26.0"
+  developmentLanguage: en
+  xcodeVersion: "26.0"
+  generateEmptyDirectories: false
+  defaultConfig: Debug
+  groupOrdering:
+    - order: [Bridging, DesignSystem, Navigation, Features, Hardware]
+
+settings:
+  base:
+    SWIFT_VERSION: 6.0
+    TARGETED_DEVICE_FAMILY: "1,2"          # iPhone + iPad
+    SWIFT_STRICT_CONCURRENCY: complete
+    PRODUCT_BUNDLE_IDENTIFIER: $(APP_BUNDLE_ID)
+    CURRENT_PROJECT_VERSION: $(APP_BUILD)
+    MARKETING_VERSION: $(APP_VERSION)
+    DEVELOPMENT_TEAM: $(TEAM_ID)
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: NO
+    # Match the existing xcconfig overrides — Configuration/Config.xcconfig
+    # supplies $(APP_BUNDLE_ID), $(APP_VERSION), $(APP_BUILD), $(TEAM_ID),
+    # plus the Supabase + API base URL substitutions for Info.plist.
+
+configs:
+  Debug: debug
+  Release: release
+
+# Single app target. Sources are auto-discovered under iosApp/ so any
+# new Swift file added under that tree is picked up on the next
+# `xcodegen generate`.
+targets:
+  iosApp:
+    type: application
+    platform: iOS
+    sources:
+      - path: iosApp
+        excludes:
+          - "**/.DS_Store"
+    info:
+      path: iosApp/Info.plist
+    entitlements:
+      path: iosApp/iosApp.entitlements
+    settings:
+      base:
+        INFOPLIST_FILE: iosApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: iosApp/iosApp.entitlements
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+    dependencies:
+      # The KMP shared framework is produced by Gradle via
+      # build-shared-framework.sh. xcodegen treats it as a binary
+      # dependency at the path `shared/build/xcode-frameworks/.../ThapsusShared.framework`.
+      - framework: ../shared/build/xcode-frameworks/$(CONFIGURATION)/$(SDK_NAME)/ThapsusShared.framework
+        embed: true
+      # Stripe SPM — declared at the project level (see packages: below)
+      # and referenced by name on the target.
+      - package: StripePaymentSheet
+    preBuildScripts:
+      # Mirror of the existing "KMP Build Shared Framework" phase.
+      # Runs every build because the framework can change underneath
+      # us when shared/ is touched. Same semantics as the committed
+      # pbxproj recipe.
+      - name: KMP Build Shared Framework
+        path: Scripts/build-shared-framework.sh
+        based-on-dependency-analysis: false
+        shell: /bin/sh
+    configFiles:
+      # Configuration/Config.xcconfig provides APP_BUNDLE_ID, APP_VERSION,
+      # APP_BUILD, TEAM_ID, SUPABASE_URL, SUPABASE_ANON_KEY, API_BASE_URL.
+      # Optionally include Configuration/Config.local.xcconfig (gitignored)
+      # for per-developer overrides via the `#include?` directive in the
+      # base config.
+      Debug: Configuration/Config.xcconfig
+      Release: Configuration/Config.xcconfig
+
+# Swift Package Manager dependencies declared at the project level so
+# multiple targets (test bundle, etc.) could reference them later.
+packages:
+  StripePaymentSheet:
+    url: https://github.com/stripe/stripe-ios-spm
+    minVersion: 25.13.0
