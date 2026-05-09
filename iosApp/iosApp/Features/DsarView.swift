@@ -93,7 +93,7 @@ struct DsarView: View {
                                 Text(req.type.capitalized).font(.headline).foregroundStyle(Brand.ink)
                                 Spacer()
                                 Text(req.status.uppercased())
-                                    .font(.system(size: 9, weight: .heavy)).tracking(2)
+                                    .font(.caption2.weight(.heavy)).tracking(2)
                                     .foregroundStyle(.secondary)
                             }
                             if let created = req.createdAt {

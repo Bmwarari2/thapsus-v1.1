@@ -125,7 +125,7 @@ struct CustomerDashboardView: View {
                 NotificationInboxView()
             } label: {
                 Image(systemName: "bell")
-                    .font(.system(size: 17, weight: .semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(LG.fg)
                     .frame(width: 40, height: 40)
                     .background(

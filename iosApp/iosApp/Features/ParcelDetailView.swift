@@ -22,6 +22,8 @@ struct ParcelDetailView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
 
+    @ScaledMetric(relativeTo: .largeTitle) private var chargeableMassSize: CGFloat = 40
+
     @State private var pkg: PackageDto?
     @State private var observerTask: Task<Void, Never>? = nil
     @State private var refreshFailureMessage: String? = nil
@@ -359,7 +361,7 @@ struct ParcelDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Chargeable mass").font(.headline).foregroundStyle(Brand.ink)
                     Text(String(format: "%.2f kg", charge))
-                        .font(.system(size: 40, weight: .bold, design: .rounded))
+                        .font(.system(size: chargeableMassSize, weight: .bold, design: .rounded))
                         .foregroundStyle(Brand.ink)
                         .contentTransition(.numericText())
                     if let actual = p.actualKg?.doubleValue, let vol = p.volumetricKg?.doubleValue {

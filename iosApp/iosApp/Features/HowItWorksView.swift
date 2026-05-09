@@ -6,15 +6,17 @@
 import SwiftUI
 
 struct HowItWorksView: View {
+    @ScaledMetric(relativeTo: .largeTitle) private var howItWorksHeadlineSize: CGFloat = 36
+
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             VStack(alignment: .center, spacing: 6) {
                 Text("OUR WORKFLOW")
-                    .font(.system(size: 12, weight: .heavy))
+                    .font(.caption.weight(.heavy))
                     .tracking(4)
                     .foregroundStyle(Brand.orange)
                 Text("HOW IT WORKS")
-                    .font(.system(size: 36, weight: .heavy))
+                    .font(.system(size: howItWorksHeadlineSize, weight: .heavy))
                     .foregroundStyle(Brand.ink)
                 Capsule().fill(Brand.orange).frame(width: 60, height: 4).padding(.top, 4)
             }
@@ -89,7 +91,7 @@ struct HowItWorksView: View {
                 Spacer()
             }
             Text("\(number). \(title)")
-                .font(.system(size: 22, weight: .heavy))
+                .font(.title2.weight(.heavy))
                 .foregroundStyle(dark ? Brand.cream : Brand.ink)
                 .lineLimit(3)
             Text(body)

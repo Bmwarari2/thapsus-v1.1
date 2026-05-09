@@ -128,7 +128,7 @@ struct OperatorReceiveView: View {
                             .font(.headline).foregroundStyle(Brand.ink).lineLimit(1)
                         if isLate {
                             Text("LATE")
-                                .font(.system(size: 9, weight: .heavy)).tracking(2)
+                                .font(.caption2.weight(.heavy)).tracking(2)
                                 .foregroundStyle(.red)
                                 .padding(.horizontal, 6).padding(.vertical, 2)
                                 .background(Capsule().fill(Color.red.opacity(0.16)))

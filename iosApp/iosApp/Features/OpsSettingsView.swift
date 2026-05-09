@@ -178,7 +178,7 @@ struct OpsSettingsView: View {
                     }
                     Spacer()
                     Text(fee.isActive ? "ACTIVE" : "OFF")
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(fee.isActive ? .green : .secondary)
                         .padding(.horizontal, 6).padding(.vertical, 3)
                         .background(Capsule().fill((fee.isActive ? Color.green : Color.gray).opacity(0.16)))
@@ -317,7 +317,7 @@ struct OpsSettingsView: View {
                         VStack(alignment: .leading, spacing: 2) {
                             Text(item.term.capitalized).font(.headline).foregroundStyle(Brand.ink)
                             Text(String(describing: item.severity).uppercased())
-                                .font(.system(size: 9, weight: .heavy)).tracking(2)
+                                .font(.caption2.weight(.heavy)).tracking(2)
                                 .foregroundStyle(.secondary)
                         }
                         Spacer()

@@ -10,6 +10,8 @@ struct ReferralView: View {
     @State private var observer: StateFlowObserver<ReferralViewModelUiState>? = nil
     @State private var copied: Bool = false
 
+    @ScaledMetric(relativeTo: .largeTitle) private var referralCodeSize: CGFloat = 36
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -47,7 +49,7 @@ struct ReferralView: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Your code").font(.headline)
                 Text(data.summary.referralCode ?? "—")
-                    .font(.system(size: 36, weight: .heavy, design: .monospaced))
+                    .font(.system(size: referralCodeSize, weight: .heavy, design: .monospaced))
                     .foregroundStyle(Brand.orange)
 
                 HStack(spacing: 10) {
@@ -94,7 +96,7 @@ struct ReferralView: View {
         CrystalCard {
             VStack(alignment: .leading, spacing: 6) {
                 Text(label.uppercased())
-                    .font(.system(size: 9, weight: .heavy))
+                    .font(.caption2.weight(.heavy))
                     .tracking(2)
                     .foregroundStyle(.secondary)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
@@ -120,7 +122,7 @@ struct ReferralView: View {
                         }
                         Spacer()
                         Text(entry.status.uppercased())
-                            .font(.system(size: 9, weight: .heavy)).tracking(2)
+                            .font(.caption2.weight(.heavy)).tracking(2)
                             .foregroundStyle(entry.status == "completed" ? .green : .orange)
                             .padding(.horizontal, 8).padding(.vertical, 4)
                             .background(Capsule().fill((entry.status == "completed" ? Color.green : Color.orange).opacity(0.16)))

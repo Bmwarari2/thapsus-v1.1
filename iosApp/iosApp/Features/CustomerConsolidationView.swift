@@ -48,7 +48,7 @@ struct CustomerConsolidationView: View {
                     Text("Status").font(.caption.weight(.semibold)).foregroundStyle(Brand.cream.opacity(0.7))
                     Spacer()
                     Text(String(describing: c.status).uppercased())
-                        .font(.system(size: 10, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(Brand.orange)
                 }
                 Divider().background(.white.opacity(0.15))
@@ -75,7 +75,7 @@ struct CustomerConsolidationView: View {
 
     private func statBlock(_ label: String, _ value: String) -> some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(label.uppercased()).font(.system(size: 9, weight: .heavy)).tracking(2)
+            Text(label.uppercased()).font(.caption2.weight(.heavy)).tracking(2)
                 .foregroundStyle(Brand.cream.opacity(0.6))
             Text(value).font(.title3.weight(.heavy)).foregroundStyle(Brand.orange)
         }
