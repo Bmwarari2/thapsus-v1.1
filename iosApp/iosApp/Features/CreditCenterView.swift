@@ -14,6 +14,8 @@ struct CreditCenterView: View {
     @State private var vm: PaymentsViewModel? = nil
     @State private var stateObs: StateFlowObserver<PaymentsViewModelUiState>? = nil
 
+    @ScaledMetric(relativeTo: .largeTitle) private var creditBalanceSize: CGFloat = 44
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -46,7 +48,7 @@ struct CreditCenterView: View {
                     Text("KES")
                         .font(.subheadline.weight(.semibold)).foregroundStyle(.secondary)
                     Text(formatKes(balance))
-                        .font(.system(size: 44, weight: .heavy))
+                        .font(.system(size: creditBalanceSize, weight: .heavy))
                         .foregroundStyle(Brand.ink)
                 }
                 if balance == 0 {

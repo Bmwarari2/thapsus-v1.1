@@ -11,6 +11,8 @@ struct DispatchView: View {
     @State private var runs: StateFlowObserver<[LastMileRunDto]>?
     @State private var ridersObs: StateFlowObserver<[RiderDto]>?
 
+    @ScaledMetric(relativeTo: .largeTitle) private var pendingCountSize: CGFloat = 56
+
     @State private var newRunZone: String = "Westlands"
     @State private var newRunRiderId: String = ""
     @State private var presentingNewRun = false
@@ -30,7 +32,7 @@ struct DispatchView: View {
                     VStack(alignment: .leading, spacing: 6) {
                         Text("Awaiting dispatch").font(.caption).foregroundStyle(Brand.cream.opacity(0.7))
                         Text("\(pending?.value.count ?? 0)")
-                            .font(.system(size: 56, weight: .bold, design: .rounded))
+                            .font(.system(size: pendingCountSize, weight: .bold, design: .rounded))
                             .contentTransition(.numericText())
                     }
                 }

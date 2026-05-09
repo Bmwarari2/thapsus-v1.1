@@ -176,7 +176,7 @@ struct CustomerHomeView: View {
                                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                                     .fill(LG.glassBgStrong)
                                 Image(systemName: row.systemImage)
-                                    .font(.system(size: 15, weight: .semibold))
+                                    .font(.subheadline.weight(.semibold))
                                     .foregroundStyle(LG.accent2)
                             }
                             .frame(width: 36, height: 36)
@@ -190,7 +190,7 @@ struct CustomerHomeView: View {
                             }
                             Spacer()
                             Image(systemName: "chevron.right")
-                                .font(.system(size: 12, weight: .bold))
+                                .font(.caption.weight(.bold))
                                 .foregroundStyle(LG.fgMute)
                         }
                         .padding(12)

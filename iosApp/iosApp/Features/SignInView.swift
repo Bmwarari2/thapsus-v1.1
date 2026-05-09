@@ -192,7 +192,7 @@ struct SignInView: View {
                         HStack(spacing: 6) {
                             Text(isSignUp ? "Create account" : "Sign in")
                             Image(systemName: "arrow.right")
-                                .font(.system(size: 13, weight: .bold))
+                                .font(.footnote.weight(.bold))
                         }
                     }
                     .buttonStyle(LGPrimaryButtonStyle())
@@ -215,7 +215,7 @@ struct SignInView: View {
                 withAnimation(LG.animation) { agreedToTerms.toggle() }
             } label: {
                 Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 22, weight: .semibold))
+                    .font(.title2.weight(.semibold))
                     .foregroundStyle(agreedToTerms ? LG.accent2 : LG.fgMute)
                     .padding(.top, 1)
             }
@@ -272,7 +272,7 @@ struct SignInView: View {
                         .foregroundStyle(country.isEmpty ? LG.fgMute : LG.fg)
                     Spacer()
                     Image(systemName: "chevron.down")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.caption.weight(.semibold))
                         .foregroundStyle(LG.fgMute)
                 }
                 .font(.body(15, weight: .medium))
@@ -321,7 +321,7 @@ struct LGStatusBanner: View {
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.body.weight(.semibold))
                 .foregroundStyle(toneColor)
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)

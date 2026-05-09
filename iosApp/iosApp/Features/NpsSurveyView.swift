@@ -15,6 +15,8 @@ struct NpsSurveyView: View {
     @State private var score: Int = 9
     @State private var comment: String = ""
 
+    @ScaledMetric(relativeTo: .largeTitle) private var npsScoreSize: CGFloat = 36
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -32,7 +34,7 @@ struct NpsSurveyView: View {
                                 .foregroundStyle(Brand.ink)
                             Spacer()
                             Text("\(score)")
-                                .font(.system(size: 36, weight: .bold, design: .rounded))
+                                .font(.system(size: npsScoreSize, weight: .bold, design: .rounded))
                                 .foregroundStyle(scoreTint)
                                 .contentTransition(.numericText())
                         }

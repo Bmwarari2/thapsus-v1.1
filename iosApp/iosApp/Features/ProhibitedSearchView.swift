@@ -135,7 +135,7 @@ struct ProhibitedSearchView: View {
                     Text(item.term.capitalized).font(.headline).foregroundStyle(Brand.ink)
                     Spacer()
                     Text(String(describing: item.severity).uppercased())
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(.red)
                 }
                 if let reason = item.reason, !reason.isEmpty {

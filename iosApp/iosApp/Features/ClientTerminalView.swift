@@ -13,6 +13,8 @@ struct ClientTerminalView: View {
 
     @State private var copied: Bool = false
 
+    @ScaledMetric(relativeTo: .largeTitle) private var routingRefSize: CGFloat = 28
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -72,7 +74,7 @@ struct ClientTerminalView: View {
                     .font(.caption)
                     .foregroundStyle(Brand.cream.opacity(0.6))
                 Text(routingRef)
-                    .font(.system(size: 28, weight: .bold, design: .monospaced))
+                    .font(.system(size: routingRefSize, weight: .bold, design: .monospaced))
                     .foregroundStyle(Brand.cream)
 
                 Divider().background(Brand.cream.opacity(0.18))
@@ -102,7 +104,7 @@ struct ClientTerminalView: View {
     @ViewBuilder
     private func addressLine(_ text: String, weight: Font.Weight = .regular) -> some View {
         Text(text)
-            .font(.system(size: 17, weight: weight))
+            .font(.body.weight(weight))
             .foregroundStyle(Brand.cream)
     }
 

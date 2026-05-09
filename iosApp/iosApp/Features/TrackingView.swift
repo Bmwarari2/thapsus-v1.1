@@ -680,7 +680,7 @@ private struct GroupedDeliveryRow: View {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.headline).foregroundStyle(.white)
                         Text("\(group.members.count)×")
-                            .font(.system(size: 9, weight: .heavy))
+                            .font(.caption2.weight(.heavy))
                             .foregroundStyle(.white)
                     }
                 }
@@ -720,7 +720,7 @@ private struct GroupedDeliveryRow: View {
                 VStack(spacing: 2) {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.caption2).foregroundStyle(.tertiary)
-                    Text("POD").font(.system(size: 9, weight: .heavy)).tracking(1.5)
+                    Text("POD").font(.caption2.weight(.heavy)).tracking(1.5)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -800,7 +800,7 @@ private struct DeliveredShipmentRow: View {
                 VStack(spacing: 2) {
                     Image(systemName: "photo.on.rectangle.angled")
                         .font(.caption2).foregroundStyle(.tertiary)
-                    Text("POD").font(.system(size: 9, weight: .heavy)).tracking(1.5)
+                    Text("POD").font(.caption2.weight(.heavy)).tracking(1.5)
                         .foregroundStyle(.tertiary)
                 }
             }
@@ -981,7 +981,7 @@ struct CustomerInvoiceCard: View {
             }
         }()
         Text(label)
-            .font(.system(size: 9, weight: .heavy)).tracking(2)
+            .font(.caption2.weight(.heavy)).tracking(2)
             .foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(Capsule().fill(color.opacity(0.16)))
@@ -1110,7 +1110,7 @@ private struct TrackingBfmQuoteCard: View {
             }
         }()
         Text(label)
-            .font(.system(size: 9, weight: .heavy)).tracking(2)
+            .font(.caption2.weight(.heavy)).tracking(2)
             .foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(Capsule().fill(color.opacity(0.16)))
@@ -1320,7 +1320,7 @@ struct StageProgressCard: View {
                                 .font(.headline).foregroundStyle(.white)
                             if group.members.count > 1 {
                                 Text("\(group.members.count)×")
-                                    .font(.system(size: 9, weight: .heavy))
+                                    .font(.caption2.weight(.heavy))
                                     .foregroundStyle(.white)
                             }
                         }

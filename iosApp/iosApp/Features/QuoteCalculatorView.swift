@@ -54,7 +54,7 @@ struct QuoteCalculatorView: View {
                     HStack(spacing: 6) {
                         Text("Calculate")
                         Image(systemName: "arrow.right")
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.footnote.weight(.bold))
                     }
                 }
                 .buttonStyle(LGPrimaryButtonStyle())
