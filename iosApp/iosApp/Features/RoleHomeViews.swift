@@ -257,7 +257,6 @@ struct MarketingLinksSection: View {
 
     private let entries: [Entry] = [
         Entry(title: "About Thapsus", icon: "globe", path: "/"),
-        Entry(title: "Pricing",       icon: "tag",   path: "/pricing"),
         Entry(title: "FAQs",          icon: "questionmark.circle", path: "/faq"),
         Entry(title: "Privacy",       icon: "hand.raised.fill", path: "/privacy"),
         Entry(title: "Terms of service", icon: "doc.text", path: "/terms"),
