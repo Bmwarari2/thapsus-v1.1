@@ -49,10 +49,10 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
 
       - name: Setup Java 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "21"
@@ -63,19 +63,34 @@ jobs:
       # need to pin a non-default Xcode major.
 
       - name: Init CodeQL
-        uses: github/codeql-action/init@v3
+        uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           # security-extended adds extra vuln queries above the default set
           # without crossing into the noisier security-and-quality bucket.
           queries: security-extended
+          # Swift: keep autobuild — xcodebuild on the .xcodeproj works fine.
+          # Kotlin: manual mode. The default autobuilder calls
+          # `./gradlew testClasses` which doesn't exist in KMP projects
+          # (root + shared have no JVM Java source set; only androidApp
+          # provides that task). Manual mode hands the build over to the
+          # explicit gradle step below so we pick the right tasks.
+          build-mode: ${{ matrix.language == 'swift' && 'autobuild' || 'manual' }}
 
-      - name: Autobuild
-        # Swift: invokes xcodebuild on iosApp/iosApp.xcodeproj.
-        # Kotlin: gradle build of root + shared + androidApp modules.
-        uses: github/codeql-action/autobuild@v3
+      # Swift's autobuild runs inside the init step above when build-mode
+      # is autobuild. For KMP we drive Gradle ourselves: `assembleDebug` on
+      # :androidApp transitively compiles :shared (the JVM source set is
+      # what CodeQL's Kotlin extractor instruments), which is enough to
+      # extract every Kotlin source file in this repo. No iOS Kotlin/Native
+      # targets compile here — Swift is the other matrix entry, so we'd
+      # only be paying minutes for nothing.
+      - name: Manual Kotlin build (KMP shared + Android)
+        if: matrix.language == 'java-kotlin'
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :androidApp:assembleDebug --no-daemon --stacktrace
 
       - name: Analyze
-        uses: github/codeql-action/analyze@v3
+        uses: github/codeql-action/analyze@v4
         with:
           category: "/language:${{ matrix.language }}"
