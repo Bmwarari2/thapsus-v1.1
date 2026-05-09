@@ -79,6 +79,19 @@ class AuthViewModel(
         scope.launch { auth.signOut() }
     }
 
+    /**
+     * Audit W6.1 follow-up — fired by the Swift side on
+     * UIApplication.willEnterForegroundNotification so a
+     * long-backgrounded session that has crossed the server's 24h
+     * refresh threshold rotates its sc_token before the user's next
+     * tap. Errors are swallowed by AuthRepository.refreshSession
+     * (Result.runCatching) — a transient network blip on resume must
+     * never break the cached AuthSession.
+     */
+    fun refresh() {
+        scope.launch { auth.refreshSession() }
+    }
+
     fun dismissError() { _form.value = FormState.Idle }
 
     private fun friendly(t: Throwable): String =
