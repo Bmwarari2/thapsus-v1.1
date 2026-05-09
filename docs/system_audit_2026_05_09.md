@@ -300,4 +300,46 @@ Priority order (highest ROI first). Estimates assume one developer.
 
 ---
 
+## Appendix B — Corrections (added 2026-05-09 after remediation began)
+
+While executing the remediation plan I discovered that **several Workstream 4 ("Web parity build") items the audit listed as missing were already shipped** on `Swiftcargo-main` (`JS1`). Read the corrections below before treating the original §2.2 capability gap matrix as authoritative.
+
+### Items the audit flagged as missing — but which already exist on JS1
+
+| Audit item | Original claim | Reality on JS1 |
+|---|---|---|
+| W4A.1 — Rider Today page | "no Web equivalent" | ✅ `client/src/pages/partner/RiderPwa.jsx` renders Today's runs at `/partner/rider`. |
+| W4A.2 — Rider Run Stops | "no Web equivalent" | ✅ Same file — parcel list per run is in-line. |
+| W4A.3 — Rider POD capture | "no Web equivalent" | ✅ Same file — file-picker camera capture (`capture="environment"`), 4-digit OTP entry, signed-URL upload via `lastMileApi.podUploadUrl()`, fail-with-reason flow. |
+| W4A.5 — Rider role in nav | "missing" | ✅ Wired in `client/src/components/LiquidGlassNav.jsx` rider role group. |
+| W4B.1 — Customs entries UI | "no clearing-agent UI page" | ✅ `client/src/pages/partner/AgentPortal.jsx` at `/partner/agent` renders assigned consolidations + per-parcel entry form (IDF, entry no, duty, VAT, IDF fee, RDL). |
+| W4B.2 — Agent invoices UI | "no React page" | ✅ `AgentInvoices` named export in the same `AgentPortal.jsx`, mounted at `/partner/agent/invoices`. |
+| W4B.3 — Clearing-agent in nav | "missing" | ✅ Wired in `LiquidGlassNav.jsx` clearing-agent role group. |
+| W4D.2 — Admin error-logs viewer | "deferred" | ✅ `AdminDashboard.jsx` has an `errorLogs` tab (with stats badge + clear-button). |
+
+### Why this happened
+The audit was assembled by sub-agent inventories whose role was to *describe expected feature surfaces* per role. The sub-agents reported "no Web rider workflow" because they were searching by role-keyword (`/rider/*` URL patterns) rather than reading every file under `client/src/pages/`. The actual rider/agent surfaces live under `pages/partner/`, which the role-keyword pass missed. The lesson, captured in `feedback_audits_must_grep.md`: **never claim "X is missing" without grep-verifying on the current branch.**
+
+### Items that were genuinely missing — and have since shipped
+
+| Plan item | Status |
+|---|---|
+| W4D.3 — Customer notifications inbox | Shipped in PR #143 (now `/notifications`). |
+| W4D.1 — Admin DSAR queue | Shipped in PR #144 (`/admin/dsar`). |
+| W4C.1 — OpsConsole barcode scanner | Shipped in PR #145 (camera scanner via `@zxing/browser`). |
+| W4C.2 — Browser-print parcel label | Shipped in PR #146 (`<style>` + `window.print()` + Code128 via react-barcode). |
+| W5 — iOS marketing-link entries | Shipped in iOS PR #25 (`MarketingLinksSection` on every role's Account hub). |
+
+### Items still genuinely missing as of this corrigendum
+
+- **W4A.4 — Web Outbox.** `RiderPwa.jsx` is fully online. No IndexedDB queue, no Service Worker `sync` event. iOS has SQLDelight outbox; Web does not. This is the only meaningful rider-vs-iOS divergence left.
+- **W4C.2 manifest print** for `/ops/consolidations` (the parcel-label flavour shipped in #146; multi-parcel manifest is a follow-up).
+- **Workstream 6** — operational maturity items (JWT 7-day silent refresh, xcodegen/tuist, Lighthouse a11y CI, log retention cron, `ARCHITECTURE.md`).
+
+### Net audit accuracy
+
+Of the 13 W4 items in the original plan, **8 were already shipped, 5 were genuine gaps.** Strategic Roadmap §8 still stands directionally, but the day-cost estimates for Sprint 2 were inflated by ~60 % because they double-counted shipped work.
+
+---
+
 End of report.
