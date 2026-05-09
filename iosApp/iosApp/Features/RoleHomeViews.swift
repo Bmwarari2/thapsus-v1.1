@@ -4,6 +4,7 @@
 // link list.
 
 import SwiftUI
+import SafariServices
 import ThapsusShared
 
 private struct AccountLink {
@@ -118,6 +119,7 @@ struct OperatorHomeView: View {
                     AccountLink("Appearance", "circle.lefthalf.filled", AnyView(AppearanceSettingsView())),
                     AccountLink("Edit profile", "pencil.circle", AnyView(ProfileEditView())),
                 ])
+                MarketingLinksSection()
                 Button("Sign out", role: .destructive) { env.signOut() }
                     .buttonStyle(GlassSheenButtonStyle(fill: .red, foreground: .white))
                     .padding(.top, 12)
@@ -151,6 +153,7 @@ struct AgentHomeView: View {
                     AccountLink("Appearance", "circle.lefthalf.filled", AnyView(AppearanceSettingsView())),
                     AccountLink("Edit profile", "pencil.circle", AnyView(ProfileEditView())),
                 ])
+                MarketingLinksSection()
                 Button("Sign out", role: .destructive) { env.signOut() }
                     .buttonStyle(GlassSheenButtonStyle(fill: .red, foreground: .white))
                     .padding(.top, 12)
@@ -192,6 +195,7 @@ struct AdminHomeView: View {
                     AccountLink("Appearance", "circle.lefthalf.filled", AnyView(AppearanceSettingsView())),
                     AccountLink("Edit profile", "pencil.circle", AnyView(ProfileEditView())),
                 ])
+                MarketingLinksSection()
 
                 Button("Sign out", role: .destructive) { env.signOut() }
                     .buttonStyle(GlassSheenButtonStyle(fill: .red, foreground: .white))
@@ -221,6 +225,7 @@ struct RiderHomeView: View {
                     AccountLink("Support tickets", "questionmark.bubble.fill", AnyView(TicketsListView())),
                     AccountLink("Edit profile", "pencil.circle", AnyView(ProfileEditView())),
                 ])
+                MarketingLinksSection()
                 Button("Sign out", role: .destructive) { env.signOut() }
                     .buttonStyle(GlassSheenButtonStyle(fill: .red, foreground: .white))
                     .padding(.top, 12)
@@ -232,4 +237,103 @@ struct RiderHomeView: View {
         .navigationTitle("Account")
         .glassNavigationBar()
     }
+}
+
+// MARK: - Marketing links
+
+/// Shared "Visit thapsus.uk" section for every role's Account hub.
+/// Marketing surfaces live on the website only (per parity decision); this
+/// gives in-app users a one-tap path to them via SFSafariViewController so
+/// they stay inside the app's process and don't lose their session.
+struct MarketingLinksSection: View {
+    @State private var openURL: URL?
+
+    private struct Entry: Identifiable {
+        let id = UUID()
+        let title: String
+        let icon: String
+        let path: String
+    }
+
+    private let entries: [Entry] = [
+        Entry(title: "About Thapsus", icon: "globe", path: "/"),
+        Entry(title: "Pricing",       icon: "tag",   path: "/pricing"),
+        Entry(title: "FAQs",          icon: "questionmark.circle", path: "/faq"),
+        Entry(title: "Privacy",       icon: "hand.raised.fill", path: "/privacy"),
+        Entry(title: "Terms of service", icon: "doc.text", path: "/terms"),
+    ]
+
+    private static let baseURL = URL(string: "https://thapsus.uk")!
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionHeader(title: "On the web")
+            CrystalCard {
+                VStack(spacing: 0) {
+                    ForEach(Array(entries.enumerated()), id: \.element.id) { idx, entry in
+                        if idx > 0 { Divider().background(Brand.ink.opacity(0.08)) }
+                        Button(action: { openURL = url(for: entry.path) }) {
+                            HStack(spacing: 14) {
+                                Image(systemName: entry.icon)
+                                    .font(.headline)
+                                    .foregroundStyle(Brand.orange)
+                                    .frame(width: 28)
+                                Text(entry.title)
+                                    .font(.subheadline.weight(.semibold))
+                                    .foregroundStyle(Brand.ink)
+                                Spacer()
+                                Image(systemName: "arrow.up.right.square")
+                                    .font(.caption.weight(.bold))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 12)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(entry.title), opens in Safari")
+                    }
+                }
+            }
+        }
+        // Use the URL itself as the sheet's identity so each tap re-presents
+        // even after a user dismisses and taps the same link again.
+        .sheet(item: Binding(
+            get: { openURL.map(IdentifiableURL.init) },
+            set: { openURL = $0?.url }
+        )) { wrapper in
+            SafariView(url: wrapper.url)
+                .ignoresSafeArea()
+        }
+    }
+
+    private func url(for path: String) -> URL {
+        // appendingPathComponent normalises the leading slash for us; even
+        // an empty path resolves to the base URL.
+        var u = Self.baseURL
+        if path != "/" {
+            u = u.appendingPathComponent(path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+        }
+        return u
+    }
+}
+
+private struct IdentifiableURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
+/// Thin SwiftUI wrapper around SFSafariViewController. Stays inside the
+/// app process so the user keeps their navigation state on dismiss; no
+/// session loss, no app-switcher flash.
+struct SafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let cfg = SFSafariViewController.Configuration()
+        cfg.entersReaderIfAvailable = false
+        let controller = SFSafariViewController(url: url, configuration: cfg)
+        controller.preferredControlTintColor = UIColor(Brand.orange)
+        return controller
+    }
+
+    func updateUIViewController(_ controller: SFSafariViewController, context: Context) { }
 }

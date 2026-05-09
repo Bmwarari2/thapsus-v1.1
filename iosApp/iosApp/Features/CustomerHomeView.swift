@@ -44,6 +44,9 @@ struct CustomerHomeView: View {
                         destination: AnyView(DsarView())),
                 ])
 
+                MarketingLinksSection()
+                    .padding(.top, 4)
+
                 WhatsAppSupportButton()
                     .padding(.top, 8)
 
