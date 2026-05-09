@@ -312,14 +312,38 @@ struct BrandLogo: View {
 /// The number is server-driven (audit S2-3) — pulled by `AppConfigRepository`
 /// at app boot and cached in a hot StateFlow on the shared SDK. Falls back
 /// to the bundled default if the fetch failed (e.g. first launch offline).
+///
+/// Server input is sanitised before URL interpolation: the wa.me host is
+/// hard-coded, so a malicious value can't redirect, but it could still
+/// inject query parameters or break the URL. We strip everything except
+/// digits + an optional leading `+` and bail out if the result isn't a
+/// plausible E.164-shaped phone number.
+private let bundledFallbackWhatsappNumber = "447424531483"
+
 enum SupportContact {
     static var whatsappNumber: String {
-        ThapsusSdk.shared.appConfig().config.value.supportWhatsapp
+        sanitiseWhatsappNumber(ThapsusSdk.shared.appConfig().config.value.supportWhatsapp)
+            ?? bundledFallbackWhatsappNumber
     }
     static var whatsappURL: URL? {
         let body = "Hi%20Thapsus%20Cargo%2C%20I%20need%20help%20with%20"
         return URL(string: "https://wa.me/\(whatsappNumber)?text=\(body)")
     }
+}
+
+/// Returns nil when the input doesn't look like a phone number after
+/// stripping spaces and dashes. Accepts an optional leading `+` so the
+/// E.164 shape from the server (`447424531483`, `+447424531483`) round-trips.
+private func sanitiseWhatsappNumber(_ raw: String) -> String? {
+    let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !trimmed.isEmpty else { return nil }
+    let stripped = trimmed
+        .replacingOccurrences(of: " ", with: "")
+        .replacingOccurrences(of: "-", with: "")
+    let leading = stripped.hasPrefix("+") ? "+" : ""
+    let digits = stripped.filter(\.isNumber)
+    guard digits.count >= 7, digits.count <= 15 else { return nil }
+    return leading + digits
 }
 
 struct WhatsAppSupportButton: View {
