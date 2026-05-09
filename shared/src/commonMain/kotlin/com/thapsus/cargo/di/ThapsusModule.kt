@@ -2,6 +2,7 @@ package com.thapsus.cargo.di
 
 import com.thapsus.cargo.data.local.DatabaseDriverFactory
 import com.thapsus.cargo.data.local.ThapsusLocalCache
+import com.thapsus.cargo.data.remote.AuthEventFlags
 import com.thapsus.cargo.data.remote.RealtimeSync
 import com.thapsus.cargo.data.remote.SecureKeys
 import com.thapsus.cargo.data.remote.SecureSettings
@@ -64,7 +65,17 @@ object ThapsusKoin {
                 baseUrl = get<String>(API_BASE_URL),
                 tokenProvider = { settings.getString(SecureKeys.SC_TOKEN) },
                 onUnauthorized = {
+                    // Audit follow-up — graceful 401 UX. Clear the
+                    // Keychain entries first so any in-flight reads
+                    // see no token, then signal AuthEventFlags. The
+                    // signal flips the AuthRepository state flow to
+                    // SignedOut (via the callback wired in
+                    // AuthRepository.init) AND raises the
+                    // sessionExpired flag the SignInView reads on
+                    // appear to show its "your session expired"
+                    // banner.
                     settings.clear()
+                    AuthEventFlags.markServerSignOut()
                 },
                 engine = get()
             )
