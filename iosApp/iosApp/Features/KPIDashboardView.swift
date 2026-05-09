@@ -197,7 +197,7 @@ struct KPIDashboardView: View {
                                 RoundedRectangle(cornerRadius: 4)
                                     .fill(Brand.orange)
                                     .frame(height: max(4, CGFloat(Int(point.count)) / CGFloat(maxCount) * 80))
-                                Text(point.date.suffix(2)).font(.system(size: 8)).foregroundStyle(.tertiary)
+                                Text(point.date.suffix(2)).font(.caption2).foregroundStyle(.tertiary)
                             }
                             .frame(maxWidth: .infinity)
                         }
@@ -227,7 +227,7 @@ struct KPIDashboardView: View {
     private func miniStat(_ label: String, _ value: String, tint: Color) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(label.uppercased())
-                .font(.system(size: 9, weight: .heavy)).tracking(2)
+                .font(.caption2.weight(.heavy)).tracking(2)
                 .foregroundStyle(.secondary)
             Text(value)
                 .font(.subheadline.weight(.heavy))

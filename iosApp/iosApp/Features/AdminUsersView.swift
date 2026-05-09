@@ -160,7 +160,7 @@ struct AdminUsersView: View {
                     Text(user.name).font(.headline).foregroundStyle(Brand.ink)
                     Spacer()
                     Text(user.role.uppercased())
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(Brand.orange)
                 }
                 Text(user.email).font(.caption).foregroundStyle(.secondary)
@@ -169,7 +169,7 @@ struct AdminUsersView: View {
                 }
                 if !user.isActive {
                     Text("INACTIVE")
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(.red)
                 }
             }
@@ -323,13 +323,13 @@ struct AdminUserDetailView: View {
                     if let phone = loaded.user.phone { Text(phone).font(.subheadline).foregroundStyle(.secondary) }
                     HStack(spacing: 8) {
                         Text(loaded.user.role.uppercased())
-                            .font(.system(size: 9, weight: .heavy)).tracking(2)
+                            .font(.caption2.weight(.heavy)).tracking(2)
                             .foregroundStyle(Brand.orange)
                             .padding(.horizontal, 8).padding(.vertical, 4)
                             .background(Capsule().fill(Brand.orange.opacity(0.16)))
                         if !loaded.user.isActive {
                             Text("INACTIVE")
-                                .font(.system(size: 9, weight: .heavy)).tracking(2)
+                                .font(.caption2.weight(.heavy)).tracking(2)
                                 .foregroundStyle(.red)
                         }
                     }
@@ -352,12 +352,12 @@ struct AdminUserDetailView: View {
                             Text(email.subject).font(.subheadline.weight(.semibold)).foregroundStyle(Brand.ink)
                             Spacer()
                             Text(email.status.uppercased())
-                                .font(.system(size: 8, weight: .heavy)).tracking(2)
+                                .font(.caption2.weight(.heavy)).tracking(2)
                                 .foregroundStyle(email.status == "sent" ? .green : .red)
                         }
                         HStack {
                             Text(email.emailType.uppercased())
-                                .font(.system(size: 8, weight: .heavy)).tracking(2)
+                                .font(.caption2.weight(.heavy)).tracking(2)
                                 .foregroundStyle(.secondary)
                             Spacer()
                             if let created = email.createdAt {

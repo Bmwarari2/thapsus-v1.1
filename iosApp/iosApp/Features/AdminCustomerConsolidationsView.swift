@@ -252,7 +252,7 @@ private struct AdminConsolidationCard: View {
             }
         }()
         Text(label)
-            .font(.system(size: 9, weight: .heavy)).tracking(2)
+            .font(.caption2.weight(.heavy)).tracking(2)
             .foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 4)
             .background(Capsule().fill(color.opacity(0.16)))
@@ -464,7 +464,7 @@ private struct ShippingIdInputSheet: View {
             }
         }()
         Text(label)
-            .font(.system(size: 9, weight: .heavy)).tracking(1.5)
+            .font(.caption2.weight(.heavy)).tracking(1.5)
             .foregroundStyle(color)
             .padding(.horizontal, 6).padding(.vertical, 2)
             .background(Capsule().fill(color.opacity(0.16)))

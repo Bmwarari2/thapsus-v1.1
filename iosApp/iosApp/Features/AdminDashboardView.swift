@@ -166,7 +166,7 @@ struct AdminDashboardView: View {
     private func revenueLine(label: String, amount: Double, count: Int) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             Text(label.uppercased())
-                .font(.system(size: 9, weight: .heavy)).tracking(2)
+                .font(.caption2.weight(.heavy)).tracking(2)
                 .foregroundStyle(.secondary)
             Text(formatGbp(amount))
                 .font(.headline).foregroundStyle(Brand.ink)
@@ -187,7 +187,7 @@ struct AdminDashboardView: View {
         CrystalCard {
             VStack(alignment: .leading, spacing: 6) {
                 Text(label.uppercased())
-                    .font(.system(size: 9, weight: .heavy))
+                    .font(.caption2.weight(.heavy))
                     .tracking(2)
                     .foregroundStyle(.secondary)
                 Text(value)
@@ -303,7 +303,7 @@ struct AdminDashboardView: View {
                         .font(.headline).foregroundStyle(Brand.ink)
                     Spacer()
                     Text(flag.status.uppercased())
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(.orange)
                 }
                 Text(flag.reason).font(.subheadline).foregroundStyle(.secondary)
@@ -324,13 +324,13 @@ struct AdminDashboardView: View {
                     Text(user.name).font(.headline).foregroundStyle(Brand.ink)
                     Spacer()
                     Text(user.role.uppercased())
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(Brand.orange)
                 }
                 Text(user.email).font(.caption).foregroundStyle(.secondary)
                 if !user.isActive {
                     Text("INACTIVE")
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(.red)
                 }
             }

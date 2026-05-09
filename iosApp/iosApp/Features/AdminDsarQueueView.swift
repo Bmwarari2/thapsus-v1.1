@@ -76,7 +76,7 @@ struct AdminDsarQueueView: View {
                     }
                     Spacer()
                     Text(r.type.uppercased())
-                        .font(.system(size: 9, weight: .heavy)).tracking(2)
+                        .font(.caption2.weight(.heavy)).tracking(2)
                         .foregroundStyle(r.type == "erase" ? .red : Brand.orange)
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(Capsule().fill((r.type == "erase" ? Color.red : Brand.orange).opacity(0.16)))
