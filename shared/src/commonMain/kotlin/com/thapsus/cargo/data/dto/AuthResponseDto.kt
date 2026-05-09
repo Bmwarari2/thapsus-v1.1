@@ -60,3 +60,18 @@ data class SupabaseTokenResponse(
     @SerialName("supabase_token") val supabaseToken: String? = null,
     @SerialName("supabase_token_expires_at") val supabaseTokenExpiresAt: Long? = null
 )
+
+/**
+ * Mirrors `GET /api/auth/me`:
+ *   { success, user, refreshed_token? }
+ *
+ * `refreshed_token` is populated when the presented JWT's `iat` is older
+ * than the server's JWT_REFRESH_AFTER_SECONDS threshold (audit W6.1).
+ * Older server builds simply omit the field, so the type stays nullable.
+ */
+@Serializable
+data class MeResponseDto(
+    val success: Boolean = true,
+    val user: ScUserDto? = null,
+    @SerialName("refreshed_token") val refreshedToken: String? = null
+)

@@ -5,6 +5,7 @@ import com.thapsus.cargo.data.dto.ChangePasswordRequest
 import com.thapsus.cargo.data.dto.ForgotPasswordRequest
 import com.thapsus.cargo.data.dto.GenericAckResponse
 import com.thapsus.cargo.data.dto.LoginRequest
+import com.thapsus.cargo.data.dto.MeResponseDto
 import com.thapsus.cargo.data.dto.RegisterRequest
 import com.thapsus.cargo.data.dto.ResetPasswordRequest
 import com.thapsus.cargo.data.dto.ScUserDto
@@ -65,6 +66,18 @@ class AuthRepository(
         scope.launch {
             try {
                 rehydrate()
+                // Audit W6.1 — silent refresh. Once the local cache has
+                // populated state, fire a /me request so any aged sc_token
+                // gets rotated before the user starts navigating. Errors
+                // are swallowed: the local state is still useful even if
+                // the network is down. Run in the same coroutine so we
+                // never race rehydrate's _state.value assignment.
+                if (_state.value is AuthSession.Authenticated) {
+                    runCatching { refreshSession() }
+                        .onFailure { e ->
+                            println("[AuthRepository] silent refresh failed: ${e::class.simpleName}: ${e.message}")
+                        }
+                }
             } catch (e: Throwable) {
                 _state.value = AuthSession.SignedOut
                 println("[AuthRepository] rehydrate failed: ${e::class.simpleName}: ${e.message}")
@@ -210,6 +223,41 @@ class AuthRepository(
         val exp = settings.getString(SecureKeys.SUPABASE_TOKEN_EXP)?.toLongOrNull() ?: return true
         val now = Clock.System.now().epochSeconds
         return (exp - now) < seconds
+    }
+
+    /**
+     * Audit W6.1 — silent refresh. Calls GET /auth/me; if the server
+     * returned a `refreshed_token` (because our presented sc_token's
+     * `iat` is older than the server's JWT_REFRESH_AFTER_SECONDS),
+     * swap the new token into Keychain and update the cached profile.
+     *
+     * Fired automatically on app boot from the init block. Public so
+     * callers (e.g. an app-foreground listener) can also opt in to
+     * an extra rotation if they want a tighter window than the
+     * once-per-launch default.
+     *
+     * Errors are caught by the caller via runCatching — a network
+     * blip on launch must never break the local-cache-driven
+     * AuthSession.Authenticated state. The next launch tries again.
+     */
+    suspend fun refreshSession(): Result<Unit> = runCatching {
+        val resp: MeResponseDto = api.get<MeResponseDto>("/auth/me")
+        // Update the cached user profile from the live server row so
+        // a name / email / role change made elsewhere (admin console,
+        // self-edit on a different device) lands on the next launch.
+        resp.user?.let { user ->
+            settings.putString(
+                SecureKeys.USER_PROFILE,
+                json.encodeToString(ScUserDto.serializer(), user)
+            )
+            _state.value = sessionFromUser(user)
+        }
+        // The token swap is the actual W6.1 payload. Only write when
+        // present — older server builds omit the field and we'd
+        // otherwise overwrite the live token with null.
+        resp.refreshedToken?.let { fresh ->
+            settings.putString(SecureKeys.SC_TOKEN, fresh)
+        }
     }
 
     // ----- Internals -----
