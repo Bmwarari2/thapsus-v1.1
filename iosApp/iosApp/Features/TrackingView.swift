@@ -915,12 +915,12 @@ private struct PublicTrackingCard: View {
     }
 }
 
-/// Per-user invoice card displayed at the top of the customer Orders tab
-/// when an admin has stamped a customer-consolidation. Status badge flips
-/// from "Pay now" (invoiced) to "Paid" (paid). Tap-through to a payment
-/// flow is intentionally deferred — Phase 2 surfaces the invoice; Phase
-/// 2.1 will wire wallet/M-Pesa payment.
-private struct CustomerInvoiceCard: View {
+/// Per-user invoice card displayed wherever the customer needs to see
+/// (and act on) an admin-stamped customer-consolidation. Status badge
+/// flips from "Pay now" (invoiced) to "Paid" (paid). Reused on the
+/// home dashboard's active-invoice section and on the dedicated
+/// CustomerInvoicesView; hence not file-private.
+struct CustomerInvoiceCard: View {
     let consolidation: CustomerConsolidationDto
     /// Tap → launch PayInvoiceView. Wired in PR B (server PR #61, migration 028)
     /// — wallet path is dead, payments now go through Stripe or M-Pesa.

@@ -18,6 +18,16 @@ struct CustomerDashboardView: View {
     @State private var showingNewOrder = false
     @State private var showingBuyForMe = false
 
+    /// Customer-consolidation rows whose `invoice_status` is still
+    /// outstanding — surfaced under the address card so a fresh invoice
+    /// is impossible to miss. Same Supabase + Realtime path TrackingView
+    /// uses, so a status flip from invoiced → paid causes the row to
+    /// drop off this section automatically (server's pushToUser fan-out
+    /// also fires the in-app notification banner overlay).
+    @State private var customerConsolidations: [CustomerConsolidationDto] = []
+    @State private var customerConsolidationsTask: Task<Void, Never>?
+    @State private var payTarget: PayTarget?
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -25,6 +35,7 @@ struct CustomerDashboardView: View {
                 header
                 CutoffBannerView()
                 warehouseCard
+                activeInvoicesSection
                 actionGrid
                 statsTiles
 
@@ -65,11 +76,21 @@ struct CustomerDashboardView: View {
         .sheet(isPresented: $showingBuyForMe) {
             NavigationStack { BuyForMeView() }.glassSheet(detents: [.large, .medium])
         }
+        .sheet(item: $payTarget) { target in
+            PayInvoiceView(
+                targetKind: target.kind,
+                targetId: target.id,
+                targetTitle: target.title,
+                amountKesGross: target.amountKes
+            )
+        }
         .refreshable { dashVM?.refresh(); warehouseVM?.load() }
         .task { bootstrap() }
         .onDisappear {
             dashVM?.clear(); dashVM = nil; dashObs = nil
             warehouseVM = nil; warehouseObs = nil
+            customerConsolidationsTask?.cancel()
+            customerConsolidationsTask = nil
         }
     }
 
@@ -231,6 +252,55 @@ struct CustomerDashboardView: View {
             warehouseVM = vm
             vm.load()
             warehouseObs = StateFlowObserver(initial: vm.state.value) { vm.state }
+        }
+        if customerConsolidationsTask == nil, let userID = env.currentUserID {
+            let repo = ThapsusSdk.shared.customerConsolidations()
+            customerConsolidationsTask = Task { @MainActor in
+                customerConsolidations = (try? await repo.fetchForUser(userId: userID)) ?? []
+                do {
+                    for try await updated in repo.observeForUser(userId: userID) {
+                        if let idx = customerConsolidations.firstIndex(where: { $0.id == updated.id }) {
+                            customerConsolidations[idx] = updated
+                        } else {
+                            customerConsolidations.insert(updated, at: 0)
+                        }
+                    }
+                } catch {
+                    print("[CustomerDashboardView] customerConsolidations.observeForUser failed: \(error)")
+                }
+            }
+        }
+    }
+
+    // MARK: - Active invoices section (under the address card)
+
+    /// Only `invoiced` rows surface here — `paid`/`shipped` belong on the
+    /// Activity → Invoices archive (CustomerInvoicesView) and `pending`
+    /// rows have no amount yet.
+    private var activeInvoices: [CustomerConsolidationDto] {
+        customerConsolidations
+            .filter { $0.status == "invoiced" }
+            .sorted { ($0.createdAt ?? "") > ($1.createdAt ?? "") }
+    }
+
+    @ViewBuilder
+    private var activeInvoicesSection: some View {
+        if !activeInvoices.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    LGEyebrow(text: activeInvoices.count == 1 ? "Invoice due" : "\(activeInvoices.count) invoices due")
+                    Spacer()
+                    LGPill(text: "Action", tone: .accent)
+                }
+                .padding(.leading, 4)
+
+                ForEach(activeInvoices, id: \.id) { c in
+                    CustomerInvoiceCard(consolidation: c) {
+                        payTarget = PayTarget.fromConsolidation(c)
+                    }
+                }
+            }
+            .padding(.top, 4)
         }
     }
 
