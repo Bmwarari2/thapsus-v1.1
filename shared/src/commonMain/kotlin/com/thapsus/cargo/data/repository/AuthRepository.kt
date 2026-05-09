@@ -14,6 +14,7 @@ import com.thapsus.cargo.data.dto.UpdateProfileRequest
 import com.thapsus.cargo.data.dto.UpdateProfileResponse
 import com.thapsus.cargo.data.dto.UserDto
 import com.thapsus.cargo.data.local.ThapsusLocalCache
+import com.thapsus.cargo.data.remote.AuthEventFlags
 import com.thapsus.cargo.data.remote.SecureKeys
 import com.thapsus.cargo.data.remote.SecureSettings
 import com.thapsus.cargo.data.remote.ThapsusApiClient
@@ -59,6 +60,18 @@ class AuthRepository(
     fun currentSupabaseToken(): String? = settings.getString(SecureKeys.SUPABASE_TOKEN)
 
     init {
+        // Audit follow-up — graceful 401 UX. Wire the AuthEventFlags
+        // callback so a server-side 401 (handled in
+        // ThapsusApiClient.onUnauthorized) flips this repository's
+        // state to SignedOut immediately instead of leaving it stuck
+        // at Authenticated until the next rehydrate / app launch.
+        // The companion sessionExpired flag is set by
+        // markServerSignOut and drives the SignInView banner.
+        AuthEventFlags.onServerSignOut = {
+            runCatching { cache.clearAll() }
+            _state.value = AuthSession.SignedOut
+        }
+
         // Defensive try/catch — `rehydrate` reads SecureSettings + decodes
         // a cached profile; a corrupted blob or settings backend hiccup
         // (rare on iOS, more common after a wipe-app-data cycle) would

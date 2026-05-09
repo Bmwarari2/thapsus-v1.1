@@ -17,6 +17,13 @@ struct SignInView: View {
     @State private var isSignUp: Bool = false
     @State private var formObserver: StateFlowObserver<AuthViewModelFormState>?
     @State private var presentingForgot: Bool = false
+    // Audit follow-up — graceful 401 UX. AuthEventFlags.sessionExpired
+    // is set when the API client detects a 401 (token revoked, password
+    // changed elsewhere, account disabled). The first time SignInView
+    // appears after that, we surface a banner so the user knows why
+    // they're back here. Read once, clear, never ask again until the
+    // next involuntary sign-out.
+    @State private var sessionExpiredBanner: Bool = false
 
     private let countries: [(code: String, label: String)] = [
         ("KE", "Kenya"),
@@ -37,6 +44,16 @@ struct SignInView: View {
 
                 formCard
                     .padding(.horizontal, 18)
+
+                if sessionExpiredBanner {
+                    LGStatusBanner(
+                        tone: .info,
+                        title: "Your session expired",
+                        message: "Please sign in again to continue where you left off."
+                    )
+                    .padding(.horizontal, 18)
+                    .padding(.top, 14)
+                }
 
                 if let err = formObserver?.value as? AuthViewModelFormStateError {
                     LGStatusBanner(tone: .err, title: "Couldn't sign you in", message: err.message)
@@ -71,6 +88,17 @@ struct SignInView: View {
             env.bootstrap()
             guard let vm = env.authVM, formObserver == nil else { return }
             formObserver = StateFlowObserver(initial: vm.form.value) { vm.form }
+        }
+        .onAppear {
+            // Audit follow-up — read + clear the AuthEventFlags
+            // sessionExpired one-shot. Setting both the local @State
+            // and the static flag back to false means the banner is
+            // shown once per server-driven sign-out and not on every
+            // navigate to /sign-in.
+            if AuthEventFlags.shared.sessionExpired {
+                sessionExpiredBanner = true
+                AuthEventFlags.shared.sessionExpired = false
+            }
         }
     }
 
