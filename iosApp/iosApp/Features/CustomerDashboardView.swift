@@ -85,7 +85,28 @@ struct CustomerDashboardView: View {
             )
         }
         .refreshable { dashVM?.refresh(); warehouseVM?.load() }
-        .task { bootstrap() }
+        .task {
+            bootstrap()
+            // Customer-consolidation invoices: same Supabase + Realtime
+            // pattern TrackingView uses — kept inline (rather than inside
+            // the synchronous `bootstrap()`) so Swift 6 strict concurrency
+            // sees both the initial fetch and the observe loop running in
+            // the .task closure's main-actor isolation, avoiding the
+            // non-Sendable Kotlin repo data-race flag.
+            if customerConsolidationsTask == nil, let userID = env.currentUserID {
+                let repo = ThapsusSdk.shared.customerConsolidations()
+                customerConsolidations = (try? await repo.fetchForUser(userId: userID)) ?? []
+                customerConsolidationsTask = Task { @MainActor in
+                    for await updated in repo.observeForUser(userId: userID) {
+                        if let idx = customerConsolidations.firstIndex(where: { $0.id == updated.id }) {
+                            customerConsolidations[idx] = updated
+                        } else {
+                            customerConsolidations.insert(updated, at: 0)
+                        }
+                    }
+                }
+            }
+        }
         .onDisappear {
             dashVM?.clear(); dashVM = nil; dashObs = nil
             warehouseVM = nil; warehouseObs = nil
@@ -252,23 +273,6 @@ struct CustomerDashboardView: View {
             warehouseVM = vm
             vm.load()
             warehouseObs = StateFlowObserver(initial: vm.state.value) { vm.state }
-        }
-        if customerConsolidationsTask == nil, let userID = env.currentUserID {
-            let repo = ThapsusSdk.shared.customerConsolidations()
-            customerConsolidationsTask = Task { @MainActor in
-                customerConsolidations = (try? await repo.fetchForUser(userId: userID)) ?? []
-                do {
-                    for try await updated in repo.observeForUser(userId: userID) {
-                        if let idx = customerConsolidations.firstIndex(where: { $0.id == updated.id }) {
-                            customerConsolidations[idx] = updated
-                        } else {
-                            customerConsolidations.insert(updated, at: 0)
-                        }
-                    }
-                } catch {
-                    print("[CustomerDashboardView] customerConsolidations.observeForUser failed: \(error)")
-                }
-            }
         }
     }
 

@@ -172,16 +172,12 @@ struct CustomerInvoicesView: View {
             let repo = ThapsusSdk.shared.customerConsolidations()
             consolidations = (try? await repo.fetchForUser(userId: userID)) ?? []
             observerTask = Task { @MainActor in
-                do {
-                    for try await updated in repo.observeForUser(userId: userID) {
-                        if let idx = consolidations.firstIndex(where: { $0.id == updated.id }) {
-                            consolidations[idx] = updated
-                        } else {
-                            consolidations.insert(updated, at: 0)
-                        }
+                for await updated in repo.observeForUser(userId: userID) {
+                    if let idx = consolidations.firstIndex(where: { $0.id == updated.id }) {
+                        consolidations[idx] = updated
+                    } else {
+                        consolidations.insert(updated, at: 0)
                     }
-                } catch {
-                    print("[CustomerInvoicesView] observeForUser failed: \(error)")
                 }
             }
         }
