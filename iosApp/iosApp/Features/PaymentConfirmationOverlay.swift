@@ -73,6 +73,13 @@ struct PaymentConfirmationOverlay: View {
     @State private var contentOpacity: Double = 0
     @State private var backdropOpacity: Double = 0
 
+    // Dynamic-Type-aware sizes for the celebratory checkmark + amount.
+    // @ScaledMetric scales with the user's preferred text size while keeping
+    // the visual emphasis ratio. Bound to .largeTitle / .title so they grow
+    // proportionally with the rest of the overlay copy.
+    @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 76
+    @ScaledMetric(relativeTo: .title) private var amountSize: CGFloat = 36
+
     var body: some View {
         ZStack {
             Rectangle()
@@ -93,7 +100,7 @@ struct PaymentConfirmationOverlay: View {
                                 .scaleEffect(ringScale)
 
                             Image(systemName: variant.icon)
-                                .font(.system(size: 76, weight: .bold))
+                                .font(.system(size: iconSize, weight: .bold))
                                 .foregroundStyle(variant.tint)
                                 .scaleEffect(iconScale)
                                 .opacity(iconOpacity)
@@ -115,7 +122,7 @@ struct PaymentConfirmationOverlay: View {
 
                             if let amount = amountKesGross {
                                 Text("KES \(formatKes(amount))")
-                                    .font(.system(size: 36, weight: .black, design: .rounded))
+                                    .font(.system(size: amountSize, weight: .black, design: .rounded))
                                     .foregroundStyle(Brand.ink)
                                     .padding(.top, 4)
                                     .contentTransition(.numericText())
