@@ -6,6 +6,15 @@
 import SwiftUI
 import ThapsusShared
 
+/// Identifiable wrapper used by SignInView's `.sheet(item:)` to present
+/// the in-app Safari view for Terms / Privacy links during sign-up. The
+/// `IdentifiableURL` defined in RoleHomeViews.swift is private to that
+/// file, so we declare a parallel one here rather than cross-importing.
+fileprivate struct SignInLegalURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
+}
+
 struct SignInView: View {
     @Environment(AppEnvironment.self) private var env
 
@@ -24,6 +33,13 @@ struct SignInView: View {
     // they're back here. Read once, clear, never ask again until the
     // next involuntary sign-out.
     @State private var sessionExpiredBanner: Bool = false
+
+    // Sign-up: user must explicitly agree to ToS + Privacy before the
+    // Create-account submit unlocks. Reset back to false whenever the
+    // user toggles back into sign-in mode so the agreement is always
+    // a deliberate act for a fresh account.
+    @State private var agreedToTerms: Bool = false
+    @State private var legalSheetURL: SignInLegalURL?
 
     private let countries: [(code: String, label: String)] = [
         ("KE", "Kenya"),
@@ -69,7 +85,14 @@ struct SignInView: View {
                     Text(isSignUp ? "Already have an account?" : "New here?")
                         .foregroundStyle(LG.fg3)
                     Button(isSignUp ? "Sign in" : "Create account") {
-                        withAnimation(LG.animation) { isSignUp.toggle() }
+                        withAnimation(LG.animation) {
+                            isSignUp.toggle()
+                            // Always require a fresh, deliberate
+                            // agreement when entering the sign-up
+                            // path — never carry over a tick from a
+                            // previous session.
+                            agreedToTerms = false
+                        }
                     }
                     .foregroundStyle(LG.accent2)
                     .fontWeight(.bold)
@@ -83,6 +106,13 @@ struct SignInView: View {
         .background(LiquidGlassBackground())
         .sheet(isPresented: $presentingForgot) {
             NavigationStack { ForgotPasswordView() }
+        }
+        .sheet(item: $legalSheetURL) { wrapper in
+            // Re-uses the SafariView wrapper defined in
+            // RoleHomeViews.swift so terms/privacy open in-app rather
+            // than kicking the user out to system Safari.
+            SafariView(url: wrapper.url)
+                .ignoresSafeArea()
         }
         .task {
             env.bootstrap()
@@ -149,6 +179,11 @@ struct SignInView: View {
                     .padding(.top, -2)
                 }
 
+                if isSignUp {
+                    termsAgreementBlock
+                        .padding(.top, 4)
+                }
+
                 if let busy = formObserver?.value, busy is AuthViewModelFormStateSubmitting {
                     HStack { Spacer(); ProgressView().tint(LG.accent); Spacer() }
                         .padding(.vertical, 8)
@@ -162,9 +197,62 @@ struct SignInView: View {
                     }
                     .buttonStyle(LGPrimaryButtonStyle())
                     .padding(.top, 6)
+                    .disabled(isSignUp && !agreedToTerms)
+                    .opacity(isSignUp && !agreedToTerms ? 0.5 : 1.0)
                 }
             }
         }
+    }
+
+    // Sign-up agreement row. A square checkbox + the legal disclosure
+    // text with two inline buttons that open Terms / Privacy in the
+    // in-app SFSafariViewController (re-uses SafariView from
+    // RoleHomeViews.swift). Submit gating is on the @State above.
+    @ViewBuilder
+    private var termsAgreementBlock: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Button {
+                withAnimation(LG.animation) { agreedToTerms.toggle() }
+            } label: {
+                Image(systemName: agreedToTerms ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(agreedToTerms ? LG.accent2 : LG.fgMute)
+                    .padding(.top, 1)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("I agree to the Terms of Service and Privacy Policy")
+            .accessibilityAddTraits(agreedToTerms ? [.isSelected] : [])
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 0) {
+                    Text("I agree to Thapsus Cargo's ")
+                        .font(.body(13, weight: .medium))
+                        .foregroundStyle(LG.fg2)
+                    Button("Terms of Service") {
+                        legalSheetURL = SignInLegalURL(url: URL(string: "https://thapsus.uk/terms")!)
+                    }
+                    .font(.body(13, weight: .semibold))
+                    .foregroundStyle(LG.accent2)
+                    .buttonStyle(.plain)
+                }
+                HStack(spacing: 0) {
+                    Text("and ")
+                        .font(.body(13, weight: .medium))
+                        .foregroundStyle(LG.fg2)
+                    Button("Privacy Policy") {
+                        legalSheetURL = SignInLegalURL(url: URL(string: "https://thapsus.uk/privacy")!)
+                    }
+                    .font(.body(13, weight: .semibold))
+                    .foregroundStyle(LG.accent2)
+                    .buttonStyle(.plain)
+                    Text(".")
+                        .font(.body(13, weight: .medium))
+                        .foregroundStyle(LG.fg2)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder
