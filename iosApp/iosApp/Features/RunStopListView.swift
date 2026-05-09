@@ -210,6 +210,7 @@ private struct PodSyncFailureBanner: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss")
         }
         .padding(10)
         .background(

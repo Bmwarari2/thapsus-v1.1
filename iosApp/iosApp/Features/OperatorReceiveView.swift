@@ -98,7 +98,9 @@ struct OperatorReceiveView: View {
                 Spacer()
                 Button { todayVm?.refresh() } label: {
                     Image(systemName: "arrow.clockwise")
-                }.tint(Brand.orange)
+                }
+                .tint(Brand.orange)
+                .accessibilityLabel("Refresh")
             }
             if parcels.isEmpty {
                 CrystalCard {

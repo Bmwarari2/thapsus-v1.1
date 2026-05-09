@@ -87,6 +87,7 @@ struct AdminUsersView: View {
                 Button(action: { query = ""; vm?.load() }) {
                     Image(systemName: "xmark.circle.fill").foregroundStyle(.secondary)
                 }
+                .accessibilityLabel("Clear search")
             }
         }
         .padding(14)
