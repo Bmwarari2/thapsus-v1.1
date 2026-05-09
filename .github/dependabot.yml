@@ -1,41 +1,5 @@
 version: 2
 updates:
-  # KMP shared module + Android app — Kotlin, Coroutines, Ktor, Supabase-KT,
-  # SQLDelight, Koin, SKIE, AGP, Compose BOM, CameraX, ML Kit, etc. all live
-  # in build.gradle.kts files plus gradle/libs.versions.toml.
-  - package-ecosystem: gradle
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-      time: "06:00"
-      timezone: Europe/London
-    open-pull-requests-limit: 5
-    target-branch: main
-    labels:
-      - dependencies
-      - kmp
-    commit-message:
-      prefix: "chore(deps)"
-      include: scope
-    groups:
-      kmp-patch-and-minor:
-        patterns:
-          - "*"
-        update-types:
-          - patch
-          - minor
-    # Pin majors that Kotlin / SKIE compatibility constraints — bumping any of
-    # these without coordinating with SKIE 0.10.x's supported Kotlin range will
-    # break the iOS framework build.
-    ignore:
-      - dependency-name: org.jetbrains.kotlin*
-        update-types:
-          - version-update:semver-major
-      - dependency-name: co.touchlab.skie*
-        update-types:
-          - version-update:semver-major
-
   # GitHub Actions used by future workflows (CodeQL + iOS a11y CI gate).
   - package-ecosystem: github-actions
     directory: /
@@ -53,7 +17,32 @@ updates:
       prefix: "chore(deps/actions)"
       include: scope
 
-# Note: iOS Swift Package Manager dependencies are managed inside the .xcodeproj
-# (not via a top-level Package.swift), so Dependabot's `swift` ecosystem can't
-# track them. Use Xcode → File → Packages → Update To Latest Package Versions
-# manually for SPM bumps; CodeQL still scans Swift sources for vulns.
+# Why no Gradle ecosystem here:
+#
+# This is a Kotlin Multiplatform project that targets iosArm64 and
+# iosSimulatorArm64 alongside the JVM (Android). Resolving the Gradle
+# dependency graph requires Kotlin/Native to download Apple platform
+# sysroots and link against Xcode's iPhoneOS SDK — neither is available
+# on Dependabot's Linux runners. PR #37's first run failed with
+# "The updater encountered one or more errors" for exactly this reason.
+#
+# Workarounds considered and rejected:
+#   - `vendor: true` — resolves the manifest, not native targets
+#   - gradle.properties flag to skip native — diverges from the real
+#     build config and risks shipping unresolved-on-iOS deps
+#   - `enable-beta-ecosystems: true` — gradle is GA, not beta
+#   - Restrict to a sub-directory like `/androidApp` — Dependabot still
+#     bootstraps root settings.gradle.kts which pulls iOS targets via
+#     the shared module
+#
+# Pragmatic answer: KMP bumps want human review anyway — Kotlin / SKIE /
+# AGP / Compose BOM compatibility windows are interlocked and break the
+# iOS framework build silently if mis-aligned (see
+# reference_dep_major_gotchas.md). Manual updates via gradle/libs.versions.toml
+# plus an Xcode build pass are the correct path.
+#
+# iOS Swift Package Manager deps are also not covered: they live inside
+# the .xcodeproj rather than a top-level Package.swift, so Dependabot's
+# `swift` ecosystem can't track them either. Use Xcode → File → Packages
+# → Update To Latest Package Versions for SPM bumps. CodeQL still scans
+# the Swift / Kotlin source for vulns regardless.
