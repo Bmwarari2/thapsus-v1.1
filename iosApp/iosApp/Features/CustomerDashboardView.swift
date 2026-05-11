@@ -14,7 +14,10 @@ struct CustomerDashboardView: View {
     @State private var dashObs: StateFlowObserver<DashboardState>? = nil
 
     @State private var copied: Bool = false
-    @State private var showHowItWorks: Bool = false
+    // Expanded by default — customers benefit from seeing the steps as soon as
+    // they land on the home tab; they can still collapse it via the toggle
+    // below.
+    @State private var showHowItWorks: Bool = true
     @State private var showingNewOrder = false
     @State private var showingBuyForMe = false
 
