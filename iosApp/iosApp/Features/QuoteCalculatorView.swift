@@ -106,8 +106,8 @@ struct QuoteCalculatorView: View {
                 numberRow(
                     label: "Weight", suffix: "kg",
                     text: $weightText, focus: .weight,
-                    range: 0.1...80, format: "%.2f",
-                    commit: { actualKg = clamp(parse($0), 0.1, 80, fallback: actualKg) }
+                    range: 0.1...1000, format: "%.2f",
+                    commit: { actualKg = clamp(parse($0), 0.1, 1000, fallback: actualKg) }
                 )
                 divider
                 numberRow(
@@ -291,7 +291,7 @@ struct QuoteCalculatorView: View {
 
     private func compute() {
         // Make sure any in-flight edit is committed before pricing.
-        actualKg = clamp(parse(weightText), 0.1, 80, fallback: actualKg)
+        actualKg = clamp(parse(weightText), 0.1, 1000, fallback: actualKg)
         lengthCm = clamp(parse(lengthText), 1, 300, fallback: lengthCm)
         widthCm  = clamp(parse(widthText),  1, 300, fallback: widthCm)
         heightCm = clamp(parse(heightText), 1, 300, fallback: heightCm)
