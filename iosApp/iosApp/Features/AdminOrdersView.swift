@@ -11,7 +11,9 @@ struct CreateOrderPayload {
     var customerEmail: String?
     var customerName: String?
     var retailer: String
-    var market: String   // must be "UK" or "China"
+    var market: String   // always "UK" — the field still exists on the
+                         // server DTO until the column is dropped in the
+                         // backend strip PR.
     var description: String
     var weightKg: Double?
     var shippingSpeed: String  // "economy" or "express"
@@ -55,7 +57,6 @@ struct AdminOrdersView: View {
     @State private var showCreate: Bool = false
     @State private var showFilters: Bool = false
     @State private var statusFilter: String = ""
-    @State private var marketFilter: String = ""
     @State private var startDate: Date = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
     @State private var endDate: Date = Date()
     @State private var dateRangeEnabled: Bool = false
@@ -146,8 +147,8 @@ struct AdminOrdersView: View {
         .sheet(isPresented: $showCreate, onDismiss: { vm?.clearCustomerSearch() }) {
             if let model = vm {
                 CreateOrderForClientSheet(model: model) { payload in
-                    assert(payload.market == "UK" || payload.market == "China",
-                           "market must be UK or China — got '\(payload.market)'")
+                    assert(payload.market == "UK",
+                           "market must be UK — got '\(payload.market)'")
                     model.createForClient(
                         customerEmail: payload.customerEmail,
                         customerName: payload.customerName,
@@ -172,7 +173,6 @@ struct AdminOrdersView: View {
     private var activeFilterCount: Int {
         var n = 0
         if !statusFilter.isEmpty { n += 1 }
-        if !marketFilter.isEmpty { n += 1 }
         if dateRangeEnabled { n += 1 }
         return n
     }
@@ -199,16 +199,6 @@ struct AdminOrdersView: View {
                     vm?.setStatus(status: v.isEmpty ? nil : v)
                 }
 
-                Picker("Market", selection: $marketFilter) {
-                    Text("Any market").tag("")
-                    Text("United Kingdom").tag("UK")
-                    Text("China").tag("China")
-                }
-                .pickerStyle(.menu).tint(Brand.orange)
-                .onChange(of: marketFilter) { _, v in
-                    vm?.setMarket(market: v.isEmpty ? nil : v)
-                }
-
                 Toggle("Filter by date", isOn: $dateRangeEnabled)
                     .onChange(of: dateRangeEnabled) { _, enabled in
                         if enabled {
@@ -226,7 +216,7 @@ struct AdminOrdersView: View {
 
                 if activeFilterCount > 0 {
                     Button("Clear all") {
-                        statusFilter = ""; marketFilter = ""; dateRangeEnabled = false
+                        statusFilter = ""; dateRangeEnabled = false
                         vm?.clearFilters()
                     }
                     .buttonStyle(.bordered).tint(.red)
@@ -343,8 +333,8 @@ struct AdminOrdersView: View {
                 if let name = order.customerName {
                     Text(name).font(.caption).foregroundStyle(.secondary)
                 }
-                if let retailer = order.retailer, let market = order.market {
-                    Text("\(retailer) · \(market)").font(.caption).foregroundStyle(.tertiary)
+                if let retailer = order.retailer {
+                    Text(retailer).font(.caption).foregroundStyle(.tertiary)
                 }
                 HStack(spacing: 10) {
                     Button("Edit") { editTarget = order }
@@ -458,10 +448,6 @@ private struct CreateOrderForClientSheet: View {
                 }
                 Section("Order") {
                     TextField("Retailer (e.g. Amazon)", text: $retailer)
-                    Picker("Market", selection: $market) {
-                        Text("United Kingdom").tag("UK")
-                        Text("China").tag("China")
-                    }
                     TextField("Description", text: $description, axis: .vertical)
                         .lineLimit(2...5)
                 }

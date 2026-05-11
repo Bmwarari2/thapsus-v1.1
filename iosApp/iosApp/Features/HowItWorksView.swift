@@ -26,7 +26,7 @@ struct HowItWorksView: View {
             stepCard(
                 number: "01",
                 title: "Shop from your favorite retailers",
-                body: "Shop any brand in the UK or China. Use our warehouse address as yours.",
+                body: "Shop any UK brand. Use our warehouse address as yours.",
                 icon: "bag.fill",
                 style: .light
             )

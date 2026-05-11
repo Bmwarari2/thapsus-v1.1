@@ -13,7 +13,7 @@ import kotlinx.serialization.Serializable
 data class RetailerDto(
     @SerialName("id") val id: String,
     @SerialName("name") val name: String,
-    @SerialName("country") val country: String,         // 'UK' | 'USA' | 'China' | 'Other'
+    @SerialName("country") val country: String,         // 'UK' | 'Other'
     @SerialName("base_url") val baseUrl: String,
     @SerialName("logo_url") val logoUrl: String? = null,
     @SerialName("sort_order") val sortOrder: Int = 100

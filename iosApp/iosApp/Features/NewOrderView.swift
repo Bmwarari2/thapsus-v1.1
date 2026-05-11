@@ -43,7 +43,7 @@ struct NewOrderView: View {
                     ProcessStepsCard(
                         title: "How New order works",
                         steps: [
-                            ("1", "Tell us about it", "Pick the market, retailer and what you're sending."),
+                            ("1", "Tell us about it", "Pick the retailer and what you're sending."),
                             ("2", "Ship to our UK warehouse", "Use your warehouse address — we'll receive and weigh it."),
                             ("3", "We quote on receipt", "You'll get an emailed shipping invoice once it's measured."),
                             ("4", "Pay and we fly", "Pay from wallet or card; your parcel rides the next weekly flight."),
@@ -102,7 +102,7 @@ struct NewOrderView: View {
 
     private var progressBar: some View {
         HStack(spacing: 6) {
-            ForEach(0..<4, id: \.self) { i in
+            ForEach(0..<3, id: \.self) { i in
                 RoundedRectangle(cornerRadius: 4)
                     .fill(i <= step ? Brand.orange : Brand.ink.opacity(0.12))
                     .frame(height: 4)
@@ -113,24 +113,10 @@ struct NewOrderView: View {
     @ViewBuilder
     private var stepContent: some View {
         switch step {
-        case 0: marketStep
-        case 1: retailerStep
-        case 2: detailsStep
-        case 3: reviewStep
+        case 0: retailerStep
+        case 1: detailsStep
+        case 2: reviewStep
         default: EmptyView()
-        }
-    }
-
-    private var marketStep: some View {
-        CrystalCard {
-            VStack(alignment: .leading, spacing: 12) {
-                Text("Where's the parcel coming from?")
-                    .font(.headline).foregroundStyle(Brand.ink)
-                Picker("Market", selection: $market) {
-                    Text("United Kingdom").tag("UK")
-                    Text("China").tag("China")
-                }.pickerStyle(.segmented)
-            }
         }
     }
 
@@ -231,7 +217,6 @@ struct NewOrderView: View {
         InkFeatureCard {
             VStack(alignment: .leading, spacing: 14) {
                 Text("Review").font(.headline)
-                reviewLine("Market", market == "UK" ? "United Kingdom" : "China")
                 reviewLine("Retailer", retailer == "Other" ? customRetailer : retailer)
                 reviewLine("Description", description)
                 reviewLine("Declared value", declaredValueGbp.isEmpty ? "—" : "£ \(declaredValueGbp)")
@@ -276,8 +261,8 @@ struct NewOrderView: View {
                     Button("Back") { step -= 1 }
                         .buttonStyle(.bordered).tint(.secondary)
                 }
-                Button(step == 3 ? (isSubmitting ? "Submitting…" : "Create order") : "Next") {
-                    if step == 3 { submit() } else { step += 1 }
+                Button(step == 2 ? (isSubmitting ? "Submitting…" : "Create order") : "Next") {
+                    if step == 2 { submit() } else { step += 1 }
                 }
                 .buttonStyle(GlassSheenButtonStyle())
                 .disabled(!stepValid || isSubmitting)
@@ -287,10 +272,9 @@ struct NewOrderView: View {
 
     private var stepValid: Bool {
         switch step {
-        case 0: return !market.isEmpty
-        case 1: return retailer == "Other" ? !customRetailer.isEmpty : !retailer.isEmpty
-        case 2: return !description.isEmpty
-        case 3: return Double(declaredValueGbp) != nil
+        case 0: return retailer == "Other" ? !customRetailer.isEmpty : !retailer.isEmpty
+        case 1: return !description.isEmpty
+        case 2: return Double(declaredValueGbp) != nil
         default: return true
         }
     }

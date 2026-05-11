@@ -58,8 +58,8 @@ class QuoteEngine {
         insuranceTier: InsuranceTier = InsuranceTier.STANDARD,
         electronicsItemKey: String? = null,
         hsTier: String? = null,
-        // Display-only — channels (UK_air, UK_sea, China_air) no longer affect
-        // the price. Kept so existing UIs that show "channel" don't break.
+        // Display-only — UK_air vs UK_sea no longer affect the price.
+        // Kept so existing UIs that show "channel" don't break.
         channel: PricingChannel = PricingChannel.UK_AIR,
     ): Quote {
         val volumetric = VolumetricWeightCalculator.breakdown(dims, settings.dimDivisor)
