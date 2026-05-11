@@ -12,6 +12,12 @@ SUPABASE_ANON_KEY = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your.anon.key
 
 // Express backend lives on its own Railway service — separate from the
 // React webapp host (thapsus.uk). The iOS app talks directly to the API
-// service, not via the webapp. Use http://localhost:5000 when running
-// Express locally.
-API_BASE_URL = https:$(SLASH)$(SLASH)swiftcargo-production.up.railway.app
+// service, not via the webapp.
+//
+// The `/api` suffix matters: Express mounts every route under `/api/...`
+// (`app.use('/api/auth', ...)`, etc.), and ThapsusApiClient appends caller
+// paths like `/auth/login` to this baseUrl verbatim. Drop the suffix and
+// every call lands at the 404 "Route not found" handler.
+//
+// Use http://localhost:5000/api when running Express locally.
+API_BASE_URL = https:$(SLASH)$(SLASH)swiftcargo-production.up.railway.app/api
