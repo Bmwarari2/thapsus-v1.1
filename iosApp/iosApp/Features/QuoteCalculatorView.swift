@@ -14,7 +14,11 @@ struct QuoteCalculatorView: View {
     @State private var widthCm: Double = 20
     @State private var heightCm: Double = 20
     @State private var actualKg: Double = 2.0
-    @State private var declaredValuePence: Int64 = 5_000
+    // Customer-facing calculator has no declared-value UI — keep at 0
+    // so customs CIF = freight only. Matches the web calculator at
+    // thapsus.uk/pricing; a stale £50 default here was inflating the
+    // KES total by ~£25 (4–5k KES) vs web side-by-side.
+    @State private var declaredValuePence: Int64 = 0
     @State private var channel: PricingChannel = .ukAir
 
     // String shadows so the user can type freely (and clear the field
