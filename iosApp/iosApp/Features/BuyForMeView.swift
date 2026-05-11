@@ -299,9 +299,8 @@ private struct CreateBuyForMeSheet: View {
     }
 
     private func groupedRetailers() -> [RetailerGroup] {
-        // Customer Buy-for-me only sources from UK suppliers — USA + China
-        // are warehouse-side classifications for the operator catalog and
-        // are not yet supported as customer-facing concierge origins.
+        // UK-only system; any non-UK rows (legacy data) are filtered out
+        // so the customer never sees them.
         let ukOnly = retailers.filter { $0.country.uppercased() == "UK" }
         let groups = Dictionary(grouping: ukOnly, by: { $0.country })
         return groups

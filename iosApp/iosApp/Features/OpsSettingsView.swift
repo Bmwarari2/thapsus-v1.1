@@ -272,7 +272,6 @@ struct OpsSettingsView: View {
         switch c {
         case .ukAir: return "UK · Air"
         case .ukSea: return "UK · Sea"
-        case .chinaAir: return "China · Air"
         @unknown default: return String(describing: c)
         }
     }
@@ -392,7 +391,6 @@ private struct AddPricingTierSheet: View {
                 Picker("Channel", selection: $channel) {
                     Text("UK · Air").tag(PricingChannel.ukAir)
                     Text("UK · Sea").tag(PricingChannel.ukSea)
-                    Text("China · Air").tag(PricingChannel.chinaAir)
                 }
                 Section("Weight band (kg)") {
                     TextField("Min kg", text: $minKg).keyboardType(.decimalPad)

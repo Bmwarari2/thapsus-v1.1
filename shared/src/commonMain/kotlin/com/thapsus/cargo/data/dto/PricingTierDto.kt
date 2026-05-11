@@ -35,19 +35,17 @@ data class PricingTierDto(
 )
 
 /**
- * DB strings for the `pricing_tiers.channel` column. The canonical seed values
- * are `UK_air`, `UK_sea`, `China_air`, but a custom serializer keeps lookup
- * case-insensitive so a row written by hand as `uk_air` / `UK_AIR` still
- * deserialises into the right enum constant — without that, kotlinx.serialization
- * would throw `IllegalArgumentException: <name> is not a valid value` and the
- * whole tiers response would fail, leaving the QuoteEngine with an empty list
- * and the iOS calculator stuck on "No pricing tiers available".
+ * DB strings for the `pricing_tiers.channel` column. UK-only after the
+ * China market strip — the seed values are `UK_air` and `UK_sea`. A
+ * custom serializer keeps lookup case-insensitive so a row written by
+ * hand as `uk_air` / `UK_AIR` still deserialises — without that,
+ * kotlinx.serialization would throw `IllegalArgumentException: <name>
+ * is not a valid value` and the whole tiers response would fail.
  */
 @Serializable(with = PricingChannelSerializer::class)
 enum class PricingChannel(val wireName: String) {
     UK_AIR("UK_air"),
-    UK_SEA("UK_sea"),
-    CHINA_AIR("China_air");
+    UK_SEA("UK_sea");
 }
 
 object PricingChannelSerializer : KSerializer<PricingChannel> {
@@ -63,7 +61,6 @@ object PricingChannelSerializer : KSerializer<PricingChannel> {
         return when (raw) {
             "uk_air", "ukair", "air_uk" -> PricingChannel.UK_AIR
             "uk_sea", "uksea", "sea_uk" -> PricingChannel.UK_SEA
-            "china_air", "chinaair", "cn_air", "air_china" -> PricingChannel.CHINA_AIR
             else -> PricingChannel.UK_AIR // tolerant default keeps the calculator alive
         }
     }
