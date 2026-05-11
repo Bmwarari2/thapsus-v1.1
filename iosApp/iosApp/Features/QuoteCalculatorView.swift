@@ -300,11 +300,19 @@ struct QuoteCalculatorView: View {
         let dims = ParcelDimensions(
             lengthCm: lengthCm, widthCm: widthCm, heightCm: heightCm, actualKg: actualKg
         )
+        // SKIE bridges Kotlin function-level defaults to required Swift args,
+        // so even though items/electronicsItemKey/hsTier all have default
+        // values on the Kotlin side, the Swift call site has to supply them.
+        // Pass empty/nil — this calculator drives the legacy single-tier
+        // customs path; per-item HS-code customs is the order-creation flow.
         vm?.computeQuote(
             dims: dims,
             channel: channel,
             insurance: InsuranceTier.standard,
-            declaredValuePence: declaredValuePence
+            declaredValuePence: declaredValuePence,
+            items: [],
+            electronicsItemKey: nil,
+            hsTier: nil
         )
     }
 }
