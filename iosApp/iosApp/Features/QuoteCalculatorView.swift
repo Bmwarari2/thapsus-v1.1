@@ -264,6 +264,9 @@ struct QuoteCalculatorView: View {
                     if q.handling.major > 0 {
                         line("UK handling", formatMoney(q.handling.major))
                     }
+                    if q.customsEstimate.major > 0 {
+                        line("Customs estimate", formatMoney(q.customsEstimate.major))
+                    }
                     if q.perKgFee.major > 0 {
                         line("Trunking", formatMoney(q.perKgFee.major))
                     }
@@ -272,6 +275,13 @@ struct QuoteCalculatorView: View {
                     if q.processingFee.major > 0 {
                         line("Card processing", formatMoney(q.processingFee.major))
                     }
+                }
+
+                if q.customsEstimate.major > 0 {
+                    Text("Customs are an estimate — final duty is set by KRA at clearing.")
+                        .font(.body(11, weight: .regular))
+                        .foregroundStyle(LG.fg3)
+                        .padding(.top, 2)
                 }
             }
         }
