@@ -32,6 +32,7 @@ struct QuoteCalculatorView: View {
 
     @State private var quoteObserver: StateFlowObserver<QuoteEngine.Quote?>?
     @State private var errorObserver: StateFlowObserver<String?>?
+    @State private var gbpToKesObserver: StateFlowObserver<KotlinDouble?>?
     @State private var vm: QuoteViewModel?
 
     private var surchargePence: Int64 {
@@ -88,8 +89,12 @@ struct QuoteCalculatorView: View {
             v.loadPricing()
             self.quoteObserver = StateFlowObserver(initial: nil) { v.quote }
             self.errorObserver = StateFlowObserver(initial: nil) { v.error }
+            self.gbpToKesObserver = StateFlowObserver(initial: nil) { v.gbpToKes }
         }
-        .onDisappear { vm?.clear(); vm = nil; quoteObserver = nil; errorObserver = nil }
+        .onDisappear {
+            vm?.clear(); vm = nil
+            quoteObserver = nil; errorObserver = nil; gbpToKesObserver = nil
+        }
     }
 
     // MARK: - Dimensions
@@ -220,6 +225,27 @@ struct QuoteCalculatorView: View {
 
     // MARK: - Quote hero
 
+    /// GBP→KES rate from the shared module's QuoteViewModel. Nil until the
+    /// first `/exchange/rates` fetch lands or when that fetch fails — in
+    /// either case `formatMoney` falls back to displaying £ so the customer
+    /// still sees a usable number.
+    private var gbpToKes: Double? {
+        guard let v = gbpToKesObserver?.value?.doubleValue, v > 0 else { return nil }
+        return v
+    }
+
+    /// Format a GBP amount for customer display. KES when the live rate is
+    /// available; £ fallback otherwise. KES is rounded to whole shillings —
+    /// pricing receipts elsewhere do the same and fractional shillings would
+    /// look like a bug.
+    private func formatMoney(_ gbp: Double) -> String {
+        if let rate = gbpToKes {
+            let value = Int((gbp * rate).rounded())
+            return "KES \(value.formatted(.number))"
+        }
+        return String(format: "£%.2f", gbp)
+    }
+
     @ViewBuilder
     private func quoteCard(_ q: QuoteEngine.Quote) -> some View {
         let surchargeMajor = Double(surchargePence) / 100
@@ -227,24 +253,24 @@ struct QuoteCalculatorView: View {
         GlassPanel(corner: LG.Radius.xl, padding: 20, tint: LG.accentSoft) {
             VStack(alignment: .leading, spacing: 14) {
                 LGEyebrow(text: "Estimated total", tone: .accent)
-                Text(String(format: "£%.2f", totalWithSurchargeMajor))
+                Text(formatMoney(totalWithSurchargeMajor))
                     .font(.mono(38, weight: .bold))
                     .foregroundStyle(LG.fg)
                     .contentTransition(.numericText())
 
                 VStack(spacing: 6) {
                     line("Chargeable weight", String(format: "%.2f kg", q.volumetric.chargeableKg))
-                    line("Base shipping", String(format: "£%.2f", q.freight.major))
+                    line("Base shipping", formatMoney(q.freight.major))
                     if q.handling.major > 0 {
-                        line("UK handling", String(format: "£%.2f", q.handling.major))
+                        line("UK handling", formatMoney(q.handling.major))
                     }
                     if q.perKgFee.major > 0 {
-                        line("Trunking", String(format: "£%.2f", q.perKgFee.major))
+                        line("Trunking", formatMoney(q.perKgFee.major))
                     }
-                    if includesPhone { line("Phone surcharge", "£75.00", emphasis: true) }
-                    if includesLaptop { line("Laptop surcharge", "£65.00", emphasis: true) }
+                    if includesPhone { line("Phone surcharge", formatMoney(75.0), emphasis: true) }
+                    if includesLaptop { line("Laptop surcharge", formatMoney(65.0), emphasis: true) }
                     if q.processingFee.major > 0 {
-                        line("Card processing", String(format: "£%.2f", q.processingFee.major))
+                        line("Card processing", formatMoney(q.processingFee.major))
                     }
                 }
             }

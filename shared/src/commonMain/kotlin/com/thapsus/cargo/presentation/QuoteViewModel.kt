@@ -53,6 +53,15 @@ class QuoteViewModel(
     private val _electronicsFees = MutableStateFlow<Map<String, ElectronicsFeeDto>>(emptyMap())
     val electronicsFees: StateFlow<Map<String, ElectronicsFeeDto>> = _electronicsFees.asStateFlow()
 
+    /**
+     * Live GBP→KES rate. The pricing engine is GBP-native; customer-facing
+     * surfaces (calculator total, invoice summary) display KES by multiplying
+     * engine output by this rate at render time. Null until the first load
+     * succeeds — UI should fall back to £ in that window.
+     */
+    private val _gbpToKes = MutableStateFlow<Double?>(null)
+    val gbpToKes: StateFlow<Double?> = _gbpToKes.asStateFlow()
+
     private val _quote = MutableStateFlow<QuoteEngine.Quote?>(null)
     val quote: StateFlow<QuoteEngine.Quote?> = _quote.asStateFlow()
 
@@ -86,6 +95,10 @@ class QuoteViewModel(
                 pricing.fetchElectronicsFees()
                     .onSuccess { _electronicsFees.value = it.associateBy { ef -> ef.itemKey } }
                     .onFailure { println("[QuoteViewModel] fetchElectronicsFees failed (using empty map): ${it.message}") }
+
+                pricing.fetchExchangeRates()
+                    .onSuccess { _gbpToKes.value = it["GBP_KES"] }
+                    .onFailure { println("[QuoteViewModel] fetchExchangeRates failed (calculator will display £): ${it.message}") }
 
                 // Legacy fetches — operator UI uses these. Failure is non-fatal
                 // for the quote calculator since the new engine doesn't read them.
