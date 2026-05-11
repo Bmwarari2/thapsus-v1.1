@@ -107,29 +107,11 @@ class LooseNumericRegressionTest {
         assertEquals(0, b.unread)
     }
 
-    // ── WalletDto + TransactionDto ─────────────────────────────────────────
-    @Test
-    fun wallet_balance_string_or_null() {
-        val a = json.decodeFromString(
-            WalletDto.serializer(),
-            """{"id":"w1","user_id":"u1","balance":"1234.56"}"""
-        )
-        assertEquals(1234.56, a.balance)
-        val b = json.decodeFromString(
-            WalletDto.serializer(),
-            """{"id":"w2","user_id":"u2","balance":null}"""
-        )
-        assertEquals(0.0, b.balance)
-    }
-
-    @Test
-    fun transaction_amount_string_form() {
-        val raw = """
-            {"id":"tx1","user_id":"u1","type":"payment","amount":"-2500"}
-        """.trimIndent()
-        val tx = json.decodeFromString(TransactionDto.serializer(), raw)
-        assertEquals(-2500.0, tx.amount)
-    }
+    // ── WalletDto + TransactionDto (removed) ────────────────────────────────
+    // Tests removed as part of the pricing-model PR — WalletDto and
+    // TransactionDto were dropped when migration 028 retired the wallet model
+    // in favour of user_credits + credit_ledger. The LooseNumericSerializer
+    // these tests guarded is still exercised by the other DTOs in this file.
 
     // ── ConsolidationDto ──────────────────────────────────────────────────
     @Test
@@ -206,41 +188,31 @@ class LooseNumericRegressionTest {
         assertEquals(1500L, p.declaredValueGbpPence)
     }
 
-    // ── TrackingDto nullable doubles ──────────────────────────────────────
+    // ── TrackingDto nullable doubles (slimmed) ───────────────────────────
+    // Original test referenced declared_value / estimated_cost / actual_cost /
+    // customs_duty on TrackingDto — those fields were removed when the DTO
+    // was reduced to the public tracking surface. Keep the weight-only check
+    // so the LooseDoubleSerializer's null path is still locked in.
     @Test
-    fun tracking_dto_nullable_doubles_distinguish_null_from_zero() {
+    fun tracking_dto_weight_kg_distinguishes_null_from_zero() {
         val rawNull = """
-            {"id":"o1","tracking_number":"THP-1","weight_kg":null,
-             "declared_value":null,"estimated_cost":"0","actual_cost":null,"customs_duty":"12.50"}
+            {"id":"o1","tracking_number":"THP-1","weight_kg":null}
         """.trimIndent()
         val t = json.decodeFromString(TrackingDto.serializer(), rawNull)
         assertNull(t.weightKg)
-        assertNull(t.declaredValue)
-        assertEquals(0.0, t.estimatedCost)
-        assertNull(t.actualCost)
-        assertEquals(12.50, t.customsDuty)
     }
 
-    // ── AdminPagination + PendingTransactionRow ──────────────────────────
+    // ── AdminPagination (PendingTransactionRow removed) ──────────────────
+    // PendingTransactionRow and PendingTransactionsResponse went away with the
+    // wallet retirement (migration 028). AdminPagination's loose serializer
+    // path is still worth a smoke test on its own.
     @Test
-    fun admin_pagination_and_pending_amount_string_form() {
+    fun admin_pagination_string_form() {
         val pag = json.decodeFromString(
             AdminPagination.serializer(),
             """{"page":"1","limit":"10","total":"103","totalPages":"11"}"""
         )
         assertEquals(103, pag.total)
-        val tx = json.decodeFromString(
-            PendingTransactionRow.serializer(),
-            """{"id":"t1","user_id":"u1","type":"deposit","amount":"7500","status":"pending"}"""
-        )
-        assertEquals(7500.0, tx.amount)
-        // Legacy contract: empty list still decodes
-        assertTrue(
-            json.decodeFromString(
-                PendingTransactionsResponse.serializer(),
-                """{"success":true,"transactions":[]}"""
-            ).transactions.isEmpty()
-        )
     }
 
     // ── AdminStatsResponse loose hardening ───────────────────────────────
