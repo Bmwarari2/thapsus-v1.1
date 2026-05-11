@@ -18,10 +18,15 @@
 //                customer doesn't think the parcel has cleared yet.
 //
 // Entrance is staged so the eye lands on the icon first:
-//   1. Backdrop fades in (0.25s ease-out)
-//   2. Tinted ring scales in behind the icon (spring 0.5/0.6)
-//   3. Icon pops in (spring 0.6/0.5, +0.1s)
-//   4. Headline + amount + button fade in (ease-out, +0.4s)
+//   1. Backdrop fades in   (0.25s ease-out)
+//   2. Tinted ring scales in behind the icon (0.35s ease-out)
+//   3. Icon pops in        (0.4s ease-out, +0.1s)
+//   4. Headline + amount + button fade in (0.3s ease-out, +0.4s)
+//
+// All curves are ease-out — no springs. The previous spring/0.5–0.6
+// damping fractions read as a "bouncy" overshoot on the M-Pesa
+// confirmation in particular, which clashes with the
+// "your money is in motion" tone the screen needs.
 //
 // Caller is responsible for dismissing the parent sheet on the
 // `onDismiss` callback — the overlay itself just covers the screen.
@@ -155,10 +160,10 @@ struct PaymentConfirmationOverlay: View {
         withAnimation(.easeOut(duration: 0.25)) {
             backdropOpacity = 1
         }
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.6)) {
+        withAnimation(.easeOut(duration: 0.35)) {
             ringScale = 1
         }
-        withAnimation(.spring(response: 0.6, dampingFraction: 0.5).delay(0.1)) {
+        withAnimation(.easeOut(duration: 0.4).delay(0.1)) {
             iconScale = 1
             iconOpacity = 1
         }
