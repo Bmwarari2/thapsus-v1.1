@@ -15,4 +15,11 @@ SLASH = /
 SUPABASE_URL = https:$(SLASH)$(SLASH)your-project.supabase.co
 SUPABASE_ANON_KEY = your-anon-key
 
+// Express backend the iOS app talks to. Must be overridden in
+// Config.local.xcconfig with the real Railway / production / localhost URL.
+// iOSApp.swift fails loud with a precondition if this is still the
+// "your-app.up.railway.app" placeholder OR empty — better an early crash
+// than silently hitting a 404 host.
+API_BASE_URL = https:$(SLASH)$(SLASH)your-app.up.railway.app
+
 #include? "Config.local.xcconfig"
