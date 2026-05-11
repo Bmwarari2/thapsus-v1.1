@@ -7,6 +7,7 @@ import com.thapsus.cargo.data.dto.HsCodeTierDto
 import com.thapsus.cargo.data.dto.PricingSettingsDto
 import com.thapsus.cargo.data.dto.PricingTierDto
 import com.thapsus.cargo.data.remote.ThapsusApiClient
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -43,6 +44,26 @@ internal data class HsCodesResponse(
 internal data class ElectronicsFeesResponse(
     val success: Boolean = true,
     val items: List<ElectronicsFeeDto> = emptyList()
+)
+
+/**
+ * Shape of `GET /api/exchange/rates`. The server returns rates inside a
+ * `data` envelope, all four pairs always populated. Defaults here match
+ * the seeded values in exchange_rates so a missing or 503-ing endpoint
+ * doesn't pin every quote to £.
+ */
+@Serializable
+internal data class ExchangeRatesResponse(
+    val success: Boolean = true,
+    val data: ExchangeRatesPayload = ExchangeRatesPayload(),
+)
+
+@Serializable
+internal data class ExchangeRatesPayload(
+    @SerialName("GBP_KES") val gbpKes: Double = 170.0,
+    @SerialName("USD_KES") val usdKes: Double = 120.0,
+    @SerialName("EUR_KES") val eurKes: Double = 150.0,
+    @SerialName("CNY_KES") val cnyKes: Double = 80.0,
 )
 
 /**
@@ -83,5 +104,20 @@ class PricingRepository(private val api: ThapsusApiClient) {
 
     suspend fun fetchElectronicsFees(): Result<List<ElectronicsFeeDto>> = runCatching {
         api.get<ElectronicsFeesResponse>("/pricing/electronics").items
+    }
+
+    /**
+     * Live FX rates from `/api/exchange/rates`. Used to render customer-facing
+     * totals (calculator + invoice line) in KES while the engine stays
+     * GBP-native. Returns the full map; callers typically only need GBP_KES.
+     */
+    suspend fun fetchExchangeRates(): Result<Map<String, Double>> = runCatching {
+        val resp = api.get<ExchangeRatesResponse>("/exchange/rates")
+        mapOf(
+            "GBP_KES" to resp.data.gbpKes,
+            "USD_KES" to resp.data.usdKes,
+            "EUR_KES" to resp.data.eurKes,
+            "CNY_KES" to resp.data.cnyKes,
+        )
     }
 }
