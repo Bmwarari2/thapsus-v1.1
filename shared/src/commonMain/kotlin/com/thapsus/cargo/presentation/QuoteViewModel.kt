@@ -129,6 +129,7 @@ class QuoteViewModel(
         items: List<QuoteItemDto> = emptyList(),
         electronicsItemKey: String? = null,
         hsTier: String? = null,
+        skipCustoms: Boolean = false,
     ) {
         scope.launch {
             try {
@@ -149,6 +150,7 @@ class QuoteViewModel(
                     electronicsItemKey = electronicsItemKey,
                     hsTier = hsTier,
                     channel = channel,
+                    skipCustoms = skipCustoms,
                 )
                 _error.value = null
             } catch (t: Throwable) {
