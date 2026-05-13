@@ -3,7 +3,12 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- P4.2: rider POD capture records the delivery location so admin
+         can audit drop points. Coarse-only when fine isn't granted. -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
+    <uses-feature android:name="android.hardware.location" android:required="false" />
 
     <application
         android:name=".ThapsusApp"
