@@ -20,6 +20,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AirplanemodeActive
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Inventory2
@@ -61,9 +62,11 @@ import com.thapsus.cargo.android.ui.primitives.OrangeButton
 import com.thapsus.cargo.android.ui.primitives.SoftCard
 import com.thapsus.cargo.android.ui.primitives.WordmarkSize
 import com.thapsus.cargo.android.ui.theme.Brand
+import com.thapsus.cargo.data.dto.CustomerConsolidationDto
 import com.thapsus.cargo.data.repository.AuthSession
 import com.thapsus.cargo.presentation.WarehouseViewModel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 private val DEFAULT_LINES = listOf(
@@ -79,18 +82,43 @@ fun HomeScreen(
     onOpenBuyForMe: () -> Unit,
     onOpenPreRegister: () -> Unit,
     onOpenParcel: (String) -> Unit,
-    onOpenNotifications: () -> Unit
+    onOpenNotifications: () -> Unit,
+    onPayInvoice: (CustomerConsolidationDto) -> Unit
 ) {
     val dashVm = remember(session.userId) {
         ThapsusSdk.customerDashboardViewModel(session.userId)
     }
     val warehouseVm = remember { ThapsusSdk.warehouseViewModel() }
+    val invoicesRepo = remember { ThapsusSdk.customerConsolidations() }
 
     LaunchedEffect(warehouseVm) { warehouseVm.load() }
     DisposableEffect(dashVm) { onDispose { dashVm.clear() } }
 
     val state by dashVm.state.collectAsStateWithLifecycle()
     val warehouse by warehouseVm.state.collectAsStateWithLifecycle()
+
+    // Active invoices that the customer needs to clear. Mirrors iOS
+    // CustomerDashboardView's `activeInvoicesSection` — same Supabase
+    // path CustomerInvoicesScreen uses, so a status flip lands here
+    // without a manual refresh.
+    var invoices by remember(session.userId) {
+        mutableStateOf<List<CustomerConsolidationDto>>(emptyList())
+    }
+    LaunchedEffect(session.userId) {
+        runCatching { invoicesRepo.fetchForUser(session.userId) }
+            .onSuccess { invoices = it }
+        invoicesRepo.observeForUser(session.userId).collectLatest { updated ->
+            invoices = invoices.toMutableList().also { list ->
+                val idx = list.indexOfFirst { it.id == updated.id }
+                if (idx >= 0) list[idx] = updated else list.add(0, updated)
+            }
+        }
+    }
+    val activeInvoices = remember(invoices) {
+        invoices
+            .filter { it.status == "invoiced" }
+            .sortedByDescending { it.createdAt ?: "" }
+    }
 
     val firstName = remember(session) {
         val name = session.profile?.fullName?.takeIf { it.isNotBlank() }
@@ -125,6 +153,10 @@ fun HomeScreen(
         BfmHeroCard(onClick = onOpenBuyForMe)
         PreRegisterCard(onClick = onOpenPreRegister)
 
+        if (activeInvoices.isNotEmpty()) {
+            ActiveInvoicesSection(invoices = activeInvoices, onPay = onPayInvoice)
+        }
+
         WarehouseCard(name = fullName, code = warehouseCode, lines = lines)
 
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -151,8 +183,13 @@ fun HomeScreen(
             )
             state.recentParcels.take(5).forEach { p ->
                 ParcelTile(
-                    title = p.description ?: p.retailer ?: "Parcel",
-                    subtitle = p.trackingNumber ?: p.id.take(8),
+                    title = p.description?.takeIf { it.isNotBlank() }
+                        ?: p.retailer?.takeIf { it.isNotBlank() }
+                        ?: "Parcel",
+                    // Only surface a tracking number when we have a real one —
+                    // never leak the internal UUID prefix (P3-era bug where
+                    // p.id.take(8) was rendered as if it were a tracking ref).
+                    subtitle = p.trackingNumber?.takeIf { it.isNotBlank() },
                     onClick = { onOpenParcel(p.id) }
                 )
             }
@@ -407,7 +444,58 @@ private fun WarehouseCard(name: String, code: String, lines: List<String>) {
 }
 
 @Composable
-private fun ParcelTile(title: String, subtitle: String, onClick: () -> Unit) {
+private fun ActiveInvoicesSection(
+    invoices: List<CustomerConsolidationDto>,
+    onPay: (CustomerConsolidationDto) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        EyebrowPill(
+            label = if (invoices.size == 1) "Invoice due" else "${invoices.size} invoices due",
+            icon = Icons.AutoMirrored.Filled.ReceiptLong
+        )
+        invoices.forEach { c ->
+            ActiveInvoiceCard(consolidation = c, onPay = { onPay(c) })
+        }
+    }
+}
+
+@Composable
+private fun ActiveInvoiceCard(
+    consolidation: CustomerConsolidationDto,
+    onPay: () -> Unit
+) {
+    InkCard {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                consolidation.description
+                    ?: if (consolidation.isStandalone) "Standalone invoice" else "Shipping invoice",
+                color = Brand.cream,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp
+            )
+            consolidation.invoiceAmount?.let { amount ->
+                Text(
+                    "${consolidation.invoiceCurrency} %,.0f".format(amount),
+                    color = Brand.Orange,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 24.sp
+                )
+            }
+            consolidation.parcelCount?.takeIf { it > 0 }?.let {
+                Text(
+                    "$it parcel${if (it == 1) "" else "s"} in this batch",
+                    color = Brand.cream.copy(alpha = 0.7f),
+                    fontSize = 12.sp
+                )
+            }
+            OrangeButton(text = "Pay invoice", onClick = onPay)
+        }
+    }
+}
+
+@Composable
+private fun ParcelTile(title: String, subtitle: String?, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -427,7 +515,9 @@ private fun ParcelTile(title: String, subtitle: String, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(title, color = Brand.ink, fontWeight = FontWeight.SemiBold)
-            Text(subtitle, color = Brand.Orange, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            subtitle?.let {
+                Text(it, color = Brand.Orange, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
+            }
         }
     }
 }

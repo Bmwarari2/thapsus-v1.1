@@ -115,7 +115,7 @@ private fun PaymentRow(payment: PaymentDto) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    payment.targetLabel ?: targetLabel(payment.targetKind),
+                    payment.displayTitle(),
                     color = Brand.ink,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -174,4 +174,17 @@ private fun targetLabel(kind: String): String = when (kind) {
     "buy_for_me" -> "Buy-for-me order"
     "order" -> "Parcel order"
     else -> kind.replace('_', ' ').replaceFirstChar { it.uppercase() }
+}
+
+/**
+ * Choose a human-readable title for a payment row. The server's
+ * `target_label` is best-effort (tracking number / BFM item name / batch
+ * prefix), but for older rows it falls back to the first 8 chars of the
+ * target UUID — which leaks an internal id into the UI as "fa9320d1".
+ * Detect that shape and prefer the kind-based fallback instead.
+ */
+private fun PaymentDto.displayTitle(): String {
+    val raw = targetLabel?.trim().orEmpty()
+    val looksLikeUuidPrefix = raw.length in 6..10 && raw.all { it.isDigit() || it in 'a'..'f' }
+    return if (raw.isBlank() || looksLikeUuidPrefix) targetLabel(targetKind) else raw
 }

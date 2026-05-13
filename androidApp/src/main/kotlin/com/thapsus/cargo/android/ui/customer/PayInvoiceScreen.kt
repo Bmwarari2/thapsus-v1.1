@@ -151,7 +151,15 @@ fun PayInvoiceScreen(
 
     val mpesaSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val lipanaSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val lipanaPhoneSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val confirmationSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Lipana STK requires a phone number before we hit /api/payments —
+    // the server rejects with 400 invalid_phone when method=mpesa,
+    // provider=lipana and `phone` is null/unparseable. We collect it
+    // up-front via a dedicated sheet, then fire vm.create with it.
+    // For the manual paste-the-SMS flow this is not needed.
+    var collectingLipanaPhone by remember { mutableStateOf(false) }
 
     Column(
         modifier = Modifier
@@ -207,21 +215,28 @@ fun PayInvoiceScreen(
             is PaymentsViewModel.UiState.Ready -> {
                 val r = state as PaymentsViewModel.UiState.Ready
                 if (r.mpesaEnabled) {
+                    val isLipana = r.mpesaProvider == "lipana"
                     MethodCard(
                         icon = Icons.Filled.PhoneAndroid,
                         title = "Pay with M-Pesa",
-                        subtitle = if (r.mpesaProvider == "lipana")
+                        subtitle = if (isLipana)
                             "Get an STK Push on your phone."
                         else
                             "Pay to Till ${r.mpesaTillNumber} then paste the SMS.",
                         onClick = {
-                            vm.create(
-                                targetKind = targetKind,
-                                targetId = targetId,
-                                method = "mpesa",
-                                applyCredit = true,
-                                phone = null
-                            )
+                            if (isLipana) {
+                                // Capture phone first; vm.create fires from
+                                // the phone-entry sheet's submit handler.
+                                collectingLipanaPhone = true
+                            } else {
+                                vm.create(
+                                    targetKind = targetKind,
+                                    targetId = targetId,
+                                    method = "mpesa",
+                                    applyCredit = true,
+                                    phone = null
+                                )
+                            }
                         }
                     )
                 }
@@ -246,6 +261,29 @@ fun PayInvoiceScreen(
         }
 
         Spacer(Modifier.height(40.dp))
+    }
+
+    // Lipana phone-entry — fires vm.create with the captured phone so
+    // the server can dispatch the STK push to the right MSISDN.
+    if (collectingLipanaPhone) {
+        ModalBottomSheet(
+            onDismissRequest = { collectingLipanaPhone = false },
+            sheetState = lipanaPhoneSheetState
+        ) {
+            LipanaPhoneEntrySheet(
+                onCancel = { collectingLipanaPhone = false },
+                onSubmit = { phone ->
+                    collectingLipanaPhone = false
+                    vm.create(
+                        targetKind = targetKind,
+                        targetId = targetId,
+                        method = "mpesa",
+                        applyCredit = true,
+                        phone = phone
+                    )
+                }
+            )
+        }
     }
 
     // M-Pesa manual sheet — customer pastes the confirmation SMS.
@@ -426,6 +464,80 @@ private fun MpesaSubmitBottomSheet(
             Text("Cancel")
         }
         Spacer(Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun LipanaPhoneEntrySheet(
+    onCancel: () -> Unit,
+    onSubmit: (String) -> Unit
+) {
+    var phone by remember { mutableStateOf("") }
+    val normalised = remember(phone) { normaliseKenyanPhone(phone) }
+    val canSubmit = normalised != null
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        EditorialHeader(
+            eyebrow = "M-Pesa STK",
+            title = "Your M-Pesa number",
+            subtitle = "We'll send a PIN prompt to this Safaricom line — enter your PIN to pay."
+        )
+        OutlinedTextField(
+            value = phone,
+            onValueChange = { phone = it },
+            label = { Text("Phone number") },
+            placeholder = { Text("07XX XXX XXX") },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        Text(
+            "Accepted formats: 07XX, +2547XX, 2547XX.",
+            color = Brand.ink.copy(alpha = 0.6f),
+            fontSize = 12.sp
+        )
+        OrangeButton(
+            text = "Send STK push",
+            enabled = canSubmit,
+            onClick = { normalised?.let(onSubmit) }
+        )
+        Button(
+            onClick = onCancel,
+            colors = ButtonDefaults.buttonColors(
+                containerColor = Color.Transparent,
+                contentColor = Brand.ink
+            ),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Cancel")
+        }
+        Spacer(Modifier.height(20.dp))
+    }
+}
+
+/**
+ * Accept 07XXXXXXXX, +2547XXXXXXXX, 2547XXXXXXXX (with arbitrary spaces /
+ * dashes), normalise to 254XXXXXXXXX. Server normalises too but rejects
+ * with 400 invalid_phone if we send something it can't parse, so do a
+ * client-side guard and disable the submit button until we have a
+ * candidate that matches one of the expected forms.
+ */
+private fun normaliseKenyanPhone(raw: String): String? {
+    val digits = raw.filter { it.isDigit() }
+    return when {
+        // 07XXXXXXXX or 01XXXXXXXX → drop leading 0, prefix 254
+        digits.length == 10 && (digits.startsWith("07") || digits.startsWith("01")) ->
+            "254" + digits.substring(1)
+        // 2547XXXXXXXX or 2541XXXXXXXX
+        digits.length == 12 && (digits.startsWith("2547") || digits.startsWith("2541")) -> digits
+        // 7XXXXXXXX (9 digits) — assume already-stripped
+        digits.length == 9 && (digits.startsWith("7") || digits.startsWith("1")) -> "254$digits"
+        else -> null
     }
 }
 
