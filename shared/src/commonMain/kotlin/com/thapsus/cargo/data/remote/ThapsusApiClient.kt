@@ -130,13 +130,16 @@ class ThapsusApiClient(
         }
         if (response.status.value !in 200..299) {
             val envelope = runCatching { response.body<ErrorEnvelope>() }.getOrNull()
-            val base = envelope?.message ?: "Request failed (${response.status.value})"
-            // Pre-launch dev: server may include `detail` (raw Postgres message)
-            // alongside the user-facing message. Surface it so the UI banner
-            // shows the actual cause without needing Railway log access.
-            val detail = envelope?.detail?.takeIf { it.isNotBlank() }
-            val msg = if (detail != null) "$base — $detail" else base
-            throw ApiException(response.status.value, msg)
+            val raw = envelope?.message?.takeIf { it.isNotBlank() }
+                ?: "Request failed (${response.status.value})"
+            // `detail` is intentionally dropped from the user-facing
+            // message — the server attaches the raw Postgres / framework
+            // string here for log-side debugging, never for end users.
+            // sanitize() additionally rewrites any message that leaks
+            // HTTP verbs, paths, SQL keywords, or stack-trace fragments
+            // into a friendly fallback so a stale endpoint or a
+            // hand-typed dev error never lands in a customer banner.
+            throw ApiException(response.status.value, sanitize(raw, response.status.value))
         }
         return response.body()
     }
@@ -150,3 +153,37 @@ data class ErrorEnvelope(
 )
 
 class ApiException(val status: Int, message: String) : RuntimeException(message)
+
+/**
+ * Filter dev-facing strings out of error messages before they bubble
+ * up to UI banners. The server's PRODUCTION-correct messages
+ * ("Email already taken", "Order not found", "Insufficient balance")
+ * pass through unchanged. Strings that look like deprecation hints,
+ * raw stack traces, SQL fragments, or HTTP routing instructions get
+ * collapsed to a status-appropriate friendly fallback.
+ *
+ * Visible for testing.
+ */
+@PublishedApi
+internal fun sanitize(raw: String, status: Int): String {
+    val techHints = listOf(
+        Regex("""\b(POST|GET|PUT|DELETE|PATCH)\s+/""", RegexOption.IGNORE_CASE),
+        Regex("""(/api/|/rest/|/v\d+/|/buy-for-me/|/auth/|/admin/)""", RegexOption.IGNORE_CASE),
+        Regex("""\btarget_kind\b|\btarget_id\b|\buser_id\b|\bpayment_id\b""", RegexOption.IGNORE_CASE),
+        Regex("""\b(SELECT|INSERT|UPDATE|DELETE FROM|JOIN|WHERE|LIMIT)\b\s+[a-z_"\(\.]""", RegexOption.IGNORE_CASE),
+        Regex("""null\s*pointer|cannot\s+be\s+null|NullPointerException|undefined\s+is\s+not""", RegexOption.IGNORE_CASE),
+        Regex("""\bat\s+[a-zA-Z_][\w$.]*\.[a-zA-Z_]\w*\("""),
+        Regex("""\b(removed|deprecated)\b.*\b(use|call)\b""", RegexOption.IGNORE_CASE)
+    )
+    return if (techHints.any { it.containsMatchIn(raw) }) friendlyForStatus(status) else raw
+}
+
+@PublishedApi
+internal fun friendlyForStatus(status: Int): String = when (status) {
+    400 -> "We couldn't process that. Please check your details and try again."
+    401, 403 -> "You're not allowed to do that right now."
+    404 -> "We couldn't find what you were looking for."
+    408, 429 -> "The request timed out. Please try again in a moment."
+    in 500..599 -> "Something's not right on our side. We're on it — please try again shortly."
+    else -> "Something went wrong. Please try again."
+}

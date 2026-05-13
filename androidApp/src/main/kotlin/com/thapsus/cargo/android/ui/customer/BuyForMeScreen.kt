@@ -84,7 +84,9 @@ import com.thapsus.cargo.presentation.BuyForMeViewModel
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun BuyForMeScreen() {
+fun BuyForMeScreen(
+    onPayQuote: (BuyForMeOrderDto) -> Unit = {}
+) {
     val vm = remember { ThapsusSdk.buyForMeViewModel() }
     DisposableEffect(vm) { onDispose { vm.clear() } }
 
@@ -178,7 +180,11 @@ fun BuyForMeScreen() {
                     s.orders.forEach { order ->
                         OrderRow(
                             order = order,
-                            onAccept = { vm.accept(order.id, reason = null) },
+                            // Accept & buy → modern /api/payments flow via
+                            // PayInvoiceScreen. The legacy `vm.accept` route
+                            // hit the removed wallet/accept endpoint and
+                            // bubbled a developer-facing 410 to the UI.
+                            onAccept = { onPayQuote(order) },
                             onReject = { rejectingFor = order },
                             onCancel = { vm.cancel(order.id) }
                         )
