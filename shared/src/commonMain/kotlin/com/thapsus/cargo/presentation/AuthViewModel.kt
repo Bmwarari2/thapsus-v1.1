@@ -2,6 +2,7 @@ package com.thapsus.cargo.presentation
 
 import com.thapsus.cargo.data.repository.AuthRepository
 import com.thapsus.cargo.data.repository.AuthSession
+import com.thapsus.cargo.domain.auth.PasswordPolicy
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -39,8 +40,12 @@ class AuthViewModel(
         phone: String? = null,
         countryOfResidence: String? = null
     ) {
-        if (email.isBlank() || password.length < 8) {
-            _form.value = FormState.Error("Password must be 8+ characters")
+        if (email.isBlank()) {
+            _form.value = FormState.Error("Email is required")
+            return
+        }
+        PasswordPolicy.firstFailure(password)?.let { unmet ->
+            _form.value = FormState.Error("Password: $unmet")
             return
         }
         scope.launch {
