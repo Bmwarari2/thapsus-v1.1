@@ -5,6 +5,8 @@ object CustomerRoutes {
     const val SHOP = "customer/shop"
     const val ACTIVITY = "customer/activity"
     const val TRACKING = "customer/tracking"
+    const val INVOICES = "customer/invoices"
+    const val TRANSACTIONS = "customer/transactions"
     const val WALLET = "customer/wallet"
     const val QUOTE = "customer/quote"
     const val ACCOUNT = "customer/account"

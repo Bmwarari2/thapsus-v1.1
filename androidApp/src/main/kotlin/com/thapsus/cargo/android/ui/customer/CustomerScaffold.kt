@@ -105,8 +105,8 @@ fun CustomerScaffold(
                 ActivityHubScreen(
                     onOpenTracking = { nav.navigate(CustomerRoutes.TRACKING) },
                     onOpenPreRegister = { nav.navigate(CustomerRoutes.NEW_ORDER) },
-                    onOpenInvoices = { nav.navigate(CustomerRoutes.WALLET) },
-                    onOpenTransactions = { nav.navigate(CustomerRoutes.WALLET) }
+                    onOpenInvoices = { nav.navigate(CustomerRoutes.INVOICES) },
+                    onOpenTransactions = { nav.navigate(CustomerRoutes.TRANSACTIONS) }
                 )
             }
             composable(CustomerRoutes.QUOTE) {
@@ -129,6 +129,15 @@ fun CustomerScaffold(
             }
             composable(CustomerRoutes.WALLET) {
                 WalletScreen(userId = session.userId)
+            }
+            composable(CustomerRoutes.INVOICES) {
+                CustomerInvoicesScreen(
+                    userId = session.userId,
+                    onPayInvoice = { /* P2.3 wires PayInvoiceScreen */ }
+                )
+            }
+            composable(CustomerRoutes.TRANSACTIONS) {
+                TransactionsScreen()
             }
             composable(CustomerRoutes.NEW_ORDER) {
                 NewOrderScreen(
