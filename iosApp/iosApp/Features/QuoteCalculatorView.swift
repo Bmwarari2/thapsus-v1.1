@@ -14,10 +14,10 @@ struct QuoteCalculatorView: View {
     @State private var widthCm: Double = 20
     @State private var heightCm: Double = 20
     @State private var actualKg: Double = 2.0
-    // Customer-facing calculator has no declared-value UI — keep at 0
-    // so customs CIF = freight only. Matches the web calculator at
-    // thapsus.uk/pricing; a stale £50 default here was inflating the
-    // KES total by ~£25 (4–5k KES) vs web side-by-side.
+    // Customer-facing calculator has no declared-value UI — keep at 0.
+    // Customs is excluded from the quote entirely via skipCustoms=true
+    // on computeQuote(); a footer warns customers that VAT + Duty may
+    // apply on KRA clearance. Matches the web calculator at thapsus.uk/pricing.
     @State private var declaredValuePence: Int64 = 0
     @State private var channel: PricingChannel = .ukAir
 
@@ -268,9 +268,6 @@ struct QuoteCalculatorView: View {
                     if q.handling.major > 0 {
                         line("UK handling", formatMoney(q.handling.major))
                     }
-                    if q.customsEstimate.major > 0 {
-                        line("Customs estimate", formatMoney(q.customsEstimate.major))
-                    }
                     if q.perKgFee.major > 0 {
                         line("Trunking", formatMoney(q.perKgFee.major))
                     }
@@ -281,12 +278,10 @@ struct QuoteCalculatorView: View {
                     }
                 }
 
-                if q.customsEstimate.major > 0 {
-                    Text("Customs are an estimate — final duty is set by KRA at clearing.")
-                        .font(.body(11, weight: .regular))
-                        .foregroundStyle(LG.fg3)
-                        .padding(.top, 2)
-                }
+                Text("Customs (VAT + Duty) may be charged separately by Kenya Revenue Authority on clearance and are not included in this estimate.")
+                    .font(.body(11, weight: .regular))
+                    .foregroundStyle(LG.fg3)
+                    .padding(.top, 2)
             }
         }
     }
@@ -315,10 +310,11 @@ struct QuoteCalculatorView: View {
             lengthCm: lengthCm, widthCm: widthCm, heightCm: heightCm, actualKg: actualKg
         )
         // SKIE bridges Kotlin function-level defaults to required Swift args,
-        // so even though items/electronicsItemKey/hsTier all have default
-        // values on the Kotlin side, the Swift call site has to supply them.
-        // Pass empty/nil — this calculator drives the legacy single-tier
-        // customs path; per-item HS-code customs is the order-creation flow.
+        // so even though items/electronicsItemKey/hsTier/skipCustoms all have
+        // default values on the Kotlin side, the Swift call site has to supply
+        // them. skipCustoms=true keeps the public calculator's quote free of
+        // customs; the footer warns customers that VAT + Duty may apply on
+        // clearance. Per-item HS-code customs is the order-creation flow.
         vm?.computeQuote(
             dims: dims,
             channel: channel,
@@ -326,7 +322,8 @@ struct QuoteCalculatorView: View {
             declaredValuePence: declaredValuePence,
             items: [],
             electronicsItemKey: nil,
-            hsTier: nil
+            hsTier: nil,
+            skipCustoms: true
         )
     }
 }

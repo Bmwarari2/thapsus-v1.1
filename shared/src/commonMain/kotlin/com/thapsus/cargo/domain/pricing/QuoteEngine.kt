@@ -61,6 +61,9 @@ class QuoteEngine {
         // Display-only — UK_air vs UK_sea no longer affect the price.
         // Kept so existing UIs that show "channel" don't break.
         channel: PricingChannel = PricingChannel.UK_AIR,
+        // Public calculator: when true, customs is excluded from the quote.
+        // Customer is told via a footer that customs may apply on KRA clearance.
+        skipCustoms: Boolean = false,
     ): Quote {
         val volumetric = VolumetricWeightCalculator.breakdown(dims, settings.dimDivisor)
         val chargeKg = volumetric.chargeableKg
@@ -82,9 +85,12 @@ class QuoteEngine {
         val insurancePremium = insurancePremium(insuranceTier, declaredValuePence)
 
         // ── 5. Customs estimate
+        //   • skipCustoms=true → omitted from the quote (public calculator)
         //   • items[] supplied → per-item HS-code path
         //   • else → legacy single-tier on (declared + insurance + freight) CIF
-        val (customsTotal, customsItems) = if (items.isNotEmpty()) {
+        val (customsTotal, customsItems) = if (skipCustoms) {
+            Pair(Money.gbp(0), emptyList<CustomsItemBreakdown>())
+        } else if (items.isNotEmpty()) {
             calculateCustomsForItems(
                 items = items,
                 customsTiers = customsTiers,
