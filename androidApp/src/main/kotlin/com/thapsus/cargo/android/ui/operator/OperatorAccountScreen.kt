@@ -20,6 +20,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CloudSync
+import androidx.compose.material.icons.filled.Print
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -43,7 +46,9 @@ import com.thapsus.cargo.data.repository.AuthSession
 fun OperatorAccountScreen(
     session: AuthSession.Authenticated,
     onSignOut: () -> Unit,
-    onOpenTodaySummary: () -> Unit
+    onOpenTodaySummary: () -> Unit,
+    onOpenOutbox: () -> Unit = {},
+    onOpenClientTerminal: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -90,35 +95,30 @@ fun OperatorAccountScreen(
         // Today summary — demoted from a top-level tab in the BFM-primary
         // pivot but kept one tap away so operators can still get the
         // pipeline overview.
-        SoftCard(modifier = Modifier.clickable(onClick = onOpenTodaySummary)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .background(Brand.ink, RoundedCornerShape(12.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Filled.CalendarToday, contentDescription = null, tint = Brand.cream)
-                }
-                Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        "Today's summary",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = Brand.ink
-                    )
-                    Text(
-                        "Parcel pipeline + BFM tiles.",
-                        color = Brand.ink.copy(alpha = 0.7f)
-                    )
-                }
-                Icon(
-                    Icons.Filled.ChevronRight,
-                    contentDescription = null,
-                    tint = Brand.ink.copy(alpha = 0.45f)
-                )
-            }
-        }
+        OperatorLinkCard(
+            icon = Icons.Filled.CalendarToday,
+            iconTint = Brand.cream,
+            iconBg = Brand.ink,
+            title = "Today's summary",
+            subtitle = "Parcel pipeline + BFM tiles.",
+            onClick = onOpenTodaySummary
+        )
+        OperatorLinkCard(
+            icon = Icons.Filled.Print,
+            iconTint = Color.White,
+            iconBg = Brand.Orange,
+            title = "Client terminal",
+            subtitle = "Print parcel labels + manifests.",
+            onClick = onOpenClientTerminal
+        )
+        OperatorLinkCard(
+            icon = Icons.Filled.CloudSync,
+            iconTint = Color.White,
+            iconBg = Brand.Orange,
+            title = "Outbox",
+            subtitle = "Pending offline mutations + manual flush.",
+            onClick = onOpenOutbox
+        )
 
         Button(
             onClick = onSignOut,
@@ -135,5 +135,42 @@ fun OperatorAccountScreen(
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+}
+
+@Composable
+private fun OperatorLinkCard(
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit
+) {
+    SoftCard(modifier = Modifier.clickable(onClick = onClick)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(iconBg, RoundedCornerShape(12.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = iconTint)
+            }
+            Spacer(Modifier.width(14.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Brand.ink
+                )
+                Text(subtitle, color = Brand.ink.copy(alpha = 0.7f))
+            }
+            Icon(
+                Icons.Filled.ChevronRight,
+                contentDescription = null,
+                tint = Brand.ink.copy(alpha = 0.45f)
+            )
+        }
     }
 }

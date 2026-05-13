@@ -11,6 +11,8 @@ object OperatorRoutes {
     // Today is no longer a top-level tab; it lives behind Account → Today's summary.
     const val TODAY = "operator/today"
     const val SCANNER = "operator/scanner"
+    const val OUTBOX = "operator/outbox"
+    const val CLIENT_TERMINAL = "operator/client-terminal"
     const val CONSOL_DETAIL = "operator/consols/{consolId}"
     fun consolDetail(id: String) = "operator/consols/$id"
 }
