@@ -63,6 +63,10 @@ data class AdminStatsResponse(
     @Serializable(with = LooseIntSerializer::class) val deliveredOrders: Int = 0,
     @SerialName("revenue_kes")
     @Serializable(with = LooseDoubleSerializer::class) val revenueKes: Double = 0.0,
+    @SerialName("paid_via_card_kes")
+    @Serializable(with = LooseDoubleSerializer::class) val paidViaCardKes: Double = 0.0,
+    @SerialName("paid_via_mpesa_kes")
+    @Serializable(with = LooseDoubleSerializer::class) val paidViaMpesaKes: Double = 0.0,
     @SerialName("pending_payments")
     @Serializable(with = LooseIntSerializer::class) val pendingPayments: Int = 0
 )
@@ -137,6 +141,13 @@ data class AdminRevenueStats(
     @SerialName("total_revenue") @Serializable(with = LooseDoubleSerializer::class) val totalRevenue: Double = 0.0,
     @Serializable(with = LooseDoubleSerializer::class) val deposits: Double = 0.0,
     @Serializable(with = LooseDoubleSerializer::class) val payments: Double = 0.0,
+    // Breakdown of `total_revenue` by channel — added server-side in
+    // Swiftcargo-main#209 after the /admin/stats query was extended to
+    // union the legacy `transactions` table with the modern `payments`
+    // table. Pre-#209 these fields are absent on the wire; the default
+    // 0.0 keeps deserialisation working against older deployments.
+    @SerialName("paid_via_card")  @Serializable(with = LooseDoubleSerializer::class) val paidViaCard: Double = 0.0,
+    @SerialName("paid_via_mpesa") @Serializable(with = LooseDoubleSerializer::class) val paidViaMpesa: Double = 0.0,
     @SerialName("referral_credits_issued") @Serializable(with = LooseDoubleSerializer::class) val referralCreditsIssued: Double = 0.0
 )
 

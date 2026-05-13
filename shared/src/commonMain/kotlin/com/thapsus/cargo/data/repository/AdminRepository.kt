@@ -178,6 +178,8 @@ class AdminRepository(
             activeOrders = full.stats.orders.activeOrders,
             deliveredOrders = full.stats.orders.delivered,
             revenueKes = full.stats.revenue.totalRevenue,
+            paidViaCardKes = full.stats.revenue.paidViaCard,
+            paidViaMpesaKes = full.stats.revenue.paidViaMpesa,
             pendingPayments = 0
         )
     }
