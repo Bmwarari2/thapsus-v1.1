@@ -2,6 +2,8 @@ package com.thapsus.cargo.android.ui.customer
 
 object CustomerRoutes {
     const val HOME = "customer/home"
+    const val SHOP = "customer/shop"
+    const val ACTIVITY = "customer/activity"
     const val TRACKING = "customer/tracking"
     const val WALLET = "customer/wallet"
     const val QUOTE = "customer/quote"

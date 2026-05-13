@@ -1,6 +1,7 @@
 package com.thapsus.cargo.android.ui.customer
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -14,18 +15,19 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.AirplanemodeActive
-import androidx.compose.material.icons.filled.ArrowOutward
-import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material.icons.filled.PostAdd
+import androidx.compose.material.icons.filled.TwoWheeler
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -39,6 +41,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalClipboardManager
@@ -55,6 +58,7 @@ import com.thapsus.cargo.android.ui.primitives.EditorialHeader
 import com.thapsus.cargo.android.ui.primitives.EyebrowPill
 import com.thapsus.cargo.android.ui.primitives.InkCard
 import com.thapsus.cargo.android.ui.primitives.OrangeButton
+import com.thapsus.cargo.android.ui.primitives.SoftCard
 import com.thapsus.cargo.android.ui.primitives.WordmarkSize
 import com.thapsus.cargo.android.ui.theme.Brand
 import com.thapsus.cargo.data.repository.AuthSession
@@ -72,10 +76,9 @@ private val DEFAULT_LINES = listOf(
 @Composable
 fun HomeScreen(
     session: AuthSession.Authenticated,
-    onOpenNewOrder: () -> Unit,
+    onOpenBuyForMe: () -> Unit,
+    onOpenPreRegister: () -> Unit,
     onOpenParcel: (String) -> Unit,
-    onOpenTracking: () -> Unit,
-    onOpenWallet: () -> Unit,
     onOpenNotifications: () -> Unit
 ) {
     val dashVm = remember(session.userId) {
@@ -98,88 +101,243 @@ fun HomeScreen(
     val lines = (warehouse as? WarehouseViewModel.UiState.Loaded)
         ?.addresses?.get("UK")?.lines ?: DEFAULT_LINES
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                BrandWordmark(size = WordmarkSize.Small)
-                Spacer(Modifier.weight(1f))
-                NotifBadge(onClick = onOpenNotifications)
-            }
-            EyebrowPill(label = "Client Terminal")
-            EditorialHeader(
-                title = "Welcome,\n$firstName",
-                subtitle = "Your global logistics overview and active shipments pipeline."
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            BrandWordmark(size = WordmarkSize.Small)
+            Spacer(Modifier.weight(1f))
+            NotifBadge(onClick = onOpenNotifications)
+        }
+        EyebrowPill(label = "Client Terminal")
+        EditorialHeader(
+            title = "Welcome,\n$firstName",
+            subtitle = "Send us a UK retailer link and we'll do the rest."
+        )
+
+        // BFM-primary pivot: hero card leads with the concierge flow,
+        // pre-register sits below as a co-equal secondary path. Mirrors
+        // CustomerDashboardView's actionGrid on iOS.
+        BfmHeroCard(onClick = onOpenBuyForMe)
+        PreRegisterCard(onClick = onOpenPreRegister)
+
+        WarehouseCard(name = fullName, code = warehouseCode, lines = lines)
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            BigStatTile(
+                eyebrow = "Active orders",
+                value = state.totalParcels.toString(),
+                icon = Icons.Filled.Inventory2,
+                modifier = Modifier.weight(1f)
             )
-
-            WarehouseCard(name = fullName, code = warehouseCode, lines = lines)
-
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                BigStatTile(
-                    eyebrow = "Active orders",
-                    value = state.totalParcels.toString(),
-                    icon = Icons.Filled.Inventory2,
-                    modifier = Modifier.weight(1f)
-                )
-                BigStatTile(
-                    eyebrow = "In flight",
-                    value = state.inFlightParcels.toString(),
-                    icon = Icons.Filled.AirplanemodeActive,
-                    modifier = Modifier.weight(1f),
-                    accent = Color(0xFF2196F3)
-                )
-            }
-
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                ActionRow(
-                    label = "VIEW MY PACKAGES",
-                    icon = Icons.Filled.Inventory2,
-                    background = Brand.ink,
-                    foreground = Brand.cream,
-                    onClick = onOpenTracking
-                )
-                ActionRow(
-                    label = "WALLET & TOP-UP",
-                    icon = Icons.Filled.CreditCard,
-                    background = Brand.Orange,
-                    foreground = Color.White,
-                    onClick = onOpenWallet
-                )
-            }
-
-            if (state.recentParcels.isNotEmpty()) {
-                Text(
-                    "Recent",
-                    color = Brand.ink,
-                    style = MaterialTheme.typography.titleLarge
-                )
-                state.recentParcels.take(5).forEach { p ->
-                    ParcelTile(
-                        title = p.description ?: p.retailer ?: "Parcel",
-                        subtitle = p.trackingNumber ?: p.id.take(8),
-                        onClick = { onOpenParcel(p.id) }
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(72.dp))
+            BigStatTile(
+                eyebrow = "In flight",
+                value = state.inFlightParcels.toString(),
+                icon = Icons.Filled.AirplanemodeActive,
+                modifier = Modifier.weight(1f),
+                accent = Color(0xFF2196F3)
+            )
         }
-        FloatingActionButton(
-            onClick = onOpenNewOrder,
-            containerColor = Brand.Orange,
-            contentColor = Color.White,
+
+        if (state.recentParcels.isNotEmpty()) {
+            Text(
+                "Recent",
+                color = Brand.ink,
+                style = MaterialTheme.typography.titleLarge
+            )
+            state.recentParcels.take(5).forEach { p ->
+                ParcelTile(
+                    title = p.description ?: p.retailer ?: "Parcel",
+                    subtitle = p.trackingNumber ?: p.id.take(8),
+                    onClick = { onOpenParcel(p.id) }
+                )
+            }
+        }
+
+        HowItWorksSection()
+
+        Spacer(Modifier.height(48.dp))
+    }
+}
+
+@Composable
+private fun BfmHeroCard(onClick: () -> Unit) {
+    val gradient = Brush.linearGradient(
+        colors = listOf(Brand.Orange, Color(0xFFD9501C))
+    )
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(gradient, RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick)
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
             modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = 24.dp)
-                .size(60.dp)
+                .size(48.dp)
+                .background(Color.White.copy(alpha = 0.18f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            Icon(Icons.Filled.Add, contentDescription = "New order")
+            Icon(Icons.Filled.AutoAwesome, contentDescription = null, tint = Color.White)
         }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                "Start a Buy-for-me request",
+                color = Color.White,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 18.sp
+            )
+            Text(
+                "Send us a link from any UK retailer — we buy on your behalf, ship to Kenya, deliver to your door.",
+                color = Color.White.copy(alpha = 0.88f),
+                fontSize = 13.sp
+            )
+        }
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Color.White)
+    }
+}
+
+@Composable
+private fun PreRegisterCard(onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brand.cream.copy(alpha = 0.78f), RoundedCornerShape(22.dp))
+            .border(1.dp, Brand.ink.copy(alpha = 0.06f), RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick)
+            .padding(18.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(Brand.peach, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(Icons.Filled.PostAdd, contentDescription = null, tint = Brand.Orange)
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                "Pre-register a parcel",
+                color = Brand.ink,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp
+            )
+            Text(
+                "Already bought somewhere we don't cover? Tell us it's coming.",
+                color = Brand.ink.copy(alpha = 0.7f),
+                fontSize = 13.sp
+            )
+        }
+        Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = null, tint = Brand.ink.copy(alpha = 0.6f))
+    }
+}
+
+/**
+ * 4-step BFM narrative mirroring iOS HowItWorksView. Alternates light
+ * SoftCard and dark InkCard for visual rhythm.
+ */
+@Composable
+private fun HowItWorksSection() {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                "OUR WORKFLOW",
+                color = Brand.Orange,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 12.sp,
+                letterSpacing = 4.sp
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "HOW IT WORKS",
+                color = Brand.ink,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 28.sp
+            )
+            Spacer(Modifier.height(8.dp))
+            Box(
+                modifier = Modifier
+                    .width(60.dp)
+                    .height(4.dp)
+                    .background(Brand.Orange, RoundedCornerShape(2.dp))
+            )
+        }
+        Spacer(Modifier.height(4.dp))
+        StepCard(
+            number = "01",
+            title = "Send us a retailer link",
+            body = "Found something on Amazon, ASOS, John Lewis — anywhere in the UK? Drop us the link and we'll take it from there. No UK card or address required.",
+            icon = Icons.Filled.Link,
+            dark = false
+        )
+        StepCard(
+            number = "02",
+            title = "We buy on your behalf",
+            body = "An operator quotes you the total in GBP, you pay by card or M-Pesa, and we order it on your behalf.",
+            icon = Icons.Filled.AutoAwesome,
+            dark = true
+        )
+        StepCard(
+            number = "03",
+            title = "UK warehouse and air freight",
+            body = "Your purchases land at our Stockport hub, get consolidated into the next UK→Nairobi flight, and clear customs in Kenya.",
+            icon = Icons.Filled.AirplanemodeActive,
+            dark = false
+        )
+        StepCard(
+            number = "04",
+            title = "Door-step delivery in Kenya",
+            body = "A rider drops it at your address within 48 hours of touchdown. Already bought somewhere else? Pre-register the parcel and it joins the same flight.",
+            icon = Icons.Filled.TwoWheeler,
+            dark = true
+        )
+    }
+}
+
+@Composable
+private fun StepCard(
+    number: String,
+    title: String,
+    body: String,
+    icon: ImageVector,
+    dark: Boolean
+) {
+    val titleColor = if (dark) Brand.cream else Brand.ink
+    val bodyColor = if (dark) Brand.cream.copy(alpha = 0.7f) else Brand.ink.copy(alpha = 0.7f)
+    val content: @Composable () -> Unit = {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Box(
+                modifier = Modifier
+                    .size(56.dp)
+                    .background(Brand.Orange, RoundedCornerShape(16.dp)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(icon, contentDescription = null, tint = Color.White)
+            }
+            Text(
+                "$number. $title",
+                color = titleColor,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 18.sp
+            )
+            Text(body, color = bodyColor)
+        }
+    }
+    if (dark) {
+        InkCard { content() }
+    } else {
+        SoftCard { content() }
     }
 }
 
@@ -245,36 +403,6 @@ private fun WarehouseCard(name: String, code: String, lines: List<String>) {
                 }
             )
         }
-    }
-}
-
-@Composable
-private fun ActionRow(
-    label: String,
-    icon: ImageVector,
-    background: Color,
-    foreground: Color,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(background, RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Icon(icon, contentDescription = null, tint = foreground, modifier = Modifier.size(28.dp))
-        Spacer(Modifier.width(14.dp))
-        Text(
-            label,
-            color = foreground,
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = 12.sp,
-            letterSpacing = 2.sp,
-            modifier = Modifier.weight(1f)
-        )
-        Icon(Icons.Filled.ArrowOutward, contentDescription = null, tint = foreground.copy(alpha = 0.7f))
     }
 }
 
