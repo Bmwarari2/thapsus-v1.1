@@ -20,7 +20,9 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -50,7 +52,9 @@ fun AdminConsoleScreen(
     onOpenUsers: () -> Unit,
     onOpenPayments: () -> Unit,
     onOpenCreateBfm: () -> Unit = {},
-    onOpenIssueInvoice: () -> Unit = {}
+    onOpenIssueInvoice: () -> Unit = {},
+    onOpenCustomerConsolidations: () -> Unit = {},
+    onOpenOrders: () -> Unit = {}
 ) {
     val vm = remember { ThapsusSdk.adminDashboardViewModel() }
     DisposableEffect(vm) { onDispose { vm.clear() } }
@@ -125,6 +129,10 @@ fun AdminConsoleScreen(
                 LinkRow("Customers & operators", Icons.Filled.Group, onOpenUsers)
                 Spacer(Modifier.height(1.dp))
                 LinkRow("Pending payments", Icons.Filled.Payments, onOpenPayments)
+                Spacer(Modifier.height(1.dp))
+                LinkRow("Orders", Icons.Filled.ShoppingCart, onOpenOrders)
+                Spacer(Modifier.height(1.dp))
+                LinkRow("Customer consolidations", Icons.Filled.Inventory2, onOpenCustomerConsolidations)
             }
         }
         Spacer(Modifier.height(24.dp))
