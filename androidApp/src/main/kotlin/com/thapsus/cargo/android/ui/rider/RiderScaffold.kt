@@ -49,9 +49,9 @@ import com.thapsus.cargo.ThapsusSdk
 import com.thapsus.cargo.android.ui.primitives.BigStatTile
 import com.thapsus.cargo.android.ui.primitives.EditorialHeader
 import com.thapsus.cargo.android.ui.primitives.EyebrowPill
-import com.thapsus.cargo.android.ui.primitives.InkButton
 import com.thapsus.cargo.android.ui.primitives.InkCard
 import com.thapsus.cargo.android.ui.primitives.SoftCard
+import com.thapsus.cargo.android.ui.shared.OutboxScreen
 import com.thapsus.cargo.android.ui.theme.Brand
 import com.thapsus.cargo.data.dto.LastMileRunDto
 import com.thapsus.cargo.data.dto.RunStatus
@@ -106,7 +106,7 @@ fun RiderScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
             modifier = Modifier.fillMaxSize().padding(padding)
         ) {
             composable(RiderRoutes.TODAY) { RiderTodayScreen(riderId = session.userId) }
-            composable(RiderRoutes.OUTBOX) { RiderOutboxScreen() }
+            composable(RiderRoutes.OUTBOX) { OutboxScreen() }
             composable(RiderRoutes.ACCOUNT) { RiderAccountScreen(session, onSignOut) }
         }
     }
@@ -178,54 +178,6 @@ private fun friendly(s: RunStatus) = when (s) {
     RunStatus.IN_PROGRESS -> "In progress"
     RunStatus.COMPLETED -> "Completed"
     RunStatus.CANCELLED -> "Cancelled"
-}
-
-@Composable
-private fun RiderOutboxScreen() {
-    val vm = remember { ThapsusSdk.outboxViewModel() }
-    DisposableEffect(vm) { onDispose { vm.clear() } }
-    LaunchedEffect(vm) { vm.refresh() }
-
-    val pending by vm.pending.collectAsStateWithLifecycle()
-    val busy by vm.busy.collectAsStateWithLifecycle()
-    val lastFlushed by vm.lastFlushed.collectAsStateWithLifecycle()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        EyebrowPill(label = "Last mile")
-        EditorialHeader(
-            title = "Outbox",
-            subtitle = "Offline POD events waiting to sync."
-        )
-        InkCard {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Pending events", color = Brand.cream.copy(alpha = 0.7f), fontSize = 12.sp)
-                Text(
-                    pending.toString(),
-                    color = Brand.cream,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 56.sp
-                )
-                lastFlushed?.let {
-                    Text(
-                        "Last flush sent $it events.",
-                        color = Brand.cream.copy(alpha = 0.7f),
-                        fontSize = 12.sp
-                    )
-                }
-            }
-        }
-        InkButton(
-            text = if (busy) "Syncing…" else "Flush now",
-            enabled = !busy && pending > 0,
-            onClick = { vm.flushNow() }
-        )
-    }
 }
 
 @Composable

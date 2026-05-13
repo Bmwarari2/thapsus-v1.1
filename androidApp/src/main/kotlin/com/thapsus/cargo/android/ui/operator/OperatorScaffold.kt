@@ -26,6 +26,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.thapsus.cargo.android.ui.shared.OutboxScreen
 import com.thapsus.cargo.android.ui.theme.Brand
 import com.thapsus.cargo.data.repository.AuthSession
 

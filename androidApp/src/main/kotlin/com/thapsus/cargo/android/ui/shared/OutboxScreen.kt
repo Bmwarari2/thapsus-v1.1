@@ -1,4 +1,4 @@
-package com.thapsus.cargo.android.ui.operator
+package com.thapsus.cargo.android.ui.shared
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,13 +38,11 @@ import com.thapsus.cargo.android.ui.theme.Brand
 
 /**
  * Outbox surface — pending SQLDelight mutations + manual flush.
- * Mirrors iOS OutboxView. Same OutboxViewModel that powers the rider
- * outbox: counts queued POD captures + intake events from
- * `pending_mutation` and lets the operator force a sync.
- *
- * P3.2 ships the operator-side surface; the rider-side inline version
- * inside RiderScaffold continues to exist until a follow-up extracts
- * the two into a single shared composable.
+ * Mirrors iOS OutboxView. Shared between the Operator and Rider roles
+ * since the OutboxViewModel surface is identical for both (counts
+ * queued POD captures + intake events from `pending_mutation` and lets
+ * the user force a sync). Lives in `ui/shared/` so neither role
+ * package depends on the other.
  */
 @Composable
 fun OutboxScreen() {
