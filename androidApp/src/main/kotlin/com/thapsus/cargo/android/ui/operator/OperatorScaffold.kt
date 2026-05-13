@@ -114,7 +114,9 @@ fun OperatorScaffold(
                 OperatorAccountScreen(
                     session = session,
                     onSignOut = onSignOut,
-                    onOpenTodaySummary = { nav.navigate(OperatorRoutes.TODAY) }
+                    onOpenTodaySummary = { nav.navigate(OperatorRoutes.TODAY) },
+                    onOpenOutbox = { nav.navigate(OperatorRoutes.OUTBOX) },
+                    onOpenClientTerminal = { nav.navigate(OperatorRoutes.CLIENT_TERMINAL) }
                 )
             }
             composable(OperatorRoutes.TODAY) {
@@ -122,6 +124,10 @@ fun OperatorScaffold(
                     val popped = nav.popBackStack(OperatorRoutes.BFM, inclusive = false)
                     if (!popped) nav.navigate(OperatorRoutes.BFM)
                 })
+            }
+            composable(OperatorRoutes.OUTBOX) { OutboxScreen() }
+            composable(OperatorRoutes.CLIENT_TERMINAL) {
+                ClientTerminalScreen(session = session)
             }
             composable(OperatorRoutes.SCANNER) {
                 SkuScannerScreen(onClose = { nav.popBackStack() })
