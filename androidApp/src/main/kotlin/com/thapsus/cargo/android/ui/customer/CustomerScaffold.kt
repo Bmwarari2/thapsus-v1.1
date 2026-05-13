@@ -4,10 +4,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.CreditCard
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.Scale
-import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -31,19 +31,22 @@ import com.thapsus.cargo.data.repository.AuthSession
 
 private data class TabSpec(val label: String, val route: String, val icon: ImageVector)
 
+// BFM-primary tab order — mirrors iOS RootTabView for `.customer`.
+// Old Tracking + Wallet tabs collapsed into the Activity hub.
 private val customerTabs = listOf(
     TabSpec("Home", CustomerRoutes.HOME, Icons.Filled.Home),
-    TabSpec("Tracking", CustomerRoutes.TRACKING, Icons.Filled.Search),
-    TabSpec("Wallet", CustomerRoutes.WALLET, Icons.Filled.CreditCard),
+    TabSpec("Shop", CustomerRoutes.SHOP, Icons.Filled.AutoAwesome),
+    TabSpec("Activity", CustomerRoutes.ACTIVITY, Icons.Filled.Inbox),
     TabSpec("Quote", CustomerRoutes.QUOTE, Icons.Filled.Scale),
     TabSpec("Account", CustomerRoutes.ACCOUNT, Icons.Filled.AccountCircle)
 )
 
 /**
  * Scaffold for the customer role. Bottom nav swaps between the five top-level
- * customer routes, and sub-screens (NewOrder, ParcelDetail, Notifications,
- * ProfileEdit) push onto the same back stack so the bottom nav stays visible
- * while they're showing.
+ * customer routes (BFM-primary pivot: Home · Shop · Activity · Quote · Account),
+ * and sub-screens (NewOrder, ParcelDetail, Notifications, ProfileEdit, Wallet,
+ * Tracking) push onto the same back stack so the bottom nav stays visible while
+ * they're showing.
  */
 @Composable
 fun CustomerScaffold(
@@ -63,9 +66,6 @@ fun CustomerScaffold(
                     NavigationBarItem(
                         selected = selected,
                         onClick = {
-                            // If the tab's route is already on the back stack
-                            // (because we pushed a sub-screen from it), pop
-                            // back to it. Otherwise switch to the tab fresh.
                             val popped = nav.popBackStack(tab.route, inclusive = false)
                             if (!popped) {
                                 nav.navigate(tab.route) {
@@ -92,21 +92,22 @@ fun CustomerScaffold(
             composable(CustomerRoutes.HOME) {
                 HomeScreen(
                     session = session,
-                    onOpenNewOrder = { nav.navigate(CustomerRoutes.NEW_ORDER) },
+                    onOpenBuyForMe = { nav.navigate(CustomerRoutes.SHOP) },
+                    onOpenPreRegister = { nav.navigate(CustomerRoutes.NEW_ORDER) },
                     onOpenParcel = { nav.navigate(CustomerRoutes.parcelDetail(it)) },
-                    onOpenTracking = { nav.navigate(CustomerRoutes.TRACKING) },
-                    onOpenWallet = { nav.navigate(CustomerRoutes.WALLET) },
                     onOpenNotifications = { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
                 )
             }
-            composable(CustomerRoutes.TRACKING) {
-                TrackingScreen(
-                    userId = session.userId,
-                    onOpenParcel = { nav.navigate(CustomerRoutes.parcelDetail(it)) }
-                )
+            composable(CustomerRoutes.SHOP) {
+                BuyForMeScreen()
             }
-            composable(CustomerRoutes.WALLET) {
-                WalletScreen(userId = session.userId)
+            composable(CustomerRoutes.ACTIVITY) {
+                ActivityHubScreen(
+                    onOpenTracking = { nav.navigate(CustomerRoutes.TRACKING) },
+                    onOpenPreRegister = { nav.navigate(CustomerRoutes.NEW_ORDER) },
+                    onOpenInvoices = { nav.navigate(CustomerRoutes.WALLET) },
+                    onOpenTransactions = { nav.navigate(CustomerRoutes.WALLET) }
+                )
             }
             composable(CustomerRoutes.QUOTE) {
                 QuoteScreen()
@@ -119,6 +120,15 @@ fun CustomerScaffold(
                     onOpenNotifications = { nav.navigate(CustomerRoutes.NOTIFICATIONS) },
                     onOpenProfileEdit = { nav.navigate(CustomerRoutes.PROFILE_EDIT) }
                 )
+            }
+            composable(CustomerRoutes.TRACKING) {
+                TrackingScreen(
+                    userId = session.userId,
+                    onOpenParcel = { nav.navigate(CustomerRoutes.parcelDetail(it)) }
+                )
+            }
+            composable(CustomerRoutes.WALLET) {
+                WalletScreen(userId = session.userId)
             }
             composable(CustomerRoutes.NEW_ORDER) {
                 NewOrderScreen(
