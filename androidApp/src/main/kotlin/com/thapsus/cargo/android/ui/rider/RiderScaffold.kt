@@ -56,6 +56,18 @@ private object RiderRoutes {
         val encoded = java.net.URLEncoder.encode(zone, "UTF-8")
         return "rider/run/$runId?zone=$encoded"
     }
+
+    // POD capture — parcel ids are joined with `,` so a multi-parcel
+    // bundle can travel through a single path arg. Zone + recipient
+    // are URL-encoded so spaces / non-ascii survive the route lookup.
+    const val POD_CAPTURE =
+        "rider/run/{runId}/pod?parcelIds={parcelIds}&zone={zone}&recipient={recipient}"
+    fun podCapture(runId: String, zone: String, parcelIds: List<String>, recipient: String): String {
+        val ids = parcelIds.joinToString(",")
+        val z = java.net.URLEncoder.encode(zone, "UTF-8")
+        val r = java.net.URLEncoder.encode(recipient, "UTF-8")
+        return "rider/run/$runId/pod?parcelIds=$ids&zone=$z&recipient=$r"
+    }
 }
 
 private data class TabSpec(val label: String, val route: String, val icon: ImageVector)
@@ -124,7 +136,36 @@ fun RiderScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
                     runId = runId,
                     zone = zone,
                     onClose = { nav.popBackStack() },
-                    onOpenPod = { _, _ -> /* P4.2 wires PodCaptureScreen */ }
+                    onOpenPod = { parcelIds, recipient ->
+                        nav.navigate(RiderRoutes.podCapture(runId, zone, parcelIds, recipient))
+                    }
+                )
+            }
+            composable(
+                route = RiderRoutes.POD_CAPTURE,
+                arguments = listOf(
+                    navArgument("runId") { type = NavType.StringType },
+                    navArgument("parcelIds") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("zone") { type = NavType.StringType; defaultValue = "" },
+                    navArgument("recipient") { type = NavType.StringType; defaultValue = "" }
+                )
+            ) { entry ->
+                val runId = entry.arguments?.getString("runId") ?: ""
+                val rawZone = entry.arguments?.getString("zone") ?: ""
+                val rawRecipient = entry.arguments?.getString("recipient") ?: ""
+                val parcelIdsCsv = entry.arguments?.getString("parcelIds") ?: ""
+                val zone = runCatching { java.net.URLDecoder.decode(rawZone, "UTF-8") }
+                    .getOrDefault(rawZone)
+                val recipient = runCatching { java.net.URLDecoder.decode(rawRecipient, "UTF-8") }
+                    .getOrDefault(rawRecipient)
+                val ids = parcelIdsCsv.split(',').filter { it.isNotBlank() }
+                PodCaptureScreen(
+                    runId = runId,
+                    runZone = zone,
+                    riderId = session.userId,
+                    parcelIds = ids,
+                    defaultRecipient = recipient,
+                    onClose = { nav.popBackStack() }
                 )
             }
             composable(RiderRoutes.OUTBOX) { OutboxScreen() }
