@@ -2,6 +2,7 @@
 // Concierge-purchase flow: paste a retailer link, our team quotes, you pay.
 
 import SwiftUI
+import SafariServices
 import ThapsusShared
 
 struct BuyForMeView: View {
@@ -12,6 +13,13 @@ struct BuyForMeView: View {
     @State private var showCreate: Bool = false
     /// `nil` = sheet closed, otherwise the order whose quote we're rejecting.
     @State private var rejectingFor: BuyForMeOrderDto? = nil
+    /// In-app Safari browser target. Tapping a retailer in the rotating
+    /// strip sets this to that retailer's `baseUrl`; the sheet hosts
+    /// SFSafariViewController so the customer stays inside the app and
+    /// can come back to the Shop tab with their idea / link ready.
+    /// Wrapped in IdentifiableURL so `.sheet(item:)` can identify it
+    /// without extending URL itself (avoids retroactive conformance).
+    @State private var inAppUrl: IdentifiableURL? = nil
 
     var body: some View {
         ScrollView {
@@ -19,6 +27,8 @@ struct BuyForMeView: View {
                 EyebrowPill(label: "Concierge", systemImage: "wand.and.stars")
                 EditorialHeader(title: "Buy for me",
                                 subtitle: "Paste a UK retailer link, we buy and ship.")
+
+                retailerMarquee
 
                 Button(action: { showCreate = true }) {
                     HStack(spacing: 8) {
@@ -64,7 +74,88 @@ struct BuyForMeView: View {
                 }
             }
         }
+        // In-app browser for retailer-strip taps. SFSafariViewController
+        // handles its own dismiss affordance, so a simple .sheet(item:)
+        // binding is enough — no wrapper UINavigationController needed.
+        .sheet(item: $inAppUrl) { wrapped in
+            BFMSafariView(url: wrapped.url).ignoresSafeArea()
+        }
         .task { bootstrap() }
+    }
+
+    /// Rotating retailer strip pinned to the top of the Shop page.
+    /// Mirrors the web Home.jsx MarqueeRetailers component but adapted
+    /// for touch: a horizontally-scrollable list of curated retailers
+    /// (sorted by sortOrder, capped at 12 so the strip stays scannable).
+    /// Tap a card → in-app Safari for that retailer's homepage. Customer
+    /// browses, finds a product, then comes back and pastes the link via
+    /// the "New request" button below.
+    @ViewBuilder
+    private var retailerMarquee: some View {
+        if let all = retailersObs?.value, !all.isEmpty {
+            let curated = all
+                .sorted { $0.sortOrder < $1.sortOrder }
+                .prefix(12)
+            VStack(alignment: .leading, spacing: 8) {
+                LGEyebrow(text: "Popular UK retailers")
+                    .padding(.horizontal, 4)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 10) {
+                        ForEach(Array(curated), id: \.id) { retailer in
+                            retailerChip(retailer)
+                        }
+                    }
+                    .padding(.horizontal, 4)
+                }
+                .scrollClipDisabled()
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func retailerChip(_ retailer: RetailerDto) -> some View {
+        Button {
+            if let url = URL(string: retailer.baseUrl) {
+                inAppUrl = IdentifiableURL(url: url)
+            }
+        } label: {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle().fill(LG.glassBgStrong)
+                    Image(systemName: retailerIcon(for: retailer.name))
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(LG.accent2)
+                }
+                .frame(width: 30, height: 30)
+
+                Text(retailer.name.uppercased())
+                    .font(.body(12, weight: .heavy))
+                    .tracking(1)
+                    .foregroundStyle(LG.fg)
+                    .lineLimit(1)
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                Capsule().fill(.ultraThinMaterial)
+            )
+            .overlay(
+                Capsule().strokeBorder(LG.glassBorder, lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// SF Symbol pick for a retailer chip. Keeps the design system
+    /// monochrome — coloured retailer logos are out of scope for v1.1
+    /// since logo URLs aren't bundled with the asset catalogue.
+    private func retailerIcon(for name: String) -> String {
+        let lower = name.lowercased()
+        if lower.contains("amazon") || lower.contains("ebay") || lower.contains("argos") { return "shippingbox.fill" }
+        if lower.contains("zara") || lower.contains("asos") || lower.contains("shein") || lower.contains("next") || lower.contains("marks") { return "bag.fill" }
+        if lower.contains("temu") || lower.contains("aliexpress") { return "bolt.fill" }
+        if lower.contains("currys") || lower.contains("apple") || lower.contains("john lewis") { return "laptopcomputer" }
+        return "storefront"
     }
 
     @ViewBuilder
@@ -440,4 +531,30 @@ private struct RejectQuoteSheet: View {
             }
         }
     }
+}
+
+// MARK: - In-app Safari wrapper for retailer-strip taps
+//
+// Inlined here rather than a new Hardware/SafariView.swift file so the
+// PR doesn't need a pbxproj edit (the project uses explicit file
+// references, not synchronised folders). If a second consumer ever
+// needs SFSafariViewController, lift this into Hardware/ at that point.
+
+private struct BFMSafariView: UIViewControllerRepresentable {
+    let url: URL
+
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let config = SFSafariViewController.Configuration()
+        config.entersReaderIfAvailable = false
+        return SFSafariViewController(url: url, configuration: config)
+    }
+
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
+}
+
+// Small wrapper so `.sheet(item:)` can identify the URL without us
+// extending Foundation.URL with a retroactive Identifiable conformance.
+private struct IdentifiableURL: Identifiable {
+    let url: URL
+    var id: String { url.absoluteString }
 }

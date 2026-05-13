@@ -238,18 +238,13 @@ struct CustomerDashboardView: View {
     private var actionGrid: some View {
         VStack(spacing: 12) {
             bfmHeroCard
-            LGActionCard(
-                title: "Pre-register a parcel",
-                subtitle: "Already bought somewhere we don't cover? Tell us it's coming.",
-                systemImage: "plus.rectangle.on.rectangle",
-                action: { showingNewOrder = true }
-            )
+            preRegisterCard
         }
     }
 
     private var bfmHeroCard: some View {
         Button { showingBuyForMe = true } label: {
-            HStack(alignment: .top, spacing: 14) {
+            HStack(alignment: .center, spacing: 14) {
                 ZStack {
                     Circle().fill(Color.white.opacity(0.18))
                     Image(systemName: "wand.and.stars")
@@ -258,11 +253,7 @@ struct CustomerDashboardView: View {
                 }
                 .frame(width: 48, height: 48)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("PRIMARY")
-                        .font(.body(10, weight: .heavy))
-                        .tracking(2)
-                        .foregroundStyle(Color.white.opacity(0.75))
+                VStack(alignment: .leading, spacing: 4) {
                     Text("Start a Buy-for-me request")
                         .font(.body(20, weight: .bold))
                         .foregroundStyle(.white)
@@ -291,6 +282,58 @@ struct CustomerDashboardView: View {
                     .strokeBorder(Color.white.opacity(0.25), lineWidth: 1)
             )
             .shadow(color: LG.accent2.opacity(0.30), radius: 22, x: 0, y: 12)
+        }
+        .buttonStyle(.plain)
+    }
+
+    /// Mirrors `bfmHeroCard`'s horizontal layout (icon-left, title +
+    /// subtitle right) so the two cards align visually. Tonal contrast
+    /// (glass vs accent gradient) carries the primary-vs-secondary
+    /// hierarchy without needing labels like "PRIMARY".
+    private var preRegisterCard: some View {
+        Button { showingNewOrder = true } label: {
+            HStack(alignment: .center, spacing: 14) {
+                ZStack {
+                    Circle().fill(LG.glassBgStrong)
+                    Image(systemName: "plus.rectangle.on.rectangle")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(LG.accent2)
+                }
+                .frame(width: 48, height: 48)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Pre-register a parcel")
+                        .font(.body(17, weight: .bold))
+                        .foregroundStyle(LG.fg)
+                        .multilineTextAlignment(.leading)
+                    Text("Already bought somewhere we don't cover? Tell us it's coming.")
+                        .font(.body(13, weight: .medium))
+                        .foregroundStyle(LG.fg3)
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(LG.fg3)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                ZStack {
+                    RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
+                        .fill(.ultraThinMaterial)
+                    RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
+                        .fill(LG.glassBg)
+                }
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
+                    .strokeBorder(LG.glassBorder, lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 8)
         }
         .buttonStyle(.plain)
     }
