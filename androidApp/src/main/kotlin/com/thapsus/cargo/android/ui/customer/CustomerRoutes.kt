@@ -27,4 +27,14 @@ object CustomerRoutes {
         val encoded = java.net.URLEncoder.encode(title, "UTF-8")
         return "customer/pay/$kind/$id/$amount?title=$encoded"
     }
+
+    // Support / privacy / referrals / prohibited search
+    const val TICKETS = "customer/tickets"
+    const val TICKET_DETAIL = "customer/tickets/{ticketId}"
+    fun ticketDetail(ticketId: String) = "customer/tickets/$ticketId"
+    const val DSAR = "customer/dsar"
+    const val REFERRAL = "customer/referral"
+    const val PROHIBITED = "customer/prohibited"
+    const val PUBLIC_PAY = "customer/public-pay/{orderId}"
+    fun publicPay(orderId: String) = "customer/public-pay/$orderId"
 }
