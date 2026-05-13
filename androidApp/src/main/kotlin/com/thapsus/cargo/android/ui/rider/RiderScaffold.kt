@@ -1,9 +1,7 @@
 package com.thapsus.cargo.android.ui.rider
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,46 +19,43 @@ import androidx.compose.material.icons.filled.Outbox
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import com.thapsus.cargo.ThapsusSdk
-import com.thapsus.cargo.android.ui.primitives.BigStatTile
+import androidx.navigation.navArgument
 import com.thapsus.cargo.android.ui.primitives.EditorialHeader
 import com.thapsus.cargo.android.ui.primitives.EyebrowPill
 import com.thapsus.cargo.android.ui.primitives.InkCard
-import com.thapsus.cargo.android.ui.primitives.SoftCard
 import com.thapsus.cargo.android.ui.shared.OutboxScreen
 import com.thapsus.cargo.android.ui.theme.Brand
-import com.thapsus.cargo.data.dto.LastMileRunDto
-import com.thapsus.cargo.data.dto.RunStatus
 import com.thapsus.cargo.data.repository.AuthSession
 
 private object RiderRoutes {
     const val TODAY = "rider/today"
     const val OUTBOX = "rider/outbox"
     const val ACCOUNT = "rider/account"
+
+    const val RUN_STOPS = "rider/run/{runId}?zone={zone}"
+    fun runStops(runId: String, zone: String): String {
+        val encoded = java.net.URLEncoder.encode(zone, "UTF-8")
+        return "rider/run/$runId?zone=$encoded"
+    }
 }
 
 private data class TabSpec(val label: String, val route: String, val icon: ImageVector)
@@ -105,79 +100,37 @@ fun RiderScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
             startDestination = RiderRoutes.TODAY,
             modifier = Modifier.fillMaxSize().padding(padding)
         ) {
-            composable(RiderRoutes.TODAY) { RiderTodayScreen(riderId = session.userId) }
+            composable(RiderRoutes.TODAY) {
+                RiderRunsScreen(
+                    riderId = session.userId,
+                    onOpenRun = { run -> nav.navigate(RiderRoutes.runStops(run.id, run.zone)) }
+                )
+            }
+            composable(
+                route = RiderRoutes.RUN_STOPS,
+                arguments = listOf(
+                    navArgument("runId") { type = NavType.StringType },
+                    navArgument("zone") {
+                        type = NavType.StringType
+                        defaultValue = ""
+                    }
+                )
+            ) { entry ->
+                val runId = entry.arguments?.getString("runId") ?: ""
+                val rawZone = entry.arguments?.getString("zone") ?: ""
+                val zone = runCatching { java.net.URLDecoder.decode(rawZone, "UTF-8") }
+                    .getOrDefault(rawZone)
+                RunStopListScreen(
+                    runId = runId,
+                    zone = zone,
+                    onClose = { nav.popBackStack() },
+                    onOpenPod = { _, _ -> /* P4.2 wires PodCaptureScreen */ }
+                )
+            }
             composable(RiderRoutes.OUTBOX) { OutboxScreen() }
             composable(RiderRoutes.ACCOUNT) { RiderAccountScreen(session, onSignOut) }
         }
     }
-}
-
-@Composable
-private fun RiderTodayScreen(riderId: String) {
-    val vm = remember(riderId) { ThapsusSdk.riderRunViewModel(riderId) }
-    DisposableEffect(vm) { onDispose { vm.clear() } }
-    LaunchedEffect(vm) { vm.refresh() }
-    val runs by vm.runs.collectAsStateWithLifecycle()
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
-    ) {
-        EyebrowPill(label = "Last mile")
-        EditorialHeader(
-            title = "Today",
-            subtitle = "Active rider runs assigned to you."
-        )
-        if (runs.isEmpty()) {
-            SoftCard {
-                Text("No runs assigned. Check back when dispatch creates one.", color = Brand.ink.copy(alpha = 0.7f))
-            }
-        } else {
-            runs.forEach { run -> RunRow(run) }
-        }
-        Spacer(Modifier.height(24.dp))
-    }
-}
-
-@Composable
-private fun RunRow(run: LastMileRunDto) {
-    SoftCard {
-        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(run.zone, color = Brand.ink, fontWeight = FontWeight.SemiBold)
-                Text(
-                    "Run ${run.runDate}",
-                    color = Brand.ink.copy(alpha = 0.6f),
-                    fontSize = 12.sp,
-                    fontFamily = FontFamily.Monospace
-                )
-            }
-            Text(
-                friendly(run.status),
-                color = Brand.ink,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 11.sp,
-                modifier = Modifier
-                    .background(Brand.Orange.copy(alpha = 0.18f), RoundedCornerShape(999.dp))
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-            )
-        }
-    }
-}
-
-// RunStatus enum was simplified to 4 cases (PLANNED / IN_PROGRESS /
-// COMPLETED / CANCELLED) — "Scheduled", "En route", and "Partial" no
-// longer exist in shared/.../LastMileRunDto.kt. Labels match the iOS
-// RiderRunView/DispatchView convention so the two clients read the
-// same on screen.
-private fun friendly(s: RunStatus) = when (s) {
-    RunStatus.PLANNED -> "Planned"
-    RunStatus.IN_PROGRESS -> "In progress"
-    RunStatus.COMPLETED -> "Completed"
-    RunStatus.CANCELLED -> "Cancelled"
 }
 
 @Composable
