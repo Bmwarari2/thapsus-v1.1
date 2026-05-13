@@ -9,6 +9,8 @@ object AdminRoutes {
 
     const val USERS = "admin/users"
     const val PAYMENTS = "admin/payments"
+    const val CREATE_BFM = "admin/create-bfm"
+    const val ISSUE_INVOICE = "admin/issue-invoice"
     const val CONSOL_DETAIL = "admin/consols/{consolId}"
     fun consolDetail(id: String) = "admin/consols/$id"
 }

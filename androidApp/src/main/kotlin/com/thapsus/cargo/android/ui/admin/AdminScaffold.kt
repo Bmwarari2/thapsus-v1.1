@@ -82,7 +82,9 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
             composable(AdminRoutes.CONSOLE) {
                 AdminConsoleScreen(
                     onOpenUsers = { nav.navigate(AdminRoutes.USERS) },
-                    onOpenPayments = { nav.navigate(AdminRoutes.PAYMENTS) }
+                    onOpenPayments = { nav.navigate(AdminRoutes.PAYMENTS) },
+                    onOpenCreateBfm = { nav.navigate(AdminRoutes.CREATE_BFM) },
+                    onOpenIssueInvoice = { nav.navigate(AdminRoutes.ISSUE_INVOICE) }
                 )
             }
             composable(AdminRoutes.KPI) {
@@ -115,6 +117,12 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
             }
             composable(AdminRoutes.PAYMENTS) {
                 AdminPaymentsScreen(onBack = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.CREATE_BFM) {
+                AdminCreateBuyForMeScreen(onClose = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.ISSUE_INVOICE) {
+                AdminIssueInvoiceScreen(onClose = { nav.popBackStack() })
             }
         }
     }
