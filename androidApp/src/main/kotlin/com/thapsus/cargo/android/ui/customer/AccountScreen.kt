@@ -18,15 +18,19 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Help
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
@@ -60,7 +64,11 @@ fun AccountScreen(
     onOpenTransactions: () -> Unit = {},
     onOpenConsolidations: () -> Unit = {},
     onOpenInvoices: () -> Unit = {},
-    onOpenWarehouseAddress: () -> Unit = {}
+    onOpenWarehouseAddress: () -> Unit = {},
+    onOpenTickets: () -> Unit = {},
+    onOpenReferral: () -> Unit = {},
+    onOpenProhibitedSearch: () -> Unit = {},
+    onOpenDsar: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -140,6 +148,16 @@ fun AccountScreen(
             LinkRow("Notifications", Icons.Filled.Notifications, onOpenNotifications)
             HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
             LinkRow("Edit profile", Icons.Filled.Edit, onOpenProfileEdit)
+        }
+
+        Section(title = "Help & rewards") {
+            LinkRow("Support tickets", Icons.AutoMirrored.Filled.Help, onOpenTickets)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("Refer a friend", Icons.Filled.Group, onOpenReferral)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("Can I ship this?", Icons.Filled.Search, onOpenProhibitedSearch)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("My data (GDPR)", Icons.Filled.PrivacyTip, onOpenDsar)
         }
 
         Button(

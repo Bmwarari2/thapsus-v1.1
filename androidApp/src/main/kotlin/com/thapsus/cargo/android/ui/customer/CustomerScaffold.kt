@@ -123,7 +123,11 @@ fun CustomerScaffold(
                     onOpenTransactions = { nav.navigate(CustomerRoutes.TRANSACTIONS) },
                     onOpenConsolidations = { nav.navigate(CustomerRoutes.CONSOLIDATIONS) },
                     onOpenInvoices = { nav.navigate(CustomerRoutes.INVOICES) },
-                    onOpenWarehouseAddress = { nav.navigate(CustomerRoutes.WAREHOUSE) }
+                    onOpenWarehouseAddress = { nav.navigate(CustomerRoutes.WAREHOUSE) },
+                    onOpenTickets = { nav.navigate(CustomerRoutes.TICKETS) },
+                    onOpenReferral = { nav.navigate(CustomerRoutes.REFERRAL) },
+                    onOpenProhibitedSearch = { nav.navigate(CustomerRoutes.PROHIBITED) },
+                    onOpenDsar = { nav.navigate(CustomerRoutes.DSAR) }
                 )
             }
             composable(CustomerRoutes.TRACKING) {
@@ -206,6 +210,29 @@ fun CustomerScaffold(
             }
             composable(CustomerRoutes.PROFILE_EDIT) {
                 ProfileEditScreen(onClose = { nav.popBackStack() })
+            }
+            composable(CustomerRoutes.TICKETS) {
+                TicketsScreen(
+                    userId = session.userId,
+                    onOpenTicket = { nav.navigate(CustomerRoutes.ticketDetail(it)) }
+                )
+            }
+            composable(
+                route = CustomerRoutes.TICKET_DETAIL,
+                arguments = listOf(navArgument("ticketId") { type = NavType.StringType })
+            ) { entry ->
+                val id = entry.arguments?.getString("ticketId") ?: ""
+                TicketDetailScreen(ticketId = id, onClose = { nav.popBackStack() })
+            }
+            composable(CustomerRoutes.DSAR) { DsarScreen() }
+            composable(CustomerRoutes.REFERRAL) { ReferralScreen() }
+            composable(CustomerRoutes.PROHIBITED) { ProhibitedSearchScreen() }
+            composable(
+                route = CustomerRoutes.PUBLIC_PAY,
+                arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+            ) { entry ->
+                val id = entry.arguments?.getString("orderId") ?: ""
+                PublicPaymentScreen(orderId = id)
             }
         }
     }
