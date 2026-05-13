@@ -33,7 +33,7 @@ struct HowItWorksView: View {
             stepCard(
                 number: "02",
                 title: "We buy on your behalf",
-                body: "An operator quotes you the total in GBP (item + 10% buying fee + shipping). Pay by card or M-Pesa, and we order it on your behalf.",
+                body: "An operator quotes you the total in GBP, you pay by card or M-Pesa, and we order it on your behalf.",
                 icon: "wand.and.stars",
                 style: .dark
             )
