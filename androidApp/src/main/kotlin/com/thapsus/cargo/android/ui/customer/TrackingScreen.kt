@@ -21,12 +21,20 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AirplanemodeActive
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Circle
+import androidx.compose.material.icons.filled.Gavel
 import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -37,6 +45,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -54,6 +63,7 @@ import com.thapsus.cargo.data.dto.PackageDto
 import com.thapsus.cargo.data.dto.PackageStatus
 import com.thapsus.cargo.presentation.PublicTrackingViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TrackingScreen(
     userId: String,
@@ -82,7 +92,15 @@ fun TrackingScreen(
         }
     }
 
-    val active = remember(parcels) { parcels.filter { isActive(it.status) } }
+    // Stage-grouped active shipments. Mirrors iOS TrackingView's
+    // `recentActivityStages`: bucket every parcel by `LifecycleStage`
+    // (5 happy-path stages + Held), drop empty buckets, sort with
+    // most-actionable first (Held > Out-for-delivery > JKIA > In flight
+    // > At UK hub). Singleton groups jump straight to parcel detail;
+    // multi-parcel groups open a list sheet so the customer picks one.
+    val stageGroups = remember(parcels) { groupByStage(parcels) }
+    var expandedGroup by remember { mutableStateOf<StageGroup?>(null) }
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     Column(
         modifier = Modifier
@@ -143,11 +161,14 @@ fun TrackingScreen(
         }
 
         SectionHeader(
-            title = if (active.isEmpty()) "No active shipments" else "Active shipments",
-            subtitle = if (active.isEmpty()) null else "Tap a parcel for the full timeline."
+            title = if (stageGroups.isEmpty()) "No active shipments" else "Active shipments",
+            subtitle = if (stageGroups.isEmpty())
+                null
+            else
+                "Parcels grouped by where they are in the journey. Tap to see details."
         )
 
-        if (active.isEmpty()) {
+        if (stageGroups.isEmpty()) {
             SoftCard {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                     Text("Nothing in flight", color = Brand.ink, fontWeight = FontWeight.SemiBold)
@@ -158,12 +179,34 @@ fun TrackingScreen(
                 }
             }
         } else {
-            active.forEach { p ->
-                ActiveShipmentRow(parcel = p, onClick = { onOpenParcel(p.id) })
+            stageGroups.forEach { g ->
+                StageGroupCard(
+                    group = g,
+                    onClick = {
+                        if (g.members.size == 1) onOpenParcel(g.members.first().id)
+                        else expandedGroup = g
+                    }
+                )
             }
         }
 
         Spacer(Modifier.height(24.dp))
+    }
+
+    val target = expandedGroup
+    if (target != null) {
+        ModalBottomSheet(
+            onDismissRequest = { expandedGroup = null },
+            sheetState = sheetState
+        ) {
+            StageGroupSheet(
+                group = target,
+                onPick = { id ->
+                    expandedGroup = null
+                    onOpenParcel(id)
+                }
+            )
+        }
     }
 }
 
@@ -279,16 +322,191 @@ private fun SectionHeader(title: String, subtitle: String? = null) {
     }
 }
 
-private fun isActive(s: PackageStatus): Boolean = when (s) {
-    PackageStatus.DELIVERED, PackageStatus.ABANDONED -> false
-    else -> true
-}
-
 private fun iconFor(s: PackageStatus) = when (s) {
     PackageStatus.IN_TRANSIT,
     PackageStatus.MANIFESTED,
     PackageStatus.JKIA_ARRIVED -> Icons.Filled.AirplanemodeActive
     else -> Icons.Filled.Inventory2
+}
+
+/**
+ * Coarse pipeline buckets used to group customer parcels in the active
+ * feed. Mirrors iOS LifecycleStage — we collapse the 12 raw
+ * PackageStatus values down to 5 happy-path stages + Held, since a
+ * customer reads the feed top-to-bottom asking "where is my stuff" and
+ * the difference between e.g. `weighed` and `screened` is not
+ * meaningful at that altitude. Delivered/Abandoned drop out.
+ */
+private enum class LifecycleStage(
+    val rank: Int,
+    val progress: Float,
+    val title: String,
+    val icon: ImageVector,
+    val accent: Color
+) {
+    AT_UK_HUB(1, 0.20f, "At Stockport hub", Icons.Filled.Inventory2, Color(0xFF1A1A1A)),
+    ON_A_FLIGHT(2, 0.40f, "On a flight to Nairobi", Icons.Filled.AirplanemodeActive, Color(0xFF1A1A1A)),
+    AT_JKIA(3, 0.60f, "Customs at JKIA", Icons.Filled.Shield, Color(0xFF1A1A1A)),
+    OUT_FOR_DELIVERY(4, 0.80f, "Out for delivery", Icons.Filled.TwoWheeler, Color(0xFFD9501C)),
+    DELIVERED(5, 1.00f, "Delivered", Icons.Filled.CheckCircle, Color(0xFF2E7D32)),
+    HELD(100, 0f, "Held — action needed", Icons.Filled.Warning, Color(0xFFB3261E));
+
+    companion object {
+        fun from(status: PackageStatus): LifecycleStage? = when (status) {
+            PackageStatus.PRE_REGISTERED,
+            PackageStatus.RECEIVED_AT_WAREHOUSE,
+            PackageStatus.PHOTOGRAPHED,
+            PackageStatus.WEIGHED,
+            PackageStatus.SCREENED -> AT_UK_HUB
+            PackageStatus.MANIFESTED, PackageStatus.IN_TRANSIT -> ON_A_FLIGHT
+            PackageStatus.JKIA_ARRIVED,
+            PackageStatus.AWAITING_DUTY_PAYMENT,
+            PackageStatus.RELEASED -> AT_JKIA
+            PackageStatus.OUT_FOR_DELIVERY -> OUT_FOR_DELIVERY
+            PackageStatus.DELIVERED -> DELIVERED
+            PackageStatus.HELD, PackageStatus.HELD_AT_NAIROBI_HUB -> HELD
+            PackageStatus.ABANDONED -> null
+        }
+    }
+}
+
+private data class StageGroup(val stage: LifecycleStage, val members: List<PackageDto>)
+
+/**
+ * Bucket parcels by lifecycle stage. Delivered parcels survive only if
+ * they were updated in the last 14 days — older deliveries belong in a
+ * separate past-deliveries view. Empty buckets drop out. Sort: Held
+ * pinned to the top, then closest-to-delivered first.
+ */
+private fun groupByStage(parcels: List<PackageDto>): List<StageGroup> {
+    if (parcels.isEmpty()) return emptyList()
+    val cutoffMillis = System.currentTimeMillis() - 14L * 24 * 60 * 60 * 1000
+    val buckets = mutableMapOf<LifecycleStage, MutableList<PackageDto>>()
+    for (p in parcels) {
+        val stage = LifecycleStage.from(p.status) ?: continue
+        if (stage == LifecycleStage.DELIVERED) {
+            val stamp = parseIsoMillis(p.updatedAt ?: p.createdAt) ?: continue
+            if (stamp < cutoffMillis) continue
+        }
+        buckets.getOrPut(stage) { mutableListOf() }.add(p)
+    }
+    return buckets
+        .map { (stage, members) -> StageGroup(stage, members) }
+        .sortedByDescending { it.stage.rank }
+}
+
+/**
+ * Best-effort parse of the ISO timestamps `packages.updated_at` /
+ * `created_at` can ship in (with or without fractional seconds, with or
+ * without a `Z`). Returns null if nothing parses — those rows simply
+ * don't qualify for the 14-day Delivered window.
+ */
+private fun parseIsoMillis(raw: String?): Long? {
+    if (raw.isNullOrBlank()) return null
+    return runCatching { java.time.Instant.parse(raw).toEpochMilli() }
+        .getOrElse {
+            runCatching {
+                java.time.OffsetDateTime.parse(raw).toInstant().toEpochMilli()
+            }.getOrElse {
+                runCatching {
+                    java.time.LocalDate.parse(raw.take(10))
+                        .atStartOfDay(java.time.ZoneOffset.UTC)
+                        .toInstant().toEpochMilli()
+                }.getOrNull()
+            }
+        }
+}
+
+@Composable
+private fun StageGroupCard(group: StageGroup, onClick: () -> Unit) {
+    val stage = group.stage
+    val isHeld = stage == LifecycleStage.HELD
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brand.cream.copy(alpha = 0.85f), RoundedCornerShape(22.dp))
+            .clickable(onClick = onClick)
+            .padding(16.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .background(stage.accent, RoundedCornerShape(14.dp)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(stage.icon, contentDescription = null, tint = Color.White)
+        }
+        Spacer(Modifier.width(14.dp))
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    stage.title,
+                    color = Brand.ink,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 16.sp,
+                    modifier = Modifier.weight(1f)
+                )
+                CountChip(count = group.members.size, accent = stage.accent)
+            }
+            Text(
+                group.members.take(2).mapNotNull { p ->
+                    p.description?.takeIf { it.isNotBlank() }
+                        ?: p.retailer?.takeIf { it.isNotBlank() }
+                        ?: p.trackingNumber
+                }.joinToString(" • ").ifBlank { "—" } +
+                    if (group.members.size > 2) " • +${group.members.size - 2} more" else "",
+                color = Brand.ink.copy(alpha = 0.7f),
+                fontSize = 12.sp
+            )
+            if (!isHeld) {
+                LinearProgressIndicator(
+                    progress = { stage.progress },
+                    color = stage.accent,
+                    trackColor = Brand.ink.copy(alpha = 0.08f),
+                    modifier = Modifier.fillMaxWidth().height(6.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun CountChip(count: Int, accent: Color) {
+    Box(
+        modifier = Modifier
+            .background(accent.copy(alpha = 0.14f), RoundedCornerShape(999.dp))
+            .padding(horizontal = 10.dp, vertical = 4.dp)
+    ) {
+        Text(
+            if (count == 1) "1 parcel" else "$count parcels",
+            color = accent,
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 11.sp,
+            letterSpacing = 0.5.sp
+        )
+    }
+}
+
+@Composable
+private fun StageGroupSheet(group: StageGroup, onPick: (String) -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
+        EditorialHeader(
+            eyebrow = group.stage.title,
+            title = "${group.members.size} parcels",
+            subtitle = "Pick one to see the full timeline."
+        )
+        group.members.forEach { p ->
+            ActiveShipmentRow(parcel = p, onClick = { onPick(p.id) })
+        }
+        Spacer(Modifier.height(20.dp))
+    }
 }
 
 internal fun statusLabel(s: PackageStatus): String = when (s) {
