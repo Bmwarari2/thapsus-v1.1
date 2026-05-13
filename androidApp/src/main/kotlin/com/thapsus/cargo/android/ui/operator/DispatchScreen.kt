@@ -52,7 +52,10 @@ fun DispatchScreen() {
     val vm = remember { ThapsusSdk.dispatchViewModel() }
     DisposableEffect(vm) { onDispose { vm.clear() } }
 
-    val ready by vm.readyParcels.collectAsStateWithLifecycle()
+    // DispatchViewModel renamed readyParcels → pendingParcels in the
+    // shared module. Same semantics: parcels in 'released' status, ready
+    // for a last-mile run.
+    val ready by vm.pendingParcels.collectAsStateWithLifecycle()
     val runs by vm.runsList.collectAsStateWithLifecycle()
     var showNewRun by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -91,8 +94,11 @@ fun DispatchScreen() {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(run.zone, color = Brand.ink, fontWeight = FontWeight.SemiBold)
+                            // LastMileRunDto.riderId is nullable now (a run
+                            // can be PLANNED before a rider is assigned).
                             Text(
-                                "Rider ${run.riderId.take(8)}",
+                                run.riderId?.let { "Rider ${it.take(8)}" }
+                                    ?: "No rider assigned",
                                 color = Brand.ink.copy(alpha = 0.6f),
                                 fontSize = 12.sp
                             )
@@ -186,10 +192,12 @@ private fun NewRunSheet(onCreate: (riderId: String, zone: String) -> Unit) {
     }
 }
 
+// See RiderScaffold.friendly() for the rationale — RunStatus is now
+// 4-state (PLANNED / IN_PROGRESS / COMPLETED / CANCELLED) and labels
+// mirror iOS DispatchView.
 private fun friendly(s: RunStatus) = when (s) {
-    RunStatus.SCHEDULED -> "Scheduled"
-    RunStatus.EN_ROUTE -> "En route"
-    RunStatus.PARTIALLY_COMPLETED -> "Partial"
+    RunStatus.PLANNED -> "Planned"
+    RunStatus.IN_PROGRESS -> "In progress"
     RunStatus.COMPLETED -> "Completed"
     RunStatus.CANCELLED -> "Cancelled"
 }

@@ -168,10 +168,14 @@ private fun RunRow(run: LastMileRunDto) {
     }
 }
 
+// RunStatus enum was simplified to 4 cases (PLANNED / IN_PROGRESS /
+// COMPLETED / CANCELLED) — "Scheduled", "En route", and "Partial" no
+// longer exist in shared/.../LastMileRunDto.kt. Labels match the iOS
+// RiderRunView/DispatchView convention so the two clients read the
+// same on screen.
 private fun friendly(s: RunStatus) = when (s) {
-    RunStatus.SCHEDULED -> "Scheduled"
-    RunStatus.EN_ROUTE -> "En route"
-    RunStatus.PARTIALLY_COMPLETED -> "Partial"
+    RunStatus.PLANNED -> "Planned"
+    RunStatus.IN_PROGRESS -> "In progress"
     RunStatus.COMPLETED -> "Completed"
     RunStatus.CANCELLED -> "Cancelled"
 }
