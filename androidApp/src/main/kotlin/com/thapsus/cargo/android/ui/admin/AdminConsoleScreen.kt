@@ -18,10 +18,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.PrivacyTip
+import androidx.compose.material.icons.filled.RequestQuote
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -54,7 +58,11 @@ fun AdminConsoleScreen(
     onOpenCreateBfm: () -> Unit = {},
     onOpenIssueInvoice: () -> Unit = {},
     onOpenCustomerConsolidations: () -> Unit = {},
-    onOpenOrders: () -> Unit = {}
+    onOpenOrders: () -> Unit = {},
+    onOpenRevenue: () -> Unit = {},
+    onOpenAuditLogs: () -> Unit = {},
+    onOpenErrorLogs: () -> Unit = {},
+    onOpenDsarQueue: () -> Unit = {}
 ) {
     val vm = remember { ThapsusSdk.adminDashboardViewModel() }
     DisposableEffect(vm) { onDispose { vm.clear() } }
@@ -105,6 +113,19 @@ fun AdminConsoleScreen(
                         modifier = Modifier.weight(1f)
                     )
                 }
+
+                // Customer receipts — gross customer payments received from
+                // /admin/stats (Swiftcargo-main#209 unions legacy transactions
+                // with the modern payments table). Without this card, the iOS
+                // dashboard only surfaced Thapsus margin and customers' card +
+                // M-Pesa receipts were invisible — same problem on Android
+                // before this row landed.
+                ReceiptsCard(
+                    totalKes = s.stats.revenueKes,
+                    cardKes = s.stats.paidViaCardKes,
+                    mpesaKes = s.stats.paidViaMpesaKes,
+                    onOpenRevenue = onOpenRevenue
+                )
             }
             is AdminDashboardViewModel.UiState.Error -> SoftCard {
                 Text("Couldn't load: ${s.message}", color = Brand.ink)
@@ -133,10 +154,99 @@ fun AdminConsoleScreen(
                 LinkRow("Orders", Icons.Filled.ShoppingCart, onOpenOrders)
                 Spacer(Modifier.height(1.dp))
                 LinkRow("Customer consolidations", Icons.Filled.Inventory2, onOpenCustomerConsolidations)
+                Spacer(Modifier.height(1.dp))
+                LinkRow("Revenue", Icons.Filled.RequestQuote, onOpenRevenue)
+            }
+        }
+
+        Text("Compliance & logs", color = Brand.ink, style = MaterialTheme.typography.titleLarge)
+        SoftCard {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                LinkRow("DSAR queue", Icons.Filled.PrivacyTip, onOpenDsarQueue)
+                Spacer(Modifier.height(1.dp))
+                LinkRow("Audit logs", Icons.Filled.History, onOpenAuditLogs)
+                Spacer(Modifier.height(1.dp))
+                LinkRow("Error logs", Icons.Filled.BugReport, onOpenErrorLogs)
             }
         }
         Spacer(Modifier.height(24.dp))
     }
+}
+
+@Composable
+private fun ReceiptsCard(
+    totalKes: Double,
+    cardKes: Double,
+    mpesaKes: Double,
+    onOpenRevenue: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brand.ink, RoundedCornerShape(22.dp))
+            .clickable(onClick = onOpenRevenue)
+            .padding(20.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                "CUSTOMER RECEIPTS",
+                color = Brand.cream.copy(alpha = 0.55f),
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 10.sp,
+                letterSpacing = 2.sp
+            )
+            Spacer(Modifier.height(6.dp))
+            Text(
+                "KES " + formatThousands(totalKes.toLong()),
+                color = Brand.cream,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 26.sp
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                ReceiptsLine("Card (Stripe)", cardKes)
+                ReceiptsLine("M-Pesa", mpesaKes)
+            }
+        }
+        Icon(
+            Icons.AutoMirrored.Filled.KeyboardArrowRight,
+            contentDescription = null,
+            tint = Brand.cream.copy(alpha = 0.7f)
+        )
+    }
+}
+
+@Composable
+private fun ReceiptsLine(label: String, amountKes: Double) {
+    Column {
+        Text(
+            label.uppercase(),
+            color = Brand.cream.copy(alpha = 0.5f),
+            fontWeight = FontWeight.ExtraBold,
+            fontSize = 9.sp,
+            letterSpacing = 1.5.sp
+        )
+        Text(
+            "KES " + formatThousands(amountKes.toLong()),
+            color = Brand.cream,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 13.sp
+        )
+    }
+}
+
+private fun formatThousands(n: Long): String {
+    val s = n.toString()
+    val sb = StringBuilder()
+    val start = if (n < 0) 1 else 0
+    val digits = s.substring(start)
+    digits.reversed().forEachIndexed { i, c ->
+        if (i > 0 && i % 3 == 0) sb.append(',')
+        sb.append(c)
+    }
+    if (n < 0) sb.append('-')
+    return sb.reverse().toString()
 }
 
 @Composable

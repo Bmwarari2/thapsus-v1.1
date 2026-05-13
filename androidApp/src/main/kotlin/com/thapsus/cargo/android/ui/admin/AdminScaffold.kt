@@ -86,7 +86,11 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
                     onOpenCreateBfm = { nav.navigate(AdminRoutes.CREATE_BFM) },
                     onOpenIssueInvoice = { nav.navigate(AdminRoutes.ISSUE_INVOICE) },
                     onOpenCustomerConsolidations = { nav.navigate(AdminRoutes.CUSTOMER_CONSOLS) },
-                    onOpenOrders = { nav.navigate(AdminRoutes.ORDERS) }
+                    onOpenOrders = { nav.navigate(AdminRoutes.ORDERS) },
+                    onOpenRevenue = { nav.navigate(AdminRoutes.REVENUE) },
+                    onOpenAuditLogs = { nav.navigate(AdminRoutes.AUDIT_LOGS) },
+                    onOpenErrorLogs = { nav.navigate(AdminRoutes.ERROR_LOGS) },
+                    onOpenDsarQueue = { nav.navigate(AdminRoutes.DSAR_QUEUE) }
                 )
             }
             composable(AdminRoutes.KPI) {
@@ -141,6 +145,18 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
             ) { entry ->
                 val id = entry.arguments?.getString("orderId") ?: ""
                 AdminOrderDetailScreen(orderId = id, onBack = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.REVENUE) {
+                AdminRevenueScreen(onBack = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.AUDIT_LOGS) {
+                AdminAuditLogsScreen(onBack = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.ERROR_LOGS) {
+                AdminErrorLogsScreen(onBack = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.DSAR_QUEUE) {
+                AdminDsarQueueScreen(onBack = { nav.popBackStack() })
             }
         }
     }

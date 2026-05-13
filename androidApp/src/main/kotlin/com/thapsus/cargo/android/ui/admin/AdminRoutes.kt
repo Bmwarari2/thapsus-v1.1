@@ -15,6 +15,10 @@ object AdminRoutes {
     const val ORDERS = "admin/orders"
     const val ORDER_DETAIL = "admin/orders/{orderId}"
     fun orderDetail(id: String) = "admin/orders/$id"
+    const val REVENUE = "admin/revenue"
+    const val AUDIT_LOGS = "admin/audit-logs"
+    const val ERROR_LOGS = "admin/error-logs"
+    const val DSAR_QUEUE = "admin/dsar-queue"
     const val CONSOL_DETAIL = "admin/consols/{consolId}"
     fun consolDetail(id: String) = "admin/consols/$id"
 }
