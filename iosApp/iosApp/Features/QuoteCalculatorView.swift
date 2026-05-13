@@ -250,14 +250,45 @@ struct QuoteCalculatorView: View {
         return String(format: "£%.2f", gbp)
     }
 
+    /// Convert a GBP amount to whole-shilling KES (or pass-through pence
+    /// if the rate is missing). Used by the quote card so the displayed
+    /// total can be defined as the sum of the displayed line items —
+    /// otherwise rounding-each-line vs rounding-the-total drifts by 1 KES.
+    private func kesOf(_ gbp: Double) -> Int? {
+        guard let rate = gbpToKes else { return nil }
+        return Int((gbp * rate).rounded())
+    }
+
     @ViewBuilder
     private func quoteCard(_ q: QuoteEngine.Quote) -> some View {
         let surchargeMajor = Double(surchargePence) / 100
-        let totalWithSurchargeMajor = q.total.major + surchargeMajor
+        // Sum-stable total — same rule the server uses for the web
+        // calculator. Each visible line is rounded individually; the
+        // total is the sum of those rounded lines, so the customer can
+        // verify on screen that lines add up to total. Without this,
+        // round(q.total.major * rate) is off-by-1 vs the line sum
+        // whenever the GBP fractional × rate fractional combine
+        // unevenly. Falls back to total*rate when FX is missing.
+        let displayedTotal: String = {
+            let lineKesValues: [Int?] = [
+                kesOf(q.freight.major),
+                q.handling.major > 0      ? kesOf(q.handling.major)      : nil,
+                q.perKgFee.major > 0      ? kesOf(q.perKgFee.major)      : nil,
+                includesPhone             ? kesOf(75.0)                  : nil,
+                includesLaptop            ? kesOf(65.0)                  : nil,
+                q.processingFee.major > 0 ? kesOf(q.processingFee.major) : nil,
+            ]
+            let visibleKes = lineKesValues.compactMap { $0 }
+            if !visibleKes.isEmpty && gbpToKes != nil {
+                return "KES \(visibleKes.reduce(0, +).formatted(.number))"
+            }
+            return formatMoney(q.total.major + surchargeMajor)
+        }()
+
         GlassPanel(corner: LG.Radius.xl, padding: 20, tint: LG.accentSoft) {
             VStack(alignment: .leading, spacing: 14) {
                 LGEyebrow(text: "Estimated total", tone: .accent)
-                Text(formatMoney(totalWithSurchargeMajor))
+                Text(displayedTotal)
                     .font(.mono(38, weight: .bold))
                     .foregroundStyle(LG.fg)
                     .contentTransition(.numericText())
