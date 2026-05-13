@@ -138,6 +138,15 @@ class QuoteViewModel(
                 if (_settings.value === PricingSettingsDto.DEFAULT) {
                     pricing.fetchSettings().onSuccess { _settings.value = it }
                 }
+                // Refresh the GBP→KES rate on every quote so iOS doesn't drift
+                // from web. Without this, the rate fetched at app cold start
+                // can be minutes/hours stale by the time the customer computes
+                // a quote — and web (which fetches per session-load) ends up
+                // with a fresher rate, producing a 1–2 KES delta on the
+                // displayed total. Best-effort: failure leaves the previous
+                // cached value in place so an offline calculator still works.
+                pricing.fetchExchangeRates()
+                    .onSuccess { _gbpToKes.value = it["GBP_KES"] ?: _gbpToKes.value }
                 _quote.value = engine.quote(
                     dims = dims,
                     settings = _settings.value,
