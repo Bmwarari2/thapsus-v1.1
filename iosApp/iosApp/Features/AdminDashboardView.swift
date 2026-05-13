@@ -32,6 +32,7 @@ struct AdminDashboardView: View {
     private var content: some View {
         switch observer?.value {
         case let loaded as AdminDashboardViewModelUiStateLoaded:
+            receiptsCard(loaded.stats)
             revenueCard(loaded.revenue.summary)
             statsRow(loaded.stats)
             bfmQueueCard
@@ -133,6 +134,51 @@ struct AdminDashboardView: View {
                 statTile("Delivered", "\(s.deliveredOrders)", color: .purple)
             }
         }
+    }
+
+    /// Gross customer payments received — the corrected total from
+    /// /api/admin/stats (Swiftcargo-main#209) which unions the legacy
+    /// `transactions` table with the modern `payments` table. Without
+    /// this card the dashboard only surfaced Thapsus margin from
+    /// /admin/revenue-summary and customers' card / M-Pesa receipts
+    /// were invisible on the iOS console.
+    private func receiptsCard(_ stats: AdminStatsResponse) -> some View {
+        CrystalCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Customer receipts")
+                        .font(.caption.weight(.heavy))
+                        .tracking(2).foregroundStyle(.secondary)
+                    Spacer()
+                    Text(formatKes(stats.revenueKes))
+                        .font(.title.weight(.heavy))
+                        .foregroundStyle(Brand.ink)
+                }
+                HStack(alignment: .firstTextBaseline) {
+                    receiptsLine(label: "Card (Stripe)", amount: stats.paidViaCardKes)
+                    Spacer()
+                    receiptsLine(label: "M-Pesa",        amount: stats.paidViaMpesaKes)
+                }
+            }
+        }
+    }
+
+    private func receiptsLine(label: String, amount: Double) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(label.uppercased())
+                .font(.caption2.weight(.heavy)).tracking(2)
+                .foregroundStyle(.secondary)
+            Text(formatKes(amount))
+                .font(.headline).foregroundStyle(Brand.ink)
+        }
+    }
+
+    private func formatKes(_ amount: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.maximumFractionDigits = 0
+        let body = f.string(from: NSNumber(value: amount)) ?? "\(Int(amount))"
+        return "KES \(body)"
     }
 
     /// Money Thapsus has actually earned. Reads /api/admin/revenue-summary
