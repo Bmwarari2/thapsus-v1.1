@@ -228,24 +228,71 @@ struct CustomerDashboardView: View {
         }
     }
 
-    // MARK: - Action grid (New order / Buy for me)
+    // MARK: - Action grid (Buy-for-me hero + pre-register secondary)
+    //
+    // Mirrors the web Dashboard hierarchy after the BFM-primary pivot:
+    // Buy-for-me leads with a full-width prominent hero card; pre-
+    // register sits below as a co-equal secondary path. Visual treatment
+    // (accent gradient + larger surface) makes the primary unambiguous.
 
     private var actionGrid: some View {
-        HStack(spacing: 12) {
+        VStack(spacing: 12) {
+            bfmHeroCard
             LGActionCard(
-                title: "New order",
-                subtitle: "Pre-register parcel",
-                systemImage: "plus",
-                tone: .accent,
+                title: "Pre-register a parcel",
+                subtitle: "Already bought somewhere we don't cover? Tell us it's coming.",
+                systemImage: "plus.rectangle.on.rectangle",
                 action: { showingNewOrder = true }
             )
-            LGActionCard(
-                title: "Buy for me",
-                subtitle: "Concierge purchase",
-                systemImage: "gift.fill",
-                action: { showingBuyForMe = true }
-            )
         }
+    }
+
+    private var bfmHeroCard: some View {
+        Button { showingBuyForMe = true } label: {
+            HStack(alignment: .top, spacing: 14) {
+                ZStack {
+                    Circle().fill(Color.white.opacity(0.18))
+                    Image(systemName: "wand.and.stars")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.white)
+                }
+                .frame(width: 48, height: 48)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("PRIMARY")
+                        .font(.body(10, weight: .heavy))
+                        .tracking(2)
+                        .foregroundStyle(Color.white.opacity(0.75))
+                    Text("Start a Buy-for-me request")
+                        .font(.body(20, weight: .bold))
+                        .foregroundStyle(.white)
+                        .multilineTextAlignment(.leading)
+                    Text("Send us a link from any UK retailer — we buy on your behalf, ship to Kenya, deliver to your door.")
+                        .font(.body(13, weight: .medium))
+                        .foregroundStyle(Color.white.opacity(0.88))
+                        .multilineTextAlignment(.leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 16, weight: .bold))
+                    .foregroundStyle(.white)
+            }
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
+                    .fill(LG.accentGradient)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.25), lineWidth: 1)
+            )
+            .shadow(color: LG.accent2.opacity(0.30), radius: 22, x: 0, y: 12)
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Stats tiles
