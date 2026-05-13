@@ -84,7 +84,9 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
                     onOpenUsers = { nav.navigate(AdminRoutes.USERS) },
                     onOpenPayments = { nav.navigate(AdminRoutes.PAYMENTS) },
                     onOpenCreateBfm = { nav.navigate(AdminRoutes.CREATE_BFM) },
-                    onOpenIssueInvoice = { nav.navigate(AdminRoutes.ISSUE_INVOICE) }
+                    onOpenIssueInvoice = { nav.navigate(AdminRoutes.ISSUE_INVOICE) },
+                    onOpenCustomerConsolidations = { nav.navigate(AdminRoutes.CUSTOMER_CONSOLS) },
+                    onOpenOrders = { nav.navigate(AdminRoutes.ORDERS) }
                 )
             }
             composable(AdminRoutes.KPI) {
@@ -123,6 +125,22 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
             }
             composable(AdminRoutes.ISSUE_INVOICE) {
                 AdminIssueInvoiceScreen(onClose = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.CUSTOMER_CONSOLS) {
+                AdminCustomerConsolidationsScreen(onBack = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.ORDERS) {
+                AdminOrdersScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenOrder = { id -> nav.navigate(AdminRoutes.orderDetail(id)) }
+                )
+            }
+            composable(
+                route = AdminRoutes.ORDER_DETAIL,
+                arguments = listOf(navArgument("orderId") { type = NavType.StringType })
+            ) { entry ->
+                val id = entry.arguments?.getString("orderId") ?: ""
+                AdminOrderDetailScreen(orderId = id, onBack = { nav.popBackStack() })
             }
         }
     }
