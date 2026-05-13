@@ -25,29 +25,29 @@ struct HowItWorksView: View {
 
             stepCard(
                 number: "01",
-                title: "Shop from your favorite retailers",
-                body: "Shop any UK brand. Use our warehouse address as yours.",
-                icon: "bag.fill",
+                title: "Send us a retailer link",
+                body: "Found something on Amazon, ASOS, John Lewis — anywhere in the UK? Drop us the link and we'll take it from there. No UK card or address required.",
+                icon: "link",
                 style: .light
             )
             stepCard(
                 number: "02",
-                title: "Ship to our warehouse",
-                body: "We handle the heavy lifting. Your package is safely received and cataloged.",
-                icon: "shippingbox.fill",
+                title: "We buy on your behalf",
+                body: "An operator quotes you the total in GBP (item + 10% buying fee + shipping). Pay by card or M-Pesa, and we order it on your behalf.",
+                icon: "wand.and.stars",
                 style: .dark
             )
             stepCard(
                 number: "03",
-                title: "We consolidate",
-                body: "We combine your parcels into the next weekly UK→Nairobi flight to slash freight cost.",
-                icon: "tray.full.fill",
+                title: "UK warehouse and air freight",
+                body: "Your purchases land at our Stockport hub, get consolidated into the next UK→Nairobi flight, and clear customs in Kenya.",
+                icon: "airplane.departure",
                 style: .light
             )
             stepCard(
                 number: "04",
-                title: "Doorstep delivery",
-                body: "Customs cleared in Nairobi, then a rider hands it to you within 48 hours of arrival.",
+                title: "Door-step delivery in Kenya",
+                body: "A rider drops it at your address within 48 hours of touchdown. Already bought somewhere else? Pre-register the parcel and it joins the same flight.",
                 icon: "scooter",
                 style: .dark
             )

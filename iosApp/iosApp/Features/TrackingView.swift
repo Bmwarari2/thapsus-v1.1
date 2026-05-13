@@ -26,11 +26,6 @@ struct TrackingView: View {
     @State private var publicObserver: StateFlowObserver<PublicTrackingViewModelState>?
     @State private var showingNewOrder: Bool = false
     @State private var showingBuyForMe: Bool = false
-    /// Per-user customer-consolidations with an active invoice (Phase 2).
-    /// Loaded on appear via Supabase PostgREST under the customer's RLS
-    /// policy, then refreshed live by the realtime channel below.
-    @State private var customerConsolidations: [CustomerConsolidationDto] = []
-    @State private var customerConsolidationsTask: Task<Void, Never>?
     /// Customer's open Buy-for-me requests — pending_quote / quoted live
     /// here so they don't get lost on the BuyForMe tab. Driven by the same
     /// `BuyForMeViewModel` the dedicated screen uses; we re-issue load()
@@ -73,18 +68,10 @@ struct TrackingView: View {
                     .buttonStyle(GlassSheenButtonStyle(fill: Brand.cream, foreground: Brand.orange))
                 }
 
-                if !invoiceConsolidations.isEmpty {
-                    SectionHeader(
-                        title: "Invoices",
-                        subtitle: "Pay one invoice per consolidation to ship your batch."
-                    )
-                    ForEach(invoiceConsolidations, id: \.id) { cc in
-                        CustomerInvoiceCard(consolidation: cc) {
-                            payTarget = PayTarget.fromConsolidation(cc)
-                        }
-                    }
-                }
-
+                // Invoices intentionally NOT rendered here. They live on
+                // Activity → Invoices (CustomerInvoicesView). This screen
+                // is scoped to parcel tracking only — the customer's ask
+                // when they tap "Parcel tracking" in the Activity hub.
                 trackInputCard
 
                 if let match = matched {
@@ -291,31 +278,12 @@ struct TrackingView: View {
                 bfmStateObs  = StateFlowObserver(initial: model.state.value)  { model.state }
                 bfmActionObs = StateFlowObserver(initial: model.action.value) { model.action }
             }
-            if customerConsolidationsTask == nil {
-                let repo = ThapsusSdk.shared.customerConsolidations()
-                customerConsolidations = (try? await repo.fetchForUser(userId: userID)) ?? []
-                customerConsolidationsTask = Task { @MainActor in
-                    do {
-                        for try await updated in repo.observeForUser(userId: userID) {
-                            if let idx = customerConsolidations.firstIndex(where: { $0.id == updated.id }) {
-                                customerConsolidations[idx] = updated
-                            } else {
-                                customerConsolidations.insert(updated, at: 0)
-                            }
-                        }
-                    } catch {
-                        print("[TrackingView] customerConsolidations.observeForUser failed: \(error)")
-                    }
-                }
-            }
         }
         .onDisappear {
             observerTask?.cancel()
             observerTask = nil
             realtimeTask?.cancel()
             realtimeTask = nil
-            customerConsolidationsTask?.cancel()
-            customerConsolidationsTask = nil
             publicVm?.clear()
             publicVm = nil
             publicObserver = nil
@@ -323,12 +291,6 @@ struct TrackingView: View {
             // bfmVm here — onDisappear fires on transient redraws too.
             // The @State release on real teardown is enough.
         }
-    }
-
-    /// Only show invoiced or paid consolidations — pending ones don't
-    /// have an amount yet, and shipped ones are no longer actionable.
-    private var invoiceConsolidations: [CustomerConsolidationDto] {
-        customerConsolidations.filter { $0.status == "invoiced" || $0.status == "paid" }
     }
 
     /// Pending-quote and quoted Buy-for-me orders. We deliberately drop
