@@ -20,6 +20,12 @@ struct BuyForMeView: View {
     /// Wrapped in IdentifiableURL so `.sheet(item:)` can identify it
     /// without extending URL itself (avoids retroactive conformance).
     @State private var inAppUrl: IdentifiableURL? = nil
+    /// Pay-flow target. Set when the customer taps "Accept & buy" on a
+    /// quoted BFM order — opens PayInvoiceView with target_kind=
+    /// buy_for_me. The legacy `vm.accept` route hit the removed
+    /// /buy-for-me/{id}/accept wallet endpoint and bubbled a 410 with a
+    /// developer hint into the customer-visible error banner.
+    @State private var payTarget: PayTarget? = nil
 
     var body: some View {
         ScrollView {
@@ -79,6 +85,14 @@ struct BuyForMeView: View {
         // binding is enough — no wrapper UINavigationController needed.
         .sheet(item: $inAppUrl) { wrapped in
             BFMSafariView(url: wrapped.url).ignoresSafeArea()
+        }
+        .sheet(item: $payTarget) { target in
+            PayInvoiceView(
+                targetKind: target.kind,
+                targetId: target.id,
+                targetTitle: target.title,
+                amountKesGross: target.amountKes
+            )
         }
         .task { bootstrap() }
     }
@@ -211,7 +225,7 @@ struct BuyForMeView: View {
                 if order.status == "quoted" {
                     HStack(spacing: 10) {
                         Button {
-                            vm?.accept(id: order.id, reason: nil)
+                            payTarget = PayTarget.fromBfm(order)
                         } label: {
                             Label("Accept & buy", systemImage: "checkmark.circle.fill")
                         }
