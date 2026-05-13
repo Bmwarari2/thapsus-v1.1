@@ -4,7 +4,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.DeliveryDining
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Print
@@ -31,8 +31,10 @@ import com.thapsus.cargo.data.repository.AuthSession
 
 private data class TabSpec(val label: String, val route: String, val icon: ImageVector)
 
+// BFM-primary tab order — mirrors iOS RootTabView for `.operator`.
+// Today summary is reachable behind Account → Today.
 private val operatorTabs = listOf(
-    TabSpec("Today", OperatorRoutes.TODAY, Icons.Filled.CalendarToday),
+    TabSpec("BFM", OperatorRoutes.BFM, Icons.Filled.AutoAwesome),
     TabSpec("Receive", OperatorRoutes.RECEIVE, Icons.Filled.Print),
     TabSpec("Consols", OperatorRoutes.CONSOLS, Icons.Filled.Inventory2),
     TabSpec("Dispatch", OperatorRoutes.DISPATCH, Icons.Filled.DeliveryDining),
@@ -77,11 +79,11 @@ fun OperatorScaffold(
     ) { padding ->
         NavHost(
             navController = nav,
-            startDestination = OperatorRoutes.TODAY,
+            startDestination = OperatorRoutes.BFM,
             modifier = Modifier.fillMaxSize().padding(padding)
         ) {
-            composable(OperatorRoutes.TODAY) {
-                OperatorTodayScreen()
+            composable(OperatorRoutes.BFM) {
+                OpsBuyForMeQueueScreen()
             }
             composable(OperatorRoutes.RECEIVE) {
                 OperatorReceiveScreen(
@@ -109,7 +111,17 @@ fun OperatorScaffold(
                 DispatchScreen()
             }
             composable(OperatorRoutes.ACCOUNT) {
-                OperatorAccountScreen(session = session, onSignOut = onSignOut)
+                OperatorAccountScreen(
+                    session = session,
+                    onSignOut = onSignOut,
+                    onOpenTodaySummary = { nav.navigate(OperatorRoutes.TODAY) }
+                )
+            }
+            composable(OperatorRoutes.TODAY) {
+                OperatorTodayScreen(onOpenBfmQueue = {
+                    val popped = nav.popBackStack(OperatorRoutes.BFM, inclusive = false)
+                    if (!popped) nav.navigate(OperatorRoutes.BFM)
+                })
             }
             composable(OperatorRoutes.SCANNER) {
                 SkuScannerScreen(onClose = { nav.popBackStack() })
