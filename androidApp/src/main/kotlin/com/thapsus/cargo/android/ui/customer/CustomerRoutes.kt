@@ -16,4 +16,11 @@ object CustomerRoutes {
     fun parcelDetail(parcelId: String) = "customer/parcel/$parcelId"
     const val NOTIFICATIONS = "customer/notifications"
     const val PROFILE_EDIT = "customer/profile-edit"
+
+    /** Pay-invoice flow — title is URL-encoded by callers. */
+    const val PAY_INVOICE = "customer/pay/{kind}/{id}/{amount}?title={title}"
+    fun payInvoice(kind: String, id: String, amount: Long, title: String): String {
+        val encoded = java.net.URLEncoder.encode(title, "UTF-8")
+        return "customer/pay/$kind/$id/$amount?title=$encoded"
+    }
 }

@@ -133,7 +133,33 @@ fun CustomerScaffold(
             composable(CustomerRoutes.INVOICES) {
                 CustomerInvoicesScreen(
                     userId = session.userId,
-                    onPayInvoice = { /* P2.3 wires PayInvoiceScreen */ }
+                    onPayInvoice = { c ->
+                        val amount = c.invoiceAmount?.toLong() ?: 0L
+                        val title = c.description ?: if (c.isStandalone) "Standalone invoice" else "Shipping invoice"
+                        nav.navigate(CustomerRoutes.payInvoice("consolidation", c.id, amount, title))
+                    }
+                )
+            }
+            composable(
+                route = CustomerRoutes.PAY_INVOICE,
+                arguments = listOf(
+                    navArgument("kind") { type = NavType.StringType },
+                    navArgument("id") { type = NavType.StringType },
+                    navArgument("amount") { type = NavType.LongType },
+                    navArgument("title") { type = NavType.StringType; defaultValue = "" }
+                )
+            ) { entry ->
+                val kind = entry.arguments?.getString("kind") ?: "consolidation"
+                val id = entry.arguments?.getString("id") ?: ""
+                val amount = entry.arguments?.getLong("amount") ?: 0L
+                val rawTitle = entry.arguments?.getString("title") ?: ""
+                val title = runCatching { java.net.URLDecoder.decode(rawTitle, "UTF-8") }.getOrDefault(rawTitle)
+                PayInvoiceScreen(
+                    targetKind = kind,
+                    targetId = id,
+                    targetTitle = title,
+                    amountKesGross = amount,
+                    onClose = { nav.popBackStack() }
                 )
             }
             composable(CustomerRoutes.TRANSACTIONS) {
