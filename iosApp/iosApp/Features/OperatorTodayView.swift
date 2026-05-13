@@ -9,6 +9,18 @@ struct OperatorTodayView: View {
     @State private var vm: OperatorTodayViewModel?
     @State private var state: StateFlowObserver<TodayState>?
     @State private var refreshing: StateFlowObserver<KotlinBoolean>?
+    // BFM queue VM — reused from the dedicated OpsBuyForMeQueueView so
+    // we share Realtime subscription state. Counts pending_quote +
+    // quoted client-side from the live `orders` StateFlow.
+    @State private var bfmVM: OpsBuyForMeViewModel?
+    @State private var bfmOrders: StateFlowObserver<[BuyForMeOrderDto]>?
+
+    private var bfmUnquoted: Int {
+        bfmOrders?.value.filter { $0.status == "pending_quote" }.count ?? 0
+    }
+    private var bfmAwaitingPayment: Int {
+        bfmOrders?.value.filter { $0.status == "quoted" }.count ?? 0
+    }
 
     var body: some View {
         ScrollView {
@@ -16,8 +28,12 @@ struct OperatorTodayView: View {
                 VStack(spacing: 16) {
                     SectionHeader(
                         title: "Today",
-                        subtitle: "Live across the warehouse pipeline"
+                        subtitle: "Concierge requests first; parcel pipeline below."
                     )
+
+                    // BFM queue leads after the BFM-primary pivot. Two
+                    // live-count tiles deep-link straight into the queue.
+                    bfmStatsRow
 
                     let s = state?.value
                     LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
@@ -32,8 +48,6 @@ struct OperatorTodayView: View {
                         StatTile(label: "In transit", value: "\(s?.inTransit.count ?? 0)", systemImage: "airplane")
                         StatTile(label: "Held", value: "\(s?.held.count ?? 0)", systemImage: "exclamationmark.triangle", tint: .orange)
                     }
-
-                    bfmQueueCard
 
                     if let late = s?.late, !late.isEmpty {
                         // Pre-registered for >7 days without arriving — flagged so
@@ -57,41 +71,72 @@ struct OperatorTodayView: View {
             self.vm = v
             self.state = StateFlowObserver(initial: TodayState.companion.empty()) { v.state }
             self.refreshing = StateFlowObserver(initial: KotlinBoolean(bool: false)) { v.refreshing }
+
+            // Spin up the BFM queue VM alongside — its `orders` StateFlow
+            // is the source of truth for the two leading stat tiles. The
+            // VM subscribes to Realtime in init, so counts stay live as
+            // customers submit / operators quote.
+            let b = ThapsusSdk.shared.opsBuyForMeViewModel()
+            self.bfmVM = b
+            self.bfmOrders = StateFlowObserver(initial: b.orders.value) { b.orders }
         }
-        .onDisappear { vm?.clear(); vm = nil; state = nil; refreshing = nil }
+        .onDisappear {
+            vm?.clear(); vm = nil; state = nil; refreshing = nil
+            bfmVM?.clear(); bfmVM = nil; bfmOrders = nil
+        }
     }
 
-    /// Concierge requests live on a separate screen reachable only via the
-    /// account hub today. Surface it inline on Today so the operator can
-    /// see queued requests at a glance and tap straight through.
+    /// Two-tile stats row: unquoted requests (status=pending_quote) and
+    /// quoted-but-unpaid (status=quoted). Both tiles wrap a NavigationLink
+    /// to the full queue so a tap takes the operator straight in.
     @ViewBuilder
-    private var bfmQueueCard: some View {
-        NavigationLink {
-            OpsBuyForMeQueueView()
-        } label: {
-            GlassCard(tint: Brand.orange.opacity(0.10)) {
-                HStack(spacing: 12) {
-                    Image(systemName: "wand.and.stars")
-                        .font(.title3)
-                        .foregroundStyle(Brand.cream)
-                        .frame(width: 40, height: 40)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .fill(Brand.orange)
-                        )
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("Buy-for-me queue")
-                            .font(.headline).foregroundStyle(Brand.ink)
-                        Text("Quote concierge requests from customers")
-                            .font(.caption).foregroundStyle(.secondary)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .foregroundStyle(.tertiary)
+    private var bfmStatsRow: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
+            NavigationLink { OpsBuyForMeQueueView() } label: {
+                bfmTile(
+                    label: "Unquoted BFM",
+                    value: bfmUnquoted,
+                    systemImage: "wand.and.stars"
+                )
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink { OpsBuyForMeQueueView() } label: {
+                bfmTile(
+                    label: "Awaiting payment",
+                    value: bfmAwaitingPayment,
+                    systemImage: "hourglass"
+                )
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    @ViewBuilder
+    private func bfmTile(label: String, value: Int, systemImage: String) -> some View {
+        GlassCard(tint: Brand.orange.opacity(0.12)) {
+            HStack(spacing: 12) {
+                Image(systemName: systemImage)
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 40, height: 40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            .fill(Brand.orange)
+                    )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label.uppercased())
+                        .font(.caption2.weight(.heavy)).tracking(1.5)
+                        .foregroundStyle(.secondary)
+                    Text("\(value)")
+                        .font(.title.weight(.heavy))
+                        .foregroundStyle(Brand.ink)
                 }
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .foregroundStyle(.tertiary)
             }
         }
-        .buttonStyle(.plain)
     }
 
     @ViewBuilder
