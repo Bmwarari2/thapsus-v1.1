@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.Icon
@@ -44,7 +46,12 @@ import com.thapsus.cargo.android.ui.theme.Brand
 import com.thapsus.cargo.presentation.AdminDashboardViewModel
 
 @Composable
-fun AdminConsoleScreen(onOpenUsers: () -> Unit, onOpenPayments: () -> Unit) {
+fun AdminConsoleScreen(
+    onOpenUsers: () -> Unit,
+    onOpenPayments: () -> Unit,
+    onOpenCreateBfm: () -> Unit = {},
+    onOpenIssueInvoice: () -> Unit = {}
+) {
     val vm = remember { ThapsusSdk.adminDashboardViewModel() }
     DisposableEffect(vm) { onDispose { vm.clear() } }
     LaunchedEffect(vm) { vm.load() }
@@ -101,7 +108,18 @@ fun AdminConsoleScreen(onOpenUsers: () -> Unit, onOpenPayments: () -> Unit) {
             else -> SoftCard { Text("Loading…", color = Brand.ink) }
         }
 
-        Text("Quick actions", color = Brand.ink, style = MaterialTheme.typography.titleLarge)
+        Text("On behalf", color = Brand.ink, style = MaterialTheme.typography.titleLarge)
+        SoftCard {
+            Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                // BFM-primary pivot: "Create Buy-for-me" leads the admin tools
+                // group, mirroring the web /admin nav rearrangement.
+                LinkRow("Create Buy-for-me", Icons.Filled.AutoAwesome, onOpenCreateBfm)
+                Spacer(Modifier.height(1.dp))
+                LinkRow("Issue invoice", Icons.Filled.Description, onOpenIssueInvoice)
+            }
+        }
+
+        Text("Operations", color = Brand.ink, style = MaterialTheme.typography.titleLarge)
         SoftCard {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                 LinkRow("Customers & operators", Icons.Filled.Group, onOpenUsers)
