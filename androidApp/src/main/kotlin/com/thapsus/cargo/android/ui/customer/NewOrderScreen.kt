@@ -52,12 +52,6 @@ import com.thapsus.cargo.data.dto.InsuranceTier
 import com.thapsus.cargo.presentation.ParcelPreRegViewModel
 
 private val RETAILERS = listOf("Amazon", "Shein", "Next", "Asos", "Superdrug", "eBay", "ZARA", "H&M", "Other")
-private val MARKETS = listOf("UK" to "United Kingdom", "China" to "China")
-private val TIERS = listOf(
-    "standard" to "Standard (£0)",
-    "plus" to "Plus (£8)",
-    "premier" to "Premier (3.5%)"
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,19 +61,16 @@ fun NewOrderScreen(userId: String, onClose: () -> Unit) {
 
     val state by vm.state.collectAsStateWithLifecycle()
 
-    var market by remember { mutableStateOf("UK") }
     var retailer by remember { mutableStateOf("") }
     var customRetailer by remember { mutableStateOf("") }
     var description by remember { mutableStateOf("") }
     var declaredGbp by remember { mutableStateOf("") }
-    var tier by remember { mutableStateOf("standard") }
 
     val isSubmitting = state is ParcelPreRegViewModel.State.Submitting
     val saved = state as? ParcelPreRegViewModel.State.Saved
 
     val resolvedRetailer = if (retailer == "Other") customRetailer else retailer
-    val canSubmit = market.isNotBlank()
-        && resolvedRetailer.isNotBlank()
+    val canSubmit = resolvedRetailer.isNotBlank()
         && description.isNotBlank()
         && declaredGbp.toDoubleOrNull() != null
         && !isSubmitting
@@ -112,17 +103,6 @@ fun NewOrderScreen(userId: String, onClose: () -> Unit) {
                 title = "New order",
                 subtitle = "We'll generate a label and book a slot on the next weekly flight."
             )
-
-            SoftCard {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Text("Where's the parcel coming from?", color = Brand.ink, fontWeight = FontWeight.SemiBold)
-                    SegmentedRow(
-                        options = MARKETS,
-                        selected = market,
-                        onSelect = { market = it }
-                    )
-                }
-            }
 
             SoftCard {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -160,12 +140,6 @@ fun NewOrderScreen(userId: String, onClose: () -> Unit) {
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Text("Insurance tier", color = Brand.ink, fontWeight = FontWeight.SemiBold)
-                    SegmentedRow(
-                        options = TIERS,
-                        selected = tier,
-                        onSelect = { tier = it }
-                    )
                 }
             }
 
@@ -192,20 +166,20 @@ fun NewOrderScreen(userId: String, onClose: () -> Unit) {
                     text = if (isSubmitting) "Submitting…" else "Create order",
                     enabled = canSubmit,
                     onClick = {
-                        val tierEnum = when (tier) {
-                            "plus" -> InsuranceTier.PLUS
-                            "premier" -> InsuranceTier.PREMIER
-                            "custom" -> InsuranceTier.CUSTOM
-                            else -> InsuranceTier.STANDARD
-                        }
                         val pence = ((declaredGbp.toDoubleOrNull() ?: 0.0) * 100).toLong()
                         vm.submit(
                             ParcelPreRegViewModel.PreRegInput(
                                 retailer = resolvedRetailer,
                                 description = description,
                                 declaredValueGbpPence = pence,
-                                insuranceTier = tierEnum,
-                                market = market,
+                                // Insurance offering removed 2026-04-30. The shared
+                                // PreRegInput still requires an InsuranceTier so we
+                                // always send the no-cost `standard` baseline (same
+                                // shape iOS NewOrderView passes).
+                                insuranceTier = InsuranceTier.STANDARD,
+                                // China market stripped 2026-05-11. UK is the only
+                                // origin we ship from now.
+                                market = "UK",
                                 shippingSpeed = "economy",
                                 hsTier = "general"
                             )
@@ -215,43 +189,6 @@ fun NewOrderScreen(userId: String, onClose: () -> Unit) {
             }
 
             Spacer(Modifier.height(24.dp))
-        }
-    }
-}
-
-@Composable
-private fun SegmentedRow(
-    options: List<Pair<String, String>>,
-    selected: String,
-    onSelect: (String) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Brand.cream.copy(alpha = 0.6f), RoundedCornerShape(12.dp))
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        options.forEach { (key, label) ->
-            val active = key == selected
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .background(
-                        if (active) Brand.ink else Color.Transparent,
-                        RoundedCornerShape(8.dp)
-                    )
-                    .clickable { onSelect(key) }
-                    .padding(vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    label,
-                    color = if (active) Brand.cream else Brand.ink,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 13.sp
-                )
-            }
         }
     }
 }
