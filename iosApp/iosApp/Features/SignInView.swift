@@ -169,6 +169,11 @@ struct SignInView: View {
                 LGTextField(label: "Password", placeholder: "••••••••",
                             text: $password, capitalization: .never, isSecure: true)
 
+                if isSignUp {
+                    passwordRequirements
+                        .padding(.top, 2)
+                }
+
                 if !isSignUp {
                     HStack {
                         Spacer()
@@ -197,11 +202,38 @@ struct SignInView: View {
                     }
                     .buttonStyle(LGPrimaryButtonStyle())
                     .padding(.top, 6)
-                    .disabled(isSignUp && !agreedToTerms)
-                    .opacity(isSignUp && !agreedToTerms ? 0.5 : 1.0)
+                    .disabled(isSignUp && (!agreedToTerms || !PasswordPolicy.shared.isValid(password: password)))
+                    .opacity(isSignUp && (!agreedToTerms || !PasswordPolicy.shared.isValid(password: password)) ? 0.5 : 1.0)
                 }
             }
         }
+    }
+
+    // Live password requirements driven by the shared `PasswordPolicy`.
+    // Same source-of-truth (and same wording / order) Android renders,
+    // so the customer sees the identical checklist on both platforms.
+    // Each rule turns from a hollow circle (pending, muted) into a
+    // filled check (passed, accent) as the user types. The Create
+    // account button stays disabled until every rule passes (see the
+    // `.disabled(...)` modifier on the submit button above).
+    @ViewBuilder
+    private var passwordRequirements: some View {
+        let passed = PasswordPolicy.shared.check(password: password)
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(PasswordPolicy.shared.rules, id: \.label) { rule in
+                let isPassed = passed.contains(rule)
+                HStack(spacing: 8) {
+                    Image(systemName: isPassed ? "checkmark.circle.fill" : "circle")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(isPassed ? LG.accent2 : LG.fgMute)
+                    Text(rule.label)
+                        .font(.body(12, weight: isPassed ? .semibold : .regular))
+                        .foregroundStyle(isPassed ? LG.fg : LG.fg3)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.leading, 4)
     }
 
     // Sign-up agreement row. A square checkbox + the legal disclosure

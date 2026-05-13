@@ -23,6 +23,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.RadioButtonUnchecked
 import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
@@ -66,6 +67,7 @@ import com.thapsus.cargo.android.ui.primitives.InkButton
 import com.thapsus.cargo.android.ui.primitives.SoftCard
 import com.thapsus.cargo.android.ui.primitives.WordmarkSize
 import com.thapsus.cargo.android.ui.theme.Brand
+import com.thapsus.cargo.domain.auth.PasswordPolicy
 import com.thapsus.cargo.presentation.AuthViewModel
 
 private data class Country(val code: String, val label: String)
@@ -191,6 +193,9 @@ fun SignInScreen(vm: AuthViewModel) {
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                     modifier = Modifier.fillMaxWidth()
                 )
+                if (isSignUp) {
+                    PasswordRequirements(password = password)
+                }
 
                 if (!isSignUp) {
                     Row(modifier = Modifier.fillMaxWidth()) {
@@ -220,7 +225,7 @@ fun SignInScreen(vm: AuthViewModel) {
                 } else {
                     InkButton(
                         text = if (isSignUp) "Create account" else "Sign in",
-                        enabled = !isSignUp || agreedToTerms,
+                        enabled = !isSignUp || (agreedToTerms && PasswordPolicy.isValid(password)),
                         onClick = {
                             if (isSignUp) {
                                 vm.signUp(
@@ -378,5 +383,42 @@ private fun TermsAgreementRow(
                 .padding(top = 14.dp)
                 .clickable(onClick = onToggle)
         )
+    }
+}
+
+/**
+ * Live password checklist driven by the shared `PasswordPolicy`. Each
+ * rule renders as a check (passed, orange) or a hollow circle (pending,
+ * muted ink). Same source-of-truth + same order as iOS, so a customer
+ * who learns the rules on one platform sees the identical wording on
+ * the other.
+ */
+@Composable
+private fun PasswordRequirements(password: String) {
+    val passed = remember(password) { PasswordPolicy.check(password) }
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 4.dp, top = 2.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        PasswordPolicy.rules.forEach { rule ->
+            val isPassed = rule in passed
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = if (isPassed) Icons.Filled.Check else Icons.Filled.RadioButtonUnchecked,
+                    contentDescription = null,
+                    tint = if (isPassed) Brand.Orange else Brand.ink.copy(alpha = 0.4f),
+                    modifier = Modifier.size(14.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    rule.label,
+                    color = if (isPassed) Brand.ink else Brand.ink.copy(alpha = 0.6f),
+                    fontSize = 12.sp,
+                    fontWeight = if (isPassed) FontWeight.SemiBold else FontWeight.Normal
+                )
+            }
+        }
     }
 }
