@@ -44,11 +44,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.stripe.android.PaymentConfiguration
+import com.stripe.android.paymentsheet.PaymentSheet
+import com.stripe.android.paymentsheet.PaymentSheetResult
+import com.stripe.android.paymentsheet.rememberPaymentSheet
 import com.thapsus.cargo.ThapsusSdk
 import com.thapsus.cargo.android.ui.primitives.CalloutBanner
 import com.thapsus.cargo.android.ui.primitives.EditorialHeader
@@ -94,6 +99,55 @@ fun PayInvoiceScreen(
 
     val state by vm.state.collectAsStateWithLifecycle()
     val action by vm.action.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+
+    // Compose-side error for the Stripe path. The VM's ActionState.Error
+    // is reserved for backend failures; the sheet's cancel/fail outcomes
+    // are UI-level and don't warrant a KMP-side mutation just to surface
+    // a banner. PaymentSheet result handler stores the message here.
+    var stripeError by remember { mutableStateOf<String?>(null) }
+
+    // PaymentSheet is hoisted to the top of the composable so the
+    // `rememberPaymentSheet` ActivityResult contract is registered before
+    // we ever try to present(). On result we hand control back to the
+    // KMP VM so it can flip its ActionState (server webhook is the source
+    // of truth for the actual settlement — we just drive the UX here).
+    val paymentSheet = rememberPaymentSheet { result ->
+        when (result) {
+            is PaymentSheetResult.Completed -> {
+                stripeError = null
+                vm.markStripeCompleted("Payment received. Thanks!")
+            }
+            is PaymentSheetResult.Canceled -> {
+                stripeError = null
+                vm.resetAction()
+            }
+            is PaymentSheetResult.Failed -> {
+                stripeError = result.error.localizedMessage ?: "Card payment failed"
+                vm.resetAction()
+            }
+        }
+    }
+
+    // When the VM transitions to StripeReady, configure the publishable
+    // key (once) and present the PaymentSheet for the returned client
+    // secret. The VM stays the source of truth for settlement status —
+    // the sheet is purely a UI handoff; the server webhook flips the
+    // target row server-side.
+    LaunchedEffect(action) {
+        val ready = action as? PaymentsViewModel.ActionState.StripeReady ?: return@LaunchedEffect
+        val pk = (state as? PaymentsViewModel.UiState.Ready)?.publishableKey
+        if (pk.isNullOrBlank()) {
+            stripeError = "Stripe publishable key missing from server config"
+            vm.resetAction()
+            return@LaunchedEffect
+        }
+        PaymentConfiguration.init(context, pk)
+        paymentSheet.presentWithPaymentIntent(
+            ready.clientSecret,
+            PaymentSheet.Configuration(merchantDisplayName = "Thapsus Cargo")
+        )
+    }
 
     val mpesaSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val lipanaSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -133,6 +187,10 @@ fun PayInvoiceScreen(
             else -> {}
         }
 
+        stripeError?.let { msg ->
+            CalloutBanner(title = "Card payment", message = msg)
+        }
+
         when (state) {
             PaymentsViewModel.UiState.Idle,
             PaymentsViewModel.UiState.Loading -> {
@@ -167,13 +225,21 @@ fun PayInvoiceScreen(
                         }
                     )
                 }
-                if (r.stripeEnabled) {
+                if (r.stripeEnabled && !r.publishableKey.isNullOrBlank()) {
                     MethodCard(
                         icon = Icons.Filled.CreditCard,
                         title = "Pay with card",
-                        subtitle = "Card payments via the Android app are coming soon. Use M-Pesa for now, or pay this invoice from the web.",
-                        onClick = { /* Stripe SDK not wired; no-op */ },
-                        disabled = true
+                        subtitle = "Powered by Stripe — Visa, Mastercard, Apple Pay.",
+                        onClick = {
+                            stripeError = null
+                            vm.create(
+                                targetKind = targetKind,
+                                targetId = targetId,
+                                method = "stripe",
+                                applyCredit = true,
+                                phone = null
+                            )
+                        }
                     )
                 }
             }
