@@ -95,7 +95,13 @@ fun CustomerScaffold(
                     onOpenBuyForMe = { nav.navigate(CustomerRoutes.SHOP) },
                     onOpenPreRegister = { nav.navigate(CustomerRoutes.NEW_ORDER) },
                     onOpenParcel = { nav.navigate(CustomerRoutes.parcelDetail(it)) },
-                    onOpenNotifications = { nav.navigate(CustomerRoutes.NOTIFICATIONS) }
+                    onOpenNotifications = { nav.navigate(CustomerRoutes.NOTIFICATIONS) },
+                    onPayInvoice = { c ->
+                        val amount = c.invoiceAmount?.toLong() ?: 0L
+                        val title = c.description
+                            ?: if (c.isStandalone) "Standalone invoice" else "Shipping invoice"
+                        nav.navigate(CustomerRoutes.payInvoice("consolidation", c.id, amount, title))
+                    }
                 )
             }
             composable(CustomerRoutes.SHOP) {

@@ -446,7 +446,10 @@ private fun CreateBuyForMeSheet(
     var notes by remember { mutableStateOf("") }
     var selectedRetailerId by remember { mutableStateOf<String?>(null) }
     val isOther = selectedRetailerId == "__other__"
-    val canSubmit = item.isNotBlank() && selectedRetailerId != null && (!isOther || url.isNotBlank())
+    // URL is mandatory — we need the exact product link to buy on the
+    // customer's behalf. The retailer choice is just a hint about where
+    // it'll land at the UK warehouse.
+    val canSubmit = item.isNotBlank() && selectedRetailerId != null && url.isNotBlank()
 
     Column(
         modifier = Modifier
@@ -479,14 +482,13 @@ private fun CreateBuyForMeSheet(
                 OutlinedTextField(
                     value = url,
                     onValueChange = { url = it },
-                    label = { Text(if (isOther) "Retailer URL" else "Item URL (optional)") },
+                    label = { Text("Product URL") },
                     placeholder = { Text("https://…") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 Text(
-                    if (isOther) "Paste the full URL — we'll quote within 24h."
-                    else "Pick a retailer above. The URL field is optional unless you chose Other.",
+                    "Paste the exact product link — we need it to buy the right item.",
                     color = Brand.ink.copy(alpha = 0.6f),
                     fontSize = 12.sp
                 )
