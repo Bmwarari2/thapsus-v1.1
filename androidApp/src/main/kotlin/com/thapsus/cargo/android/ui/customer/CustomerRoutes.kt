@@ -7,6 +7,10 @@ object CustomerRoutes {
     const val TRACKING = "customer/tracking"
     const val INVOICES = "customer/invoices"
     const val TRANSACTIONS = "customer/transactions"
+    const val CREDIT = "customer/credit"
+    const val CONSOLIDATIONS = "customer/consolidations"
+    const val WAREHOUSE = "customer/warehouse"
+    /** Legacy wallet alias — kept for any deep links that still point here; renders CreditCenterScreen. */
     const val WALLET = "customer/wallet"
     const val QUOTE = "customer/quote"
     const val ACCOUNT = "customer/account"

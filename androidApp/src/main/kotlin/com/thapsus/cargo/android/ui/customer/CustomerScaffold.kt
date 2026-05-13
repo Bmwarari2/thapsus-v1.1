@@ -118,7 +118,12 @@ fun CustomerScaffold(
                     onSignOut = onSignOut,
                     onOpenNewOrder = { nav.navigate(CustomerRoutes.NEW_ORDER) },
                     onOpenNotifications = { nav.navigate(CustomerRoutes.NOTIFICATIONS) },
-                    onOpenProfileEdit = { nav.navigate(CustomerRoutes.PROFILE_EDIT) }
+                    onOpenProfileEdit = { nav.navigate(CustomerRoutes.PROFILE_EDIT) },
+                    onOpenCredit = { nav.navigate(CustomerRoutes.CREDIT) },
+                    onOpenTransactions = { nav.navigate(CustomerRoutes.TRANSACTIONS) },
+                    onOpenConsolidations = { nav.navigate(CustomerRoutes.CONSOLIDATIONS) },
+                    onOpenInvoices = { nav.navigate(CustomerRoutes.INVOICES) },
+                    onOpenWarehouseAddress = { nav.navigate(CustomerRoutes.WAREHOUSE) }
                 )
             }
             composable(CustomerRoutes.TRACKING) {
@@ -128,7 +133,18 @@ fun CustomerScaffold(
                 )
             }
             composable(CustomerRoutes.WALLET) {
-                WalletScreen(userId = session.userId)
+                // Legacy wallet route now renders CreditCenterScreen — the
+                // wallet was decomposed into Credit + Transactions in mig-028.
+                CreditCenterScreen()
+            }
+            composable(CustomerRoutes.CREDIT) {
+                CreditCenterScreen()
+            }
+            composable(CustomerRoutes.CONSOLIDATIONS) {
+                CustomerConsolidationsScreen(userId = session.userId)
+            }
+            composable(CustomerRoutes.WAREHOUSE) {
+                WarehouseAddressScreen(session = session)
             }
             composable(CustomerRoutes.INVOICES) {
                 CustomerInvoicesScreen(

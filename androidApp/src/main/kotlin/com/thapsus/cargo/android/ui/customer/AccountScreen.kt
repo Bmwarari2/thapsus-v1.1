@@ -18,9 +18,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.Logout
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Logout
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -50,7 +55,12 @@ fun AccountScreen(
     onSignOut: () -> Unit,
     onOpenNewOrder: () -> Unit,
     onOpenNotifications: () -> Unit,
-    onOpenProfileEdit: () -> Unit
+    onOpenProfileEdit: () -> Unit,
+    onOpenCredit: () -> Unit = {},
+    onOpenTransactions: () -> Unit = {},
+    onOpenConsolidations: () -> Unit = {},
+    onOpenInvoices: () -> Unit = {},
+    onOpenWarehouseAddress: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -112,6 +122,18 @@ fun AccountScreen(
 
         Section(title = "Send & ship") {
             LinkRow("New order", Icons.Filled.Add, onOpenNewOrder)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("Warehouse address", Icons.Filled.LocationOn, onOpenWarehouseAddress)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("Consolidations", Icons.Filled.Inventory2, onOpenConsolidations)
+        }
+
+        Section(title = "Money") {
+            LinkRow("Credit centre", Icons.Filled.AccountBalanceWallet, onOpenCredit)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("Invoices", Icons.Filled.Description, onOpenInvoices)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("Transactions", Icons.AutoMirrored.Filled.ReceiptLong, onOpenTransactions)
         }
 
         Section(title = "Account") {
@@ -129,7 +151,7 @@ fun AccountScreen(
                 contentColor = Color.White
             )
         ) {
-            Icon(Icons.Filled.Logout, contentDescription = null)
+            Icon(Icons.AutoMirrored.Filled.Logout, contentDescription = null)
             Spacer(Modifier.width(8.dp))
             Text("Sign out", fontWeight = FontWeight.SemiBold)
         }
