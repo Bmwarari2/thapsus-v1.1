@@ -15,12 +15,18 @@ struct RootTabView: View {
                 Tab("Home", systemImage: "shippingbox.fill") {
                     NavigationStack { CustomerDashboardView() }
                 }
-                Tab("Orders", systemImage: "shippingbox") {
-                    NavigationStack { TrackingView() }
+                // Primary surface in the Buy-for-me-first pivot. Customers
+                // send us a retailer link, we buy, ship, deliver. The old
+                // "Orders" tab pointed at TrackingView (parcel tracking,
+                // NOT order creation) and is now demoted into the Activity
+                // hub alongside Pre-register, so the secondary path stays
+                // one tap away.
+                Tab("Shop", systemImage: "wand.and.stars") {
+                    NavigationStack { BuyForMeView() }
                 }
-                // Hub for invoices / transactions / Buy-for-me — these
-                // were previously buried inside other screens and easy
-                // to miss. See CustomerActivityHubView.swift.
+                // Hub for invoices / transactions / parcel tracking /
+                // pre-register — every secondary financial + shipment
+                // surface lives here. See CustomerActivityHubView.swift.
                 Tab("Activity", systemImage: "tray.full.fill") {
                     NavigationStack { CustomerActivityHubView() }
                 }
@@ -32,8 +38,12 @@ struct RootTabView: View {
                 }
 
             case .`operator`:
-                Tab("Today", systemImage: "calendar") {
-                    NavigationStack { OperatorTodayView() }
+                // BFM Queue leads the operator workflow: a quote-first
+                // concierge order is now the canonical inbound, replacing
+                // the receive-first parcel intake mindset. The old "Today"
+                // tab's summary stats are reachable via Account → Today.
+                Tab("BFM", systemImage: "wand.and.stars") {
+                    NavigationStack { OpsBuyForMeQueueView() }
                 }
                 Tab("Receive", systemImage: "printer.fill") {
                     NavigationStack { OperatorReceiveView() }

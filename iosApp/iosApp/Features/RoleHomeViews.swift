@@ -111,6 +111,7 @@ struct OperatorHomeView: View {
                                 subtitle: "Profile, support and operations tools.")
                 AccountHeader(env: env)
                 AccountSection(title: "Tools", links: [
+                    AccountLink("Today's summary", "calendar", AnyView(OperatorTodayView())),
                     AccountLink("Buy-for-me queue", "wand.and.stars", AnyView(OpsBuyForMeQueueView())),
                     AccountLink("Notifications", "bell.fill", AnyView(NotificationInboxView())),
                     AccountLink("Support tickets", "questionmark.bubble.fill", AnyView(TicketsListView())),

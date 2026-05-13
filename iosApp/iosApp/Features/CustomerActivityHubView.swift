@@ -1,8 +1,8 @@
 // CustomerActivityHubView.swift
-// Bottom-tab hub surfacing the three financial-activity surfaces that
-// were previously buried inside other screens (Invoices under Orders,
-// Transactions under Account → Credit, Buy-for-me under TrackingView).
-// Each row deep-links to the dedicated screen.
+// Secondary-surface hub. Invoices, transactions, parcel tracking, and
+// the pre-register flow all live here so they remain one tap away from
+// the customer's bottom-tab bar. Buy-for-me is no longer in this hub —
+// it owns its own "Shop" tab in the BFM-primary pivot.
 
 import SwiftUI
 import ThapsusShared
@@ -11,11 +11,38 @@ struct CustomerActivityHubView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                Text("Invoices, transactions, and Buy-for-me requests in one place.")
+                Text("Tracking, invoices, transactions, and pre-register in one place.")
                     .font(.body(14, weight: .medium))
                     .foregroundStyle(LG.fg3)
                     .padding(.top, 4)
                     .padding(.bottom, 4)
+
+                // Parcel tracking — the OUTPUT of both Buy-for-me orders
+                // (post-purchase) AND pre-registered parcels. Demoted
+                // from a dedicated bottom tab in the BFM-primary pivot
+                // since most parcels reach this view via BFM lifecycle.
+                NavigationLink { TrackingView() } label: {
+                    HubCard(
+                        icon: "shippingbox",
+                        iconBg: Brand.ink,
+                        title: "Parcel tracking",
+                        subtitle: "Every parcel we're shipping for you, by status."
+                    )
+                }
+                .buttonStyle(.plain)
+
+                // Pre-register — secondary creation path for customers
+                // who already bought a parcel from a retailer we don't
+                // cover, or who are consolidating items they already own.
+                NavigationLink { NewOrderView() } label: {
+                    HubCard(
+                        icon: "plus.rectangle.on.rectangle",
+                        iconBg: Color.purple,
+                        title: "Pre-register a parcel",
+                        subtitle: "Already bought something? Tell us it's coming."
+                    )
+                }
+                .buttonStyle(.plain)
 
                 NavigationLink { CustomerInvoicesView() } label: {
                     HubCard(
@@ -33,16 +60,6 @@ struct CustomerActivityHubView: View {
                         iconBg: Brand.ink,
                         title: "Transactions",
                         subtitle: "Every card or M-Pesa payment + your credit activity."
-                    )
-                }
-                .buttonStyle(.plain)
-
-                NavigationLink { BuyForMeView() } label: {
-                    HubCard(
-                        icon: "wand.and.stars",
-                        iconBg: Color.purple,
-                        title: "Buy-for-me requests",
-                        subtitle: "Concierge orders — quotes, payments, and tracking."
                     )
                 }
                 .buttonStyle(.plain)
