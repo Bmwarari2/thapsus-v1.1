@@ -146,26 +146,10 @@ struct CustomerDashboardView: View {
         .padding(.bottom, 4)
     }
 
-    // MARK: - Header (greeting)
+    // MARK: - Header (rotating greeting carousel)
 
     private var header: some View {
-        let parcels = dashObs?.value.totalParcels ?? 0
-        let inFlight = dashObs?.value.inFlightParcels ?? 0
-        let summary: String = {
-            if inFlight > 0 { return "\(inFlight) parcel\(inFlight == 1 ? "" : "s") in transit" }
-            if parcels > 0 { return "\(parcels) parcel\(parcels == 1 ? "" : "s") on file" }
-            return "Ready when you are"
-        }()
-        return VStack(alignment: .leading, spacing: 4) {
-            Text("Hi \(firstName(env.session)) 👋")
-                .font(.display(28, weight: .heavy))
-                .foregroundStyle(LG.fg)
-            Text(summary)
-                .font(.body(14.5, weight: .medium))
-                .foregroundStyle(LG.fg3)
-        }
-        .padding(.top, 8)
-        .padding(.bottom, 4)
+        HomeGreetingCarousel(vm: dashVM)
     }
 
     // MARK: - Warehouse address card (matches mockup)
@@ -402,13 +386,4 @@ struct CustomerDashboardView: View {
         }
     }
 
-    private func firstName(_ session: any AuthSession) -> String {
-        if let auth = session as? AuthSessionAuthenticated {
-            if let name = auth.profile?.fullName, !name.isEmpty {
-                return name.split(separator: " ").first.map(String.init) ?? name
-            }
-            return auth.email?.split(separator: "@").first.map(String.init) ?? "there"
-        }
-        return "there"
-    }
 }
