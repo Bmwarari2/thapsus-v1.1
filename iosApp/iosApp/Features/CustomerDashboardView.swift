@@ -164,7 +164,22 @@ struct CustomerDashboardView: View {
     // MARK: - Header (rotating greeting carousel)
 
     private var header: some View {
-        HomeGreetingCarousel(vm: dashVM, onNpsTap: { npsSheetPresented = true })
+        // Pull firstName from the env session — that's the reliably-
+        // populated source (env.session reflects the Authenticated
+        // profile by the time Home is on screen). The dashboard VM's
+        // own auth.state snapshot occasionally lacks `profile` at first
+        // emission on iOS, so reading the env directly keeps the
+        // "Good morning, Brian." prefix from regressing to "Hi.".
+        let auth = env.session as? AuthSessionAuthenticated
+        let first = (auth?.profile?.fullName?
+            .split(separator: " ")
+            .first
+            .map(String.init)) ?? ""
+        return HomeGreetingCarousel(
+            vm: dashVM,
+            firstName: first,
+            onNpsTap: { npsSheetPresented = true }
+        )
     }
 
     // MARK: - Warehouse address card (matches mockup)

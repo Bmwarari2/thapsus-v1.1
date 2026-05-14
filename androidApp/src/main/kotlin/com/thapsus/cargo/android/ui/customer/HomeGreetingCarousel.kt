@@ -32,16 +32,21 @@ import com.thapsus.cargo.android.ui.theme.Brand
 import com.thapsus.cargo.presentation.CustomerDashboardViewModel
 import com.thapsus.cargo.presentation.home.HomeGreeting
 import com.thapsus.cargo.presentation.home.HomeGreetingDestination
+import com.thapsus.cargo.presentation.home.TimeOfDayGreeter
 import kotlinx.coroutines.delay
+import java.util.TimeZone
 
 /**
  * Rotating welcome carousel on the Customer Home tab — replaces the static
- * "Welcome, {firstName}" header. Sourced from `headlinePrefix` + `greetings`
- * StateFlows on [CustomerDashboardViewModel] (built in the KMP shared module
- * so iOS and Android render identical copy).
+ * "Welcome, {firstName}" header. Sourced from
+ * [CustomerDashboardViewModel.greetings] (built in the KMP shared module so
+ * iOS and Android render identical copy). Composes the time-of-day prefix
+ * locally from the [firstName] the caller supplies, so the headline reads as
+ * a single sentence ("Good morning, Brian. Your shipment is on its way to
+ * Kenya.") at one font size.
  *
  * Behaviour:
- * - Auto-advances every 5 seconds with a fade cross-transition.
+ * - Auto-advances every 8 seconds with a fade cross-transition.
  * - Resets to index 0 whenever the source list changes — keeps the most
  *   urgent greeting visible after a refresh.
  * - Single greeting renders static (no rotation, no page indicator).
@@ -52,10 +57,10 @@ import kotlinx.coroutines.delay
 @Composable
 fun HomeGreetingCarousel(
     dashVm: CustomerDashboardViewModel,
+    firstName: String,
     onTap: (HomeGreetingDestination) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val prefix by dashVm.headlinePrefix.collectAsStateWithLifecycle()
     val greetings by dashVm.greetings.collectAsStateWithLifecycle()
 
     var index by remember { mutableStateOf(0) }
@@ -67,13 +72,13 @@ fun HomeGreetingCarousel(
         if (index >= greetings.size) index = 0
     }
 
-    // 5-second rotation. Only runs when there's more than one greeting,
+    // 8-second rotation. Only runs when there's more than one greeting,
     // and uses `greetings.size` in the loop guard so adding/removing
     // entries reactively pauses or starts the loop.
     LaunchedEffect(greetings.size) {
         if (greetings.size <= 1) return@LaunchedEffect
         while (true) {
-            delay(5_000)
+            delay(8_000)
             if (greetings.isEmpty()) break
             index = (index + 1) % greetings.size
         }
@@ -85,50 +90,38 @@ fun HomeGreetingCarousel(
         modifier = modifier
             .fillMaxWidth()
             .padding(top = 4.dp),
-        verticalArrangement = Arrangement.spacedBy(6.dp)
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
-        Text(
-            text = prefix.ifBlank { "hi." },
-            color = Brand.ink.copy(alpha = 0.6f),
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 14.sp
-        )
-
         AnimatedContent(
             targetState = current,
             label = "home-greeting-carousel",
             transitionSpec = { fadeIn() togetherWith fadeOut() }
         ) { greeting ->
-            if (greeting != null) {
-                Text(
-                    text = greeting.body,
-                    color = Brand.ink,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 26.sp,
-                    lineHeight = 32.sp,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
+            val sentence = fullSentenceFor(
+                body = greeting?.body ?: "Ready when you are.",
+                firstName = firstName
+            )
+            Text(
+                text = sentence,
+                color = Brand.ink,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 26.sp,
+                lineHeight = 32.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .let { mod ->
+                        if (greeting != null) mod.clickable {
                             dashVm.markGreetingSeen(greeting.id)
                             onTap(greeting.destination)
-                        }
-                )
-            } else {
-                // Pre-bootstrap fallback — the layout shouldn't pop in.
-                Text(
-                    text = "ready when you are.",
-                    color = Brand.ink,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 26.sp,
-                    lineHeight = 32.sp
-                )
-            }
+                        } else mod
+                    }
+            )
         }
 
         if (greetings.size > 1) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(top = 2.dp)
+                modifier = Modifier.padding(top = 12.dp)
             ) {
                 repeat(greetings.size) { i ->
                     val active = i == index
@@ -147,6 +140,20 @@ fun HomeGreetingCarousel(
         }
         Spacer(Modifier.height(2.dp))
     }
+}
+
+/**
+ * Composes the full headline — time-of-day prefix + greeting body — as a
+ * single sentence. Uses the KMP shared [TimeOfDayGreeter] so iOS and
+ * Android render identical copy.
+ */
+private fun fullSentenceFor(body: String, firstName: String): String {
+    val prefix = TimeOfDayGreeter.greetingLineFor(
+        epochMs = System.currentTimeMillis(),
+        tzId = TimeZone.getDefault().id,
+        firstName = firstName
+    )
+    return "$prefix $body"
 }
 
 /**

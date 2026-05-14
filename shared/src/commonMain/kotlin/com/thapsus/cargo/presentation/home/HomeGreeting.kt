@@ -8,9 +8,10 @@ package com.thapsus.cargo.presentation.home
  *   - [id]: stable string used by the seen-marker table (freshness rule)
  *   - [priority]: lower wins — see the ladder in HomeGreetingBuilder
  *   - [category]: drives whether the freshness rule applies
- *   - [body]: the rendered, friendly second-sentence string ("you have 3
- *     parcels on the way to our hub.") — the time-of-day prefix
- *     ("good morning, brian.") is rendered separately by the UI
+ *   - [body]: the rendered, sentence-cased context line ("Your shipment
+ *     is on its way to Kenya.") — the time-of-day prefix
+ *     ("Good morning, Brian.") is rendered separately by the UI, and the
+ *     two are typically concatenated into one continuous text block
  *   - [destination]: where to navigate on tap
  *
  * Catalogue (25 variants) is grouped:
@@ -40,21 +41,35 @@ sealed class HomeGreeting(
 
     // ---------- Urgent (1-8) ----------
 
-    /** P=1. Unpaid invoice past its due date. */
+    /**
+     * P=1. Unpaid invoice past its due date. Body branches on the underlying
+     * payment's `target_kind` so a stuck buy-for-me order reads as a
+     * concierge-specific reminder rather than a generic "your invoice is
+     * overdue" line.
+     */
     class OverdueInvoice(ref: InvoiceRef) : HomeGreeting(
         id = "overdue_invoice",
         priority = 1,
         category = Category.Urgent,
-        body = "your invoice is overdue — please settle to avoid storage fees.",
+        body = if (ref.targetKind == "buy_for_me")
+            "Your buy-for-me payment is overdue — settle to keep the order moving."
+        else "Your invoice is overdue — please settle to avoid storage fees.",
         destination = ref.toDestination()
     )
 
-    /** P=2. Plain unpaid invoice. */
+    /**
+     * P=2. Plain unpaid invoice. Body branches on the underlying payment's
+     * `target_kind` so a buy-for-me order awaiting payment reads distinctly
+     * from a shipping/consolidation invoice — fixes the "I accepted a BFM
+     * quote but the home tab doesn't tell me it's awaiting payment" gap.
+     */
     class UnpaidInvoice(ref: InvoiceRef) : HomeGreeting(
         id = "unpaid_invoice",
         priority = 2,
         category = Category.Urgent,
-        body = "you have a pending invoice that needs your attention.",
+        body = if (ref.targetKind == "buy_for_me")
+            "Your buy-for-me order is awaiting payment — complete to ship."
+        else "You have a pending invoice that needs your attention.",
         destination = ref.toDestination()
     )
 
@@ -63,7 +78,9 @@ sealed class HomeGreeting(
         id = "failed_payment",
         priority = 3,
         category = Category.Urgent,
-        body = "your last payment didn't go through — please try again.",
+        body = if (ref.targetKind == "buy_for_me")
+            "Your buy-for-me payment didn't go through — please try again."
+        else "Your last payment didn't go through — please try again.",
         destination = ref.toDestination()
     )
 
@@ -72,7 +89,7 @@ sealed class HomeGreeting(
         id = "mpesa_pending",
         priority = 4,
         category = Category.Urgent,
-        body = "we're waiting on your M-Pesa confirmation.",
+        body = "We're waiting on your M-Pesa confirmation.",
         destination = ref.toDestination()
     )
 
@@ -101,7 +118,7 @@ sealed class HomeGreeting(
         id = "quote_expiring_soon",
         priority = 5,
         category = Category.Urgent,
-        body = "your buy-for-me quote expires tomorrow — approve to lock in the price.",
+        body = "Your buy-for-me quote expires tomorrow — approve to lock in the price.",
         destination = HomeGreetingDestination.BuyForMeOrder(orderId)
     )
 
@@ -111,8 +128,8 @@ sealed class HomeGreeting(
         priority = 6,
         category = Category.Urgent,
         body = if (amountGbp != null && amountGbp > 0)
-            "your buy-for-me quote is ready (£${formatGbp(amountGbp)}) — review and approve."
-        else "your buy-for-me quote is ready — review and approve.",
+            "Your buy-for-me quote is ready (£${formatGbp(amountGbp)}) — review and approve."
+        else "Your buy-for-me quote is ready — review and approve.",
         destination = HomeGreetingDestination.BuyForMeOrder(orderId)
     )
 
@@ -121,7 +138,7 @@ sealed class HomeGreeting(
         id = "ticket_reply",
         priority = 7,
         category = Category.Urgent,
-        body = "your support ticket has a new response.",
+        body = "Your support ticket has a new response.",
         destination = HomeGreetingDestination.TicketDetail(ticketId)
     )
 
@@ -130,7 +147,7 @@ sealed class HomeGreeting(
         id = "dsar_ready",
         priority = 8,
         category = Category.Urgent,
-        body = "your data request is ready to download.",
+        body = "Your data request is ready to download.",
         destination = HomeGreetingDestination.Dsar
     )
 
@@ -150,7 +167,7 @@ sealed class HomeGreeting(
         id = "out_for_delivery",
         priority = 10,
         category = Category.Status,
-        body = "your parcels are out for delivery today.",
+        body = "Your parcels are out for delivery today.",
         destination = HomeGreetingDestination.Parcels
     )
 
@@ -159,7 +176,7 @@ sealed class HomeGreeting(
         id = "consolidation_ready",
         priority = 11,
         category = Category.Status,
-        body = "your consolidation is ready to ship to Nairobi.",
+        body = "Your consolidation is ready to ship to Nairobi.",
         destination = HomeGreetingDestination.Consolidations
     )
 
@@ -168,7 +185,7 @@ sealed class HomeGreeting(
         id = "consolidation_in_transit",
         priority = 12,
         category = Category.Status,
-        body = "your shipment is on its way to Kenya.",
+        body = "Your shipment is on its way to Kenya.",
         destination = HomeGreetingDestination.Consolidations
     )
 
@@ -177,7 +194,7 @@ sealed class HomeGreeting(
         id = "consolidation_cleared",
         priority = 13,
         category = Category.Status,
-        body = "your shipment has cleared customs.",
+        body = "Your shipment has cleared customs.",
         destination = HomeGreetingDestination.Consolidations
     )
 
@@ -186,7 +203,7 @@ sealed class HomeGreeting(
         id = "recently_delivered",
         priority = 14,
         category = Category.Status,
-        body = "your parcels were delivered — thanks for choosing us.",
+        body = "Your parcels were delivered — thanks for choosing us.",
         destination = HomeGreetingDestination.Transactions
     )
 
@@ -196,8 +213,8 @@ sealed class HomeGreeting(
         priority = 15,
         category = Category.Status,
         body = if (!retailer.isNullOrBlank())
-            "we've purchased your order from $retailer."
-        else "we've purchased your buy-for-me order.",
+            "We've purchased your order from $retailer."
+        else "We've purchased your buy-for-me order.",
         destination = HomeGreetingDestination.BuyForMeOrder(orderId)
     )
 
@@ -207,8 +224,8 @@ sealed class HomeGreeting(
         priority = 16,
         category = Category.Status,
         body = if (!retailer.isNullOrBlank())
-            "your order from $retailer is on its way to our hub."
-        else "your buy-for-me order is on its way to our hub.",
+            "Your order from $retailer is on its way to our hub."
+        else "Your buy-for-me order is on its way to our hub.",
         destination = HomeGreetingDestination.BuyForMeOrder(orderId)
     )
 
@@ -226,7 +243,7 @@ sealed class HomeGreeting(
         id = "pre_register_processing",
         priority = 18,
         category = Category.Status,
-        body = "your pre-registration is being processed.",
+        body = "Your pre-registration is being processed.",
         destination = HomeGreetingDestination.ActivityHub
     )
 
@@ -242,7 +259,7 @@ sealed class HomeGreeting(
         id = "credit_balance",
         priority = 19,
         category = Category.Engagement,
-        body = "you have KES ${formatKes(balanceKes)} in credit ready to spend.",
+        body = "You have KES ${formatKes(balanceKes)} in credit ready to spend.",
         destination = HomeGreetingDestination.CreditCenter
     )
 
@@ -251,7 +268,7 @@ sealed class HomeGreeting(
         id = "referral_milestone",
         priority = 20,
         category = Category.Engagement,
-        body = "your friend just signed up — you've earned a credit.",
+        body = "Your friend just signed up — you've earned a credit.",
         destination = HomeGreetingDestination.Referral
     )
 
@@ -260,7 +277,7 @@ sealed class HomeGreeting(
         id = "nps_prompt_due",
         priority = 21,
         category = Category.Engagement,
-        body = "got a minute? share how we're doing.",
+        body = "Got a minute? Share how we're doing.",
         destination = HomeGreetingDestination.NpsSurvey
     )
 
@@ -271,7 +288,7 @@ sealed class HomeGreeting(
         id = "brand_new",
         priority = 22,
         category = Category.Onboarding,
-        body = "welcome aboard. let's get your first parcel shipped to Kenya.",
+        body = "Welcome aboard. Let's get your first parcel shipped to Kenya.",
         destination = HomeGreetingDestination.Shop
     )
 
@@ -280,7 +297,7 @@ sealed class HomeGreeting(
         id = "long_idle_return",
         priority = 23,
         category = Category.Onboarding,
-        body = "welcome back. lots of new UK retailers in our catalogue.",
+        body = "Welcome back. Lots of new UK retailers in our catalogue.",
         destination = HomeGreetingDestination.Shop
     )
 
@@ -289,7 +306,7 @@ sealed class HomeGreeting(
         id = "short_idle_return",
         priority = 24,
         category = Category.Onboarding,
-        body = "welcome back. ready to place another order?",
+        body = "Welcome back. Ready to place another order?",
         destination = HomeGreetingDestination.Shop
     )
 
@@ -300,7 +317,7 @@ sealed class HomeGreeting(
         id = "default",
         priority = 25,
         category = Category.Fallback,
-        body = "ready to place an order with us?",
+        body = "Ready to place an order with us?",
         destination = HomeGreetingDestination.Shop
     )
 }
