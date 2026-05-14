@@ -95,8 +95,12 @@ struct CustomerDashboardView: View {
             // Carousel-triggered NPS survey (general feedback, no parcel
             // context). The auto-prompt-on-delivery path stays disabled —
             // see comment on the parent `.overlay` above.
-            NavigationStack { NpsSurveyView(parcelId: nil) }
-                .glassSheet(detents: [.medium, .large])
+            NavigationStack {
+                NpsSurveyView(parcelId: nil) {
+                    npsSheetPresented = false
+                }
+            }
+            .glassSheet(detents: [.medium, .large])
         }
         .refreshable { dashVM?.refresh(); warehouseVM?.load() }
         .task {
