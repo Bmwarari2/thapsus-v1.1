@@ -131,6 +131,10 @@ fun HomeScreen(
     }
 
     val fullName = session.profile?.fullName?.takeIf { it.isNotBlank() } ?: "Customer"
+    val firstName = session.profile?.fullName
+        ?.split(" ")
+        ?.firstOrNull()
+        .orEmpty()
     val warehouseCode = session.profile?.warehouseId?.takeIf { it.isNotBlank() } ?: "TC-XXXX"
     val lines = (warehouse as? WarehouseViewModel.UiState.Loaded)
         ?.addresses?.get("UK")?.lines ?: DEFAULT_LINES
@@ -147,9 +151,9 @@ fun HomeScreen(
             Spacer(Modifier.weight(1f))
             NotifBadge(onClick = onOpenNotifications)
         }
-        EyebrowPill(label = "Client Terminal")
         HomeGreetingCarousel(
             dashVm = dashVm,
+            firstName = firstName,
             onTap = { destination ->
                 if (destination is HomeGreetingDestination.NpsSurvey) {
                     npsSheetVisible = true

@@ -15,54 +15,58 @@ class TimeOfDayGreeterTest {
         LocalDateTime(2026, 5, 14, hour, minute, 0).toInstant(tz)
 
     @Test
-    fun `morning bucket 05_00 to 11_59 yields good morning`() {
-        assertEquals("good morning", TimeOfDayGreeter.prefix(localInstant(5, 0), tz))
-        assertEquals("good morning", TimeOfDayGreeter.prefix(localInstant(8, 30), tz))
-        assertEquals("good morning", TimeOfDayGreeter.prefix(localInstant(11, 59), tz))
+    fun `morning bucket 05_00 to 11_59 yields Good morning`() {
+        assertEquals("Good morning", TimeOfDayGreeter.prefix(localInstant(5, 0), tz))
+        assertEquals("Good morning", TimeOfDayGreeter.prefix(localInstant(8, 30), tz))
+        assertEquals("Good morning", TimeOfDayGreeter.prefix(localInstant(11, 59), tz))
     }
 
     @Test
-    fun `afternoon bucket 12_00 to 16_59 yields good afternoon`() {
-        assertEquals("good afternoon", TimeOfDayGreeter.prefix(localInstant(12, 0), tz))
-        assertEquals("good afternoon", TimeOfDayGreeter.prefix(localInstant(15, 45), tz))
-        assertEquals("good afternoon", TimeOfDayGreeter.prefix(localInstant(16, 59), tz))
+    fun `afternoon bucket 12_00 to 16_59 yields Good afternoon`() {
+        assertEquals("Good afternoon", TimeOfDayGreeter.prefix(localInstant(12, 0), tz))
+        assertEquals("Good afternoon", TimeOfDayGreeter.prefix(localInstant(15, 45), tz))
+        assertEquals("Good afternoon", TimeOfDayGreeter.prefix(localInstant(16, 59), tz))
     }
 
     @Test
-    fun `evening bucket 17_00 to 21_59 yields good evening`() {
-        assertEquals("good evening", TimeOfDayGreeter.prefix(localInstant(17, 0), tz))
-        assertEquals("good evening", TimeOfDayGreeter.prefix(localInstant(19, 30), tz))
-        assertEquals("good evening", TimeOfDayGreeter.prefix(localInstant(21, 59), tz))
+    fun `evening bucket 17_00 to 21_59 yields Good evening`() {
+        assertEquals("Good evening", TimeOfDayGreeter.prefix(localInstant(17, 0), tz))
+        assertEquals("Good evening", TimeOfDayGreeter.prefix(localInstant(19, 30), tz))
+        assertEquals("Good evening", TimeOfDayGreeter.prefix(localInstant(21, 59), tz))
     }
 
     @Test
-    fun `late night bucket 22_00 to 04_59 yields hi (not good evening)`() {
-        assertEquals("hi", TimeOfDayGreeter.prefix(localInstant(22, 0), tz))
-        assertEquals("hi", TimeOfDayGreeter.prefix(localInstant(0, 15), tz))
-        assertEquals("hi", TimeOfDayGreeter.prefix(localInstant(3, 30), tz))
-        assertEquals("hi", TimeOfDayGreeter.prefix(localInstant(4, 59), tz))
+    fun `late night bucket 22_00 to 04_59 yields Hi (not Good evening)`() {
+        assertEquals("Hi", TimeOfDayGreeter.prefix(localInstant(22, 0), tz))
+        assertEquals("Hi", TimeOfDayGreeter.prefix(localInstant(0, 15), tz))
+        assertEquals("Hi", TimeOfDayGreeter.prefix(localInstant(3, 30), tz))
+        assertEquals("Hi", TimeOfDayGreeter.prefix(localInstant(4, 59), tz))
     }
 
     @Test
-    fun `greetingLine lowercases the name and adds the comma`() {
+    fun `greetingLine title-cases the name and adds the comma`() {
         assertEquals(
-            "good morning, brian.",
-            TimeOfDayGreeter.greetingLine(localInstant(9), tz, "Brian")
+            "Good morning, Brian.",
+            TimeOfDayGreeter.greetingLine(localInstant(9), tz, "brian")
         )
         assertEquals(
-            "good evening, brian.",
+            "Good evening, Brian.",
             TimeOfDayGreeter.greetingLine(localInstant(18), tz, "BRIAN")
+        )
+        assertEquals(
+            "Hi, Brian.",
+            TimeOfDayGreeter.greetingLine(localInstant(2), tz, "Brian")
         )
     }
 
     @Test
     fun `greetingLine with blank name drops the trailing comma`() {
         assertEquals(
-            "good morning.",
+            "Good morning.",
             TimeOfDayGreeter.greetingLine(localInstant(9), tz, "")
         )
         assertEquals(
-            "hi.",
+            "Hi.",
             TimeOfDayGreeter.greetingLine(localInstant(2), tz, "   ")
         )
     }
@@ -72,7 +76,7 @@ class TimeOfDayGreeterTest {
         // 09:00 in Nairobi (UTC+3) is 06:00 in London (UTC+0) — both morning,
         // but at 13:00 Nairobi it's 10:00 London — afternoon vs morning.
         val nairobiAfternoon = localInstant(13)
-        assertEquals("good afternoon", TimeOfDayGreeter.prefix(nairobiAfternoon, tz))
-        assertEquals("good morning", TimeOfDayGreeter.prefix(nairobiAfternoon, TimeZone.of("Europe/London")))
+        assertEquals("Good afternoon", TimeOfDayGreeter.prefix(nairobiAfternoon, tz))
+        assertEquals("Good morning", TimeOfDayGreeter.prefix(nairobiAfternoon, TimeZone.of("Europe/London")))
     }
 }

@@ -26,7 +26,6 @@ import com.thapsus.cargo.data.repository.TicketsRepository
 import com.thapsus.cargo.presentation.home.HomeGreeting
 import com.thapsus.cargo.presentation.home.HomeGreetingBuilder
 import com.thapsus.cargo.presentation.home.HomeGreetingSnapshot
-import com.thapsus.cargo.presentation.home.TimeOfDayGreeter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -42,8 +41,9 @@ import kotlinx.datetime.TimeZone
 
 /**
  * Drives /app dashboard (spec §3.2): open parcels, this week's cut-off countdown,
- * recent activity, and the **rotating welcome carousel** ([headlinePrefix] +
- * [greetings]).
+ * recent activity, and the **rotating welcome carousel** ([greetings]). The
+ * platform layer composes the time-of-day prefix from its own auth session
+ * and concatenates it with the current greeting body for display.
  *
  * Backed by the offline cache so the dashboard renders instantly on cold-launch
  * even with no network.
@@ -98,16 +98,17 @@ class CustomerDashboardViewModel(
         .map { raw -> raw.mapValues { (_, ms) -> Instant.fromEpochMilliseconds(ms) } }
         .stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
-    /** Friendly time-of-day prefix, e.g. "good morning, brian.". Recomputed every refresh. */
-    private val _headlinePrefix = MutableStateFlow(
-        TimeOfDayGreeter.greetingLine(clock.now(), timeZone, "")
-    )
-    val headlinePrefix: StateFlow<String> = _headlinePrefix.asStateFlow()
-
     /**
      * Priority-ordered, freshness-filtered list of greetings to show in the
-     * home carousel. Always at least one entry — the fallback "ready to place
-     * an order with us?" line if nothing else applies.
+     * home carousel. Always at least one entry — the fallback "Ready to
+     * place an order with us?" line if nothing else applies.
+     *
+     * The carousel renders the greeting alongside a `TimeOfDayGreeter`
+     * prefix that the platform composes locally from its own auth session
+     * (iOS: `env.session.profile.fullName`, Android: the `AuthSession`
+     * passed into HomeScreen). That side-steps a race where this VM's
+     * `auth.state` snapshot occasionally lacks `profile` at first emission
+     * on iOS, leaving the prefix without the customer's name.
      */
     val greetings: StateFlow<List<HomeGreeting>> = combine(
         packages.observeForUser(userId),
@@ -118,8 +119,6 @@ class CustomerDashboardViewModel(
         combine(auth.state, seenFlow) { authState, seen -> authState to seen }
     ) { parcels, cons, (bfm, pays, extras), (authState, seen) ->
         val profile = (authState as? AuthSession.Authenticated)?.profile
-        val firstName = firstNameOf(profile)
-        val now = clock.now()
         val snapshot = SnapshotAssembler.assemble(
             parcels = parcels,
             consolidations = cons,
@@ -127,10 +126,9 @@ class CustomerDashboardViewModel(
             payments = pays,
             extras = extras,
             authProfile = profile,
-            now = now
+            now = clock.now()
         )
-        _headlinePrefix.value = TimeOfDayGreeter.greetingLine(now, timeZone, firstName)
-        HomeGreetingBuilder.build(snapshot, seen, now)
+        HomeGreetingBuilder.build(snapshot, seen, clock.now())
     }.stateIn(scope, SharingStarted.Eagerly, listOf(HomeGreeting.Default))
 
     init {
@@ -219,12 +217,6 @@ class CustomerDashboardViewModel(
     }
 
     fun dismissError() { _error.value = null }
-
-    private fun firstNameOf(profile: UserDto?): String {
-        val full = profile?.fullName?.trim().orEmpty()
-        if (full.isEmpty()) return ""
-        return full.split(' ').firstOrNull().orEmpty()
-    }
 }
 
 data class DashboardState(

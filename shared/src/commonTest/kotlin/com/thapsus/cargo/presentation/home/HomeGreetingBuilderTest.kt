@@ -283,11 +283,11 @@ class HomeGreetingBuilderTest {
     @Test
     fun `quote-ready includes amount when provided, drops it otherwise`() {
         assertEquals(
-            "your buy-for-me quote is ready (£42.50) — review and approve.",
+            "Your buy-for-me quote is ready (£42.50) — review and approve.",
             HomeGreeting.QuoteReady("o", 42.5).body
         )
         assertEquals(
-            "your buy-for-me quote is ready — review and approve.",
+            "Your buy-for-me quote is ready — review and approve.",
             HomeGreeting.QuoteReady("o", null).body
         )
     }
@@ -295,15 +295,15 @@ class HomeGreetingBuilderTest {
     @Test
     fun `credit balance renders KES with thousands separators (server ledger is KES)`() {
         assertEquals(
-            "you have KES 250 in credit ready to spend.",
+            "You have KES 250 in credit ready to spend.",
             HomeGreeting.CreditBalance(250L).body
         )
         assertEquals(
-            "you have KES 1,500 in credit ready to spend.",
+            "You have KES 1,500 in credit ready to spend.",
             HomeGreeting.CreditBalance(1_500L).body
         )
         assertEquals(
-            "you have KES 2,500,000 in credit ready to spend.",
+            "You have KES 2,500,000 in credit ready to spend.",
             HomeGreeting.CreditBalance(2_500_000L).body
         )
     }
@@ -371,11 +371,11 @@ class HomeGreetingBuilderTest {
     @Test
     fun `bfm purchased without retailer falls back to generic`() {
         assertEquals(
-            "we've purchased your buy-for-me order.",
+            "We've purchased your buy-for-me order.",
             HomeGreeting.BfmPurchased("o", null).body
         )
         assertEquals(
-            "we've purchased your order from amazon.co.uk.",
+            "We've purchased your order from amazon.co.uk.",
             HomeGreeting.BfmPurchased("o", "amazon.co.uk").body
         )
     }
