@@ -1010,6 +1010,70 @@ struct BfmPendingPaymentCard: View {
     }
 }
 
+/// Persistent home-screen card for a `BuyForMeOrderDto` in status='quoted' —
+/// the pre-accept state where the operator has named a price but the
+/// customer hasn't approved yet. Sibling of `BfmPendingPaymentCard` (which
+/// covers the post-accept, mid-payment state); both share the
+/// `CustomerInvoiceCard` look.
+struct BfmQuotedInvoiceCard: View {
+    let order: BuyForMeOrderDto
+    let onPay: () -> Void
+
+    var body: some View {
+        SoftCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Buy-for-me quote", systemImage: "wand.and.stars")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Brand.ink)
+                    Spacer()
+                    Text("PAY NOW")
+                        .font(.caption2.weight(.heavy)).tracking(2)
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Capsule().fill(Color.orange.opacity(0.16)))
+                }
+                if !order.itemName.isEmpty {
+                    Text(order.itemName)
+                        .font(.subheadline)
+                        .foregroundStyle(Brand.ink.opacity(0.8))
+                }
+                // Customer-facing total: estimate × (1 + markup). Server's
+                // amount_due_kes is authoritative once /api/payments
+                // responds, but for the card we show the GBP up front.
+                let estimate = order.estimateGbp?.doubleValue ?? 0
+                let totalGbp = estimate * (1.0 + Double(order.markupPct) / 100.0)
+                if totalGbp > 0 {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("£")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(formatAmount(totalGbp))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(Brand.ink)
+                    }
+                }
+                Text("Review the quote and approve to lock in the price.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button(action: onPay) {
+                    Label("Pay invoice", systemImage: "creditcard.fill")
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(GlassSheenButtonStyle(fill: Brand.orange, foreground: .white))
+            }
+        }
+    }
+
+    private func formatAmount(_ value: Double) -> String {
+        let f = NumberFormatter()
+        f.numberStyle = .decimal
+        f.minimumFractionDigits = 2
+        f.maximumFractionDigits = 2
+        return f.string(from: NSNumber(value: value)) ?? "\(value)"
+    }
+}
+
 
 // MARK: - Buy-for-me quote card on the Orders page
 
