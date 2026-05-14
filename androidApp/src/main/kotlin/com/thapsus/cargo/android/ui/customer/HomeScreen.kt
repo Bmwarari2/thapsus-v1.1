@@ -64,6 +64,7 @@ import com.thapsus.cargo.android.ui.primitives.OrangeButton
 import com.thapsus.cargo.android.ui.primitives.SoftCard
 import com.thapsus.cargo.android.ui.primitives.WordmarkSize
 import com.thapsus.cargo.android.ui.theme.Brand
+import com.thapsus.cargo.data.dto.BuyForMeOrderDto
 import com.thapsus.cargo.data.dto.CustomerConsolidationDto
 import com.thapsus.cargo.data.dto.PaymentDto
 import com.thapsus.cargo.data.repository.AuthSession
@@ -90,6 +91,7 @@ fun HomeScreen(
     onOpenNotifications: () -> Unit,
     onPayInvoice: (CustomerConsolidationDto) -> Unit,
     onPayBfmInvoice: (PaymentDto) -> Unit,
+    onPayBfmQuote: (BuyForMeOrderDto) -> Unit,
     onGreetingTap: (HomeGreetingDestination) -> Unit
 ) {
     // Carousel taps whose destination is `NpsSurvey` flip this; everything
@@ -109,6 +111,7 @@ fun HomeScreen(
     val state by dashVm.state.collectAsStateWithLifecycle()
     val warehouse by warehouseVm.state.collectAsStateWithLifecycle()
     val bfmPendingInvoices by dashVm.bfmPendingInvoices.collectAsStateWithLifecycle()
+    val quotedBfmOrders by dashVm.quotedBfmOrders.collectAsStateWithLifecycle()
 
     // Active invoices that the customer needs to clear. Mirrors iOS
     // CustomerDashboardView's `activeInvoicesSection` — same Supabase
@@ -172,10 +175,12 @@ fun HomeScreen(
         BfmHeroCard(onClick = onOpenBuyForMe)
         PreRegisterCard(onClick = onOpenPreRegister)
 
-        if (bfmPendingInvoices.isNotEmpty()) {
-            BfmPendingInvoicesSection(
-                payments = bfmPendingInvoices,
-                onPay = onPayBfmInvoice
+        if (bfmPendingInvoices.isNotEmpty() || quotedBfmOrders.isNotEmpty()) {
+            BfmInvoicesSection(
+                quotedOrders = quotedBfmOrders,
+                pendingPayments = bfmPendingInvoices,
+                onPayQuote = onPayBfmQuote,
+                onPayPending = onPayBfmInvoice
             )
         }
 
@@ -483,24 +488,72 @@ private fun WarehouseCard(name: String, code: String, lines: List<String>) {
 }
 
 /**
- * Persistent home section for pending buy-for-me payments — a customer who
- * accepts a BFM quote should see the unpaid invoice without having to wait
- * for the rotating greeting to land on it. Sits above the consolidation
- * invoices section so concierge orders read with prominence.
+ * Persistent home section for buy-for-me invoices. Covers both
+ * pre-accept (status='quoted' on [BuyForMeOrderDto] — the customer was
+ * billed and hasn't approved yet) and post-accept (status='pending' on
+ * [PaymentDto] — accepted but mid-payment) states. Sits above the
+ * consolidation invoices section so concierge orders read with
+ * prominence. Styled identically to [ActiveInvoiceCard] / iOS
+ * `CustomerInvoiceCard` so all "invoice due" cards on the home page
+ * feel like one coherent group.
+ *
+ * A BFM order rarely sits in both states at once (acceptance moves the
+ * row out of `quoted`), so cross-list de-duplication isn't needed.
  */
 @Composable
-private fun BfmPendingInvoicesSection(
-    payments: List<PaymentDto>,
-    onPay: (PaymentDto) -> Unit
+private fun BfmInvoicesSection(
+    quotedOrders: List<BuyForMeOrderDto>,
+    pendingPayments: List<PaymentDto>,
+    onPayQuote: (BuyForMeOrderDto) -> Unit,
+    onPayPending: (PaymentDto) -> Unit
 ) {
+    val total = quotedOrders.size + pendingPayments.size
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         EyebrowPill(
-            label = if (payments.size == 1) "Buy-for-me payment due"
-            else "${payments.size} buy-for-me payments due",
+            label = if (total == 1) "Buy-for-me invoice due"
+            else "$total buy-for-me invoices due",
             icon = Icons.AutoMirrored.Filled.ReceiptLong
         )
-        payments.forEach { p ->
-            BfmPendingInvoiceCard(payment = p, onPay = { onPay(p) })
+        quotedOrders.forEach { order ->
+            BfmQuotedInvoiceCard(order = order, onPay = { onPayQuote(order) })
+        }
+        pendingPayments.forEach { payment ->
+            BfmPendingInvoiceCard(payment = payment, onPay = { onPayPending(payment) })
+        }
+    }
+}
+
+@Composable
+private fun BfmQuotedInvoiceCard(order: BuyForMeOrderDto, onPay: () -> Unit) {
+    InkCard {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                order.itemName.takeIf { it.isNotBlank() } ?: "Buy-for-me order",
+                color = Brand.cream,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp
+            )
+            // Server-side `pricing.js` is authoritative once the customer
+            // taps Pay, but show the customer-facing total up front so the
+            // card is informative without a click. Estimate * (1 + markup)
+            // mirrors the existing iOS PayTarget.fromBfm formula.
+            val estimate = order.estimateGbp ?: 0.0
+            val totalGbp = estimate * (1.0 + order.markupPct / 100.0)
+            if (totalGbp > 0) {
+                Text(
+                    "£%.2f".format(totalGbp),
+                    color = Brand.Orange,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 24.sp
+                )
+            }
+            Text(
+                "Review the quote and approve to lock in the price.",
+                color = Brand.cream.copy(alpha = 0.7f),
+                fontSize = 12.sp
+            )
+            OrangeButton(text = "Pay invoice", onClick = onPay)
         }
     }
 }

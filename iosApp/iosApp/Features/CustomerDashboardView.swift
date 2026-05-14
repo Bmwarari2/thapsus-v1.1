@@ -35,6 +35,12 @@ struct CustomerDashboardView: View {
     /// section so a customer who's accepted a quote always sees the
     /// unpaid invoice, not just when the rotating greeting lands on it.
     @State private var bfmPendingObs: StateFlowObserver<[PaymentDto]>? = nil
+    /// Quoted buy-for-me orders — the pre-accept state. Same surface as
+    /// `bfmPendingObs` but for `BuyForMeOrderDto.status == "quoted"`,
+    /// which is what a customer sees the moment an operator finalises
+    /// a price. Surfaced as a card so the customer doesn't have to dig
+    /// into the Shop tab to find the quote.
+    @State private var quotedBfmObs: StateFlowObserver<[BuyForMeOrderDto]>? = nil
     /// True when the home carousel taps a greeting whose destination is
     /// `HomeGreetingDestinationNpsSurvey`. Drives the `.sheet` modifier
     /// below — NPS surveys are a sheet, not a stack push.
@@ -134,6 +140,7 @@ struct CustomerDashboardView: View {
         .onDisappear {
             dashVM?.clear(); dashVM = nil; dashObs = nil
             bfmPendingObs = nil
+            quotedBfmObs = nil
             warehouseVM = nil; warehouseObs = nil
             customerConsolidationsTask?.cancel()
             customerConsolidationsTask = nil
@@ -385,6 +392,9 @@ struct CustomerDashboardView: View {
             bfmPendingObs = StateFlowObserver(initial: vm.bfmPendingInvoices.value) {
                 vm.bfmPendingInvoices
             }
+            quotedBfmObs = StateFlowObserver(initial: vm.quotedBfmOrders.value) {
+                vm.quotedBfmOrders
+            }
         }
         if warehouseVM == nil {
             let vm = ThapsusSdk.shared.warehouseViewModel()
@@ -426,30 +436,42 @@ struct CustomerDashboardView: View {
         }
     }
 
-    // MARK: - Buy-for-me pending payments
+    // MARK: - Buy-for-me invoices (quoted + pending-payment)
 
-    /// Pending payment rows from `bfmPendingInvoices` — kept above the
-    /// consolidation invoices section so concierge orders read with
-    /// prominence. A customer who's accepted a BFM quote sees this card
-    /// persistently, independent of where the rotating greeting carousel
-    /// happens to be.
+    /// Pending payment rows from `bfmPendingInvoices` — post-accept,
+    /// mid-payment state.
     private var bfmPendingInvoices: [PaymentDto] {
         bfmPendingObs?.value ?? []
     }
 
+    /// Quoted BFM orders — pre-accept state, the customer was billed but
+    /// hasn't approved yet.
+    private var quotedBfmOrders: [BuyForMeOrderDto] {
+        quotedBfmObs?.value ?? []
+    }
+
+    /// Persistent invoice-due section that covers both BFM states. Sits
+    /// above the consolidation invoices section so concierge orders read
+    /// with prominence. Styled identically to `CustomerInvoiceCard`.
     @ViewBuilder
     private var bfmPendingInvoicesSection: some View {
-        if !bfmPendingInvoices.isEmpty {
+        let total = quotedBfmOrders.count + bfmPendingInvoices.count
+        if total > 0 {
             VStack(alignment: .leading, spacing: 10) {
                 HStack {
-                    LGEyebrow(text: bfmPendingInvoices.count == 1
-                        ? "Buy-for-me payment due"
-                        : "\(bfmPendingInvoices.count) buy-for-me payments due")
+                    LGEyebrow(text: total == 1
+                        ? "Buy-for-me invoice due"
+                        : "\(total) buy-for-me invoices due")
                     Spacer()
                     LGPill(text: "Action", tone: .accent)
                 }
                 .padding(.leading, 4)
 
+                ForEach(quotedBfmOrders, id: \.id) { order in
+                    BfmQuotedInvoiceCard(order: order) {
+                        payTarget = PayTarget.fromBfm(order)
+                    }
+                }
                 ForEach(bfmPendingInvoices, id: \.id) { p in
                     BfmPendingPaymentCard(payment: p) {
                         payTarget = PayTarget.fromBfmPayment(p)

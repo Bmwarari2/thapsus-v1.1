@@ -102,6 +102,19 @@ class CustomerDashboardViewModel(
         .stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     /**
+     * Quoted buy-for-me orders — the *pre-accept* state, where the operator
+     * has named a price but the customer hasn't accepted yet. Surfaced as
+     * an invoice-due card on the home tab so the customer doesn't have to
+     * dig into the Shop tab to find a quote that's ready for them.
+     *
+     * Pairs with [bfmPendingInvoices] (post-accept): the home UI renders
+     * both lists together in one "Buy-for-me payment due" section.
+     */
+    val quotedBfmOrders: StateFlow<List<BuyForMeOrderDto>> = bfmFlow
+        .map { list -> list.filter { it.status == "quoted" } }
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /**
      * Reactive seen-marker stream from the SQLDelight table. Updates whenever
      * any code path (this VM's [markGreetingSeen], a ticket-detail screen
      * calling [ThapsusSdk.markHomeGreetingSeen], etc.) writes to the table.

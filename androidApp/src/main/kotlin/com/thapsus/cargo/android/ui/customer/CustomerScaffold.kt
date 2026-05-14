@@ -115,6 +115,23 @@ fun CustomerScaffold(
                             )
                         )
                     },
+                    onPayBfmQuote = { order ->
+                        // Same approximation BuyForMeScreen's Pay button
+                        // uses — estimate * (1 + markup) at ~165 KES/GBP.
+                        // Server's amount_due_kes is authoritative once
+                        // /api/payments responds.
+                        val estimateGbp = order.estimateGbp ?: 0.0
+                        val totalGbp = estimateGbp * (1.0 + order.markupPct / 100.0)
+                        val approxKes = (totalGbp * 165.0).toLong().coerceAtLeast(0L)
+                        nav.navigate(
+                            CustomerRoutes.payInvoice(
+                                kind = "buy_for_me",
+                                id = order.id,
+                                amount = approxKes,
+                                title = "Buy-for-me · ${order.itemName}"
+                            )
+                        )
+                    },
                     onGreetingTap = { destination ->
                         nav.navigate(destination.toCustomerRoute())
                     }
