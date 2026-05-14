@@ -311,10 +311,10 @@ private object SnapshotAssembler {
             lastActivityAt = lastActivity,
 
             urgentInvoice = urgentInvoicePayment?.let {
-                HomeGreetingSnapshot.UrgentInvoice(id = it.id, overdue = false)
+                HomeGreetingSnapshot.UrgentInvoice(ref = it.toInvoiceRef(), overdue = false)
             },
-            failedPaymentInvoiceId = failedPayment?.id,
-            mpesaPendingInvoiceId = mpesaPending?.id,
+            failedPayment = failedPayment?.toInvoiceRef(),
+            mpesaPending = mpesaPending?.toInvoiceRef(),
             quoteExpiringSoon = expiringSoon?.let {
                 HomeGreetingSnapshot.PendingQuote(it.id, it.estimateGbp)
             },
@@ -364,6 +364,22 @@ private object SnapshotAssembler {
         val host = (if (end >= 0) s.substring(0, end) else s).removePrefix("www.")
         return host.takeIf { it.isNotBlank() }
     }
+
+    /**
+     * Builds the deep-link payload the pay-invoice greetings need. Pulls
+     * `target_kind` + `target_id` straight from the payment row (server
+     * authoritative — 'consolidation', 'buy_for_me', 'order'), uses
+     * `amount_due_kes` (falling back to gross) for the sheet header, and
+     * `target_label` for the title with a defensive fallback to the
+     * payment id so the customer never sees an empty header.
+     */
+    internal fun PaymentDto.toInvoiceRef(): HomeGreeting.InvoiceRef =
+        HomeGreeting.InvoiceRef(
+            targetKind = targetKind,
+            targetId = targetId,
+            amountKes = if (amountDueKes > 0) amountDueKes else amountGrossKes,
+            title = targetLabel?.takeIf { it.isNotBlank() }
+        )
 
 }
 

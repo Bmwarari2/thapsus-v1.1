@@ -41,40 +41,60 @@ sealed class HomeGreeting(
     // ---------- Urgent (1-8) ----------
 
     /** P=1. Unpaid invoice past its due date. */
-    class OverdueInvoice(invoiceId: String) : HomeGreeting(
+    class OverdueInvoice(ref: InvoiceRef) : HomeGreeting(
         id = "overdue_invoice",
         priority = 1,
         category = Category.Urgent,
         body = "your invoice is overdue — please settle to avoid storage fees.",
-        destination = HomeGreetingDestination.PayInvoice(invoiceId)
+        destination = ref.toDestination()
     )
 
     /** P=2. Plain unpaid invoice. */
-    class UnpaidInvoice(invoiceId: String) : HomeGreeting(
+    class UnpaidInvoice(ref: InvoiceRef) : HomeGreeting(
         id = "unpaid_invoice",
         priority = 2,
         category = Category.Urgent,
         body = "you have a pending invoice that needs your attention.",
-        destination = HomeGreetingDestination.PayInvoice(invoiceId)
+        destination = ref.toDestination()
     )
 
     /** P=3. Most recent payment attempt failed. */
-    class FailedPayment(invoiceId: String) : HomeGreeting(
+    class FailedPayment(ref: InvoiceRef) : HomeGreeting(
         id = "failed_payment",
         priority = 3,
         category = Category.Urgent,
         body = "your last payment didn't go through — please try again.",
-        destination = HomeGreetingDestination.PayInvoice(invoiceId)
+        destination = ref.toDestination()
     )
 
     /** P=4. M-Pesa STK push pending confirmation. */
-    class MpesaPending(invoiceId: String) : HomeGreeting(
+    class MpesaPending(ref: InvoiceRef) : HomeGreeting(
         id = "mpesa_pending",
         priority = 4,
         category = Category.Urgent,
         body = "we're waiting on your M-Pesa confirmation.",
-        destination = HomeGreetingDestination.PayInvoice(invoiceId)
+        destination = ref.toDestination()
     )
+
+    /**
+     * Reusable bundle of the fields the pay-invoice deep-link needs.
+     * Constructed once by the snapshot assembler from a `PaymentDto` row
+     * and threaded through every urgent-invoice greeting variant.
+     */
+    data class InvoiceRef(
+        val targetKind: String,
+        val targetId: String,
+        val amountKes: Long,
+        val title: String?
+    ) {
+        internal fun toDestination(): HomeGreetingDestination.PayInvoice =
+            HomeGreetingDestination.PayInvoice(
+                targetKind = targetKind,
+                targetId = targetId,
+                amountKes = amountKes,
+                title = title
+            )
+    }
 
     /** P=5. Quoted BFM order whose quote is within 24h of expiry. */
     class QuoteExpiringSoon(orderId: String) : HomeGreeting(

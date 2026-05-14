@@ -13,12 +13,19 @@ class HomeGreetingBuilderTest {
     private val now = Instant.parse("2026-05-14T10:00:00Z")
     private val emptySeen = emptyMap<String, Instant>()
 
+    private fun invoiceRef(
+        kind: String = "consolidation",
+        targetId: String = "c-1",
+        amountKes: Long = 12_500L,
+        title: String? = "Shipping invoice"
+    ) = HomeGreeting.InvoiceRef(targetKind = kind, targetId = targetId, amountKes = amountKes, title = title)
+
     // ---------------- Ladder ordering ----------------
 
     @Test
     fun `urgent invoice beats every status signal`() {
         val snap = HomeGreetingSnapshot(
-            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice("inv-1", overdue = false),
+            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice(invoiceRef(), overdue = false),
             parcelsAtHubCount = 5,
             parcelsAtHubLatestAt = now,
             parcelsInTransitCount = 3,
@@ -33,23 +40,42 @@ class HomeGreetingBuilderTest {
     @Test
     fun `overdue invoice beats unpaid invoice`() {
         val snap = HomeGreetingSnapshot(
-            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice("inv-1", overdue = true)
+            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice(invoiceRef(), overdue = true)
         )
         val out = HomeGreetingBuilder.build(snap, emptySeen, now)
         assertTrue(out.first() is HomeGreeting.OverdueInvoice)
     }
 
     @Test
+    fun `invoice greeting destination carries full pay-sheet payload`() {
+        val ref = invoiceRef(
+            kind = "consolidation",
+            targetId = "con-42",
+            amountKes = 12_500L,
+            title = "May shipment"
+        )
+        val snap = HomeGreetingSnapshot(
+            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice(ref, overdue = false)
+        )
+        val greeting = HomeGreetingBuilder.build(snap, emptySeen, now).first() as HomeGreeting.UnpaidInvoice
+        val dest = greeting.destination as HomeGreetingDestination.PayInvoice
+        assertEquals("consolidation", dest.targetKind)
+        assertEquals("con-42", dest.targetId)
+        assertEquals(12_500L, dest.amountKes)
+        assertEquals("May shipment", dest.title)
+    }
+
+    @Test
     fun `urgent priority — failed payment, mpesa pending, quote expiring, quote ready`() {
         val snap = HomeGreetingSnapshot(
-            failedPaymentInvoiceId = "p-fail",
-            mpesaPendingInvoiceId = "p-mpesa",
+            failedPayment = invoiceRef(targetId = "p-fail"),
+            mpesaPending = invoiceRef(targetId = "p-mpesa"),
             quoteExpiringSoon = HomeGreetingSnapshot.PendingQuote("o-1", 100.0),
             quoteReady = HomeGreetingSnapshot.PendingQuote("o-2", 200.0)
         )
         val out = HomeGreetingBuilder.build(snap, emptySeen, now)
-        assertEquals(HomeGreeting.FailedPayment("p-fail").id, out[0].id)
-        assertEquals(HomeGreeting.MpesaPending("p-mpesa").id, out[1].id)
+        assertEquals(HomeGreeting.FailedPayment(invoiceRef()).id, out[0].id)
+        assertEquals(HomeGreeting.MpesaPending(invoiceRef()).id, out[1].id)
         assertEquals(HomeGreeting.QuoteExpiringSoon("o-1").id, out[2].id)
         assertEquals(HomeGreeting.QuoteReady("o-2", 200.0).id, out[3].id)
     }
@@ -71,9 +97,9 @@ class HomeGreetingBuilderTest {
         // cap keeps the four highest — 2, 3, 4, 6 — so QuoteReady (P=6) sits
         // at the tail and TicketReply (P=7) + DsarReady (P=8) get dropped.
         val snap = HomeGreetingSnapshot(
-            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice("inv", false),
-            failedPaymentInvoiceId = "p-fail",
-            mpesaPendingInvoiceId = "p-mp",
+            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice(invoiceRef(), overdue = false),
+            failedPayment = invoiceRef(targetId = "p-fail"),
+            mpesaPending = invoiceRef(targetId = "p-mp"),
             quoteReady = HomeGreetingSnapshot.PendingQuote("o", 100.0),
             ticketWithUnreadReply = "t-1",
             dsarReady = true
@@ -124,7 +150,7 @@ class HomeGreetingBuilderTest {
     @Test
     fun `urgent invoice ignores seen marker — keeps firing until paid`() {
         val snap = HomeGreetingSnapshot(
-            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice("inv-1", overdue = false)
+            urgentInvoice = HomeGreetingSnapshot.UrgentInvoice(invoiceRef(), overdue = false)
         )
         val seenForever = mapOf(
             "unpaid_invoice" to Instant.parse("2030-01-01T00:00:00Z")

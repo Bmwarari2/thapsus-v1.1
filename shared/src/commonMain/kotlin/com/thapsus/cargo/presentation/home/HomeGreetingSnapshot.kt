@@ -23,8 +23,8 @@ data class HomeGreetingSnapshot(
 
     // ----- Urgent -----
     val urgentInvoice: UrgentInvoice? = null,
-    val failedPaymentInvoiceId: String? = null,
-    val mpesaPendingInvoiceId: String? = null,
+    val failedPayment: HomeGreeting.InvoiceRef? = null,
+    val mpesaPending: HomeGreeting.InvoiceRef? = null,
     val quoteExpiringSoon: PendingQuote? = null,
     val quoteReady: PendingQuote? = null,
     val ticketWithUnreadReply: String? = null,
@@ -59,7 +59,7 @@ data class HomeGreetingSnapshot(
     val npsPromptDue: Boolean = false
 ) {
     data class UrgentInvoice(
-        val id: String,
+        val ref: HomeGreeting.InvoiceRef,
         /** True when the invoice is past its due date. */
         val overdue: Boolean
     )

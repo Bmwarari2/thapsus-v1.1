@@ -3,11 +3,13 @@
 // to a SwiftUI destination view. Tapping a greeting on the home carousel
 // pushes the resulting view onto the Home tab's NavigationStack.
 //
-// Per-record deep-links (specific invoice / BFM order / ticket) fall back
-// to the corresponding list screen for v1 — the customer reaches the
-// record with one more tap from there. A follow-up PR can wire the
-// deep-link DTOs through and replace the list-level fallbacks with the
-// detail screens.
+// `PayInvoice` and `TicketDetail` deep-link straight to the per-record
+// screens (PR D — `HomeGreetingDestination` carries the payload now).
+// `BuyForMeOrder` keeps the list as the entry point because the iOS BFM
+// flow doesn't have a dedicated per-order detail view.
+// `NpsSurvey` is intentionally not handled by a push — the carousel host
+// (`CustomerDashboardView`) intercepts that destination and presents the
+// survey sheet instead; this fallback exists only for safety.
 
 import SwiftUI
 import ThapsusShared
@@ -33,10 +35,18 @@ extension HomeGreetingDestination {
             CreditCenterView()
         case _ as HomeGreetingDestinationBuyForMeOrder:
             BuyForMeView()
-        case _ as HomeGreetingDestinationPayInvoice:
-            CustomerInvoicesView()
-        case _ as HomeGreetingDestinationTicketDetail:
-            TicketsListView()
+        case let pay as HomeGreetingDestinationPayInvoice:
+            PayInvoiceView(
+                targetKind: pay.targetKind,
+                targetId: pay.targetId,
+                targetTitle: pay.title ?? "Invoice",
+                amountKesGross: pay.amountKes
+            )
+        case let ticket as HomeGreetingDestinationTicketDetail:
+            // `subject` is the nav-title hint — TicketDetailViewModel
+            // loads the real ticket on appear, so an empty initial
+            // label resolves once the data arrives.
+            TicketDetailView(ticketId: ticket.ticketId, subject: "", asAdmin: false)
         case _ as HomeGreetingDestinationDsar:
             DsarView()
         case _ as HomeGreetingDestinationReferral:
