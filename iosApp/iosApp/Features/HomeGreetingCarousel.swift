@@ -17,6 +17,10 @@ import ThapsusShared
 
 struct HomeGreetingCarousel: View {
     let vm: CustomerDashboardViewModel?
+    /// Called when the carousel taps a greeting whose destination is
+    /// `HomeGreetingDestination.NpsSurvey`. The host view owns the sheet
+    /// state and presents `NpsSurveyView` — surveys aren't a push.
+    var onNpsTap: () -> Void = {}
 
     @State private var prefixObs: StateFlowObserver<String>? = nil
     @State private var greetingsObs: StateFlowObserver<[HomeGreeting]>? = nil
@@ -49,25 +53,12 @@ struct HomeGreetingCarousel: View {
     private var content: some View {
         let list = currentGreetings
         if let current = list[safe: index] {
-            NavigationLink {
-                current.destination.makeDestinationView()
-                    .onAppear { vm?.markGreetingSeen(greetingId: current.id) }
-            } label: {
-                Text(current.body)
-                    .font(.display(24, weight: .heavy))
-                    .foregroundStyle(LG.fg)
-                    .multilineTextAlignment(.leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .id(current.id)
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
-            .buttonStyle(.plain)
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.15)
-                    .onChanged { _ in paused = true }
-                    .onEnded { _ in paused = false }
-            )
+            interactiveGreeting(current)
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.15)
+                        .onChanged { _ in paused = true }
+                        .onEnded { _ in paused = false }
+                )
 
             if list.count > 1 {
                 HStack(spacing: 6) {
@@ -86,6 +77,40 @@ struct HomeGreetingCarousel: View {
                 .font(.display(24, weight: .heavy))
                 .foregroundStyle(LG.fg)
         }
+    }
+
+    @ViewBuilder
+    private func interactiveGreeting(_ current: HomeGreeting) -> some View {
+        // NPS surveys are a sheet, not a stack push. Branch here so the
+        // host view can mount `NpsSurveyView` via its own state binding.
+        if current.destination is HomeGreetingDestinationNpsSurvey {
+            Button {
+                vm?.markGreetingSeen(greetingId: current.id)
+                onNpsTap()
+            } label: {
+                greetingText(current)
+            }
+            .buttonStyle(.plain)
+        } else {
+            NavigationLink {
+                current.destination.makeDestinationView()
+                    .onAppear { vm?.markGreetingSeen(greetingId: current.id) }
+            } label: {
+                greetingText(current)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func greetingText(_ current: HomeGreeting) -> some View {
+        Text(current.body)
+            .font(.display(24, weight: .heavy))
+            .foregroundStyle(LG.fg)
+            .multilineTextAlignment(.leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .id(current.id)
+            .transition(.opacity.combined(with: .move(edge: .bottom)))
     }
 
     // MARK: - State helpers

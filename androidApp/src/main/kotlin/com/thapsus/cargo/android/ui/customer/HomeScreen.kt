@@ -29,9 +29,12 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PostAdd
 import androidx.compose.material.icons.filled.TwoWheeler
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -76,6 +79,7 @@ private val DEFAULT_LINES = listOf(
     "United Kingdom"
 )
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     session: AuthSession.Authenticated,
@@ -86,6 +90,11 @@ fun HomeScreen(
     onPayInvoice: (CustomerConsolidationDto) -> Unit,
     onGreetingTap: (HomeGreetingDestination) -> Unit
 ) {
+    // Carousel taps whose destination is `NpsSurvey` flip this; everything
+    // else bubbles up to the scaffold via [onGreetingTap]. NPS lives as a
+    // bottom-sheet (not a nav push) on both platforms.
+    var npsSheetVisible by remember { mutableStateOf(false) }
+    val npsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val dashVm = remember(session.userId) {
         ThapsusSdk.customerDashboardViewModel(session.userId)
     }
@@ -139,7 +148,16 @@ fun HomeScreen(
             NotifBadge(onClick = onOpenNotifications)
         }
         EyebrowPill(label = "Client Terminal")
-        HomeGreetingCarousel(dashVm = dashVm, onTap = onGreetingTap)
+        HomeGreetingCarousel(
+            dashVm = dashVm,
+            onTap = { destination ->
+                if (destination is HomeGreetingDestination.NpsSurvey) {
+                    npsSheetVisible = true
+                } else {
+                    onGreetingTap(destination)
+                }
+            }
+        )
 
         // BFM-primary pivot: hero card leads with the concierge flow,
         // pre-register sits below as a co-equal secondary path. Mirrors
@@ -192,6 +210,19 @@ fun HomeScreen(
         HowItWorksSection()
 
         Spacer(Modifier.height(48.dp))
+    }
+
+    if (npsSheetVisible) {
+        ModalBottomSheet(
+            onDismissRequest = { npsSheetVisible = false },
+            sheetState = npsSheetState,
+            containerColor = Brand.cream
+        ) {
+            // General feedback survey — no parcel context (the
+            // auto-prompt-on-delivery path stays disabled, see
+            // CustomerDashboardView's comment for why).
+            NpsSurveyContent(parcelId = null, onDismiss = { npsSheetVisible = false })
+        }
     }
 }
 

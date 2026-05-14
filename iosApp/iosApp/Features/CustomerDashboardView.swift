@@ -30,6 +30,10 @@ struct CustomerDashboardView: View {
     @State private var customerConsolidations: [CustomerConsolidationDto] = []
     @State private var customerConsolidationsTask: Task<Void, Never>?
     @State private var payTarget: PayTarget?
+    /// True when the home carousel taps a greeting whose destination is
+    /// `HomeGreetingDestinationNpsSurvey`. Drives the `.sheet` modifier
+    /// below — NPS surveys are a sheet, not a stack push.
+    @State private var npsSheetPresented: Bool = false
 
     var body: some View {
         ScrollView {
@@ -86,6 +90,13 @@ struct CustomerDashboardView: View {
                 targetTitle: target.title,
                 amountKesGross: target.amountKes
             )
+        }
+        .sheet(isPresented: $npsSheetPresented) {
+            // Carousel-triggered NPS survey (general feedback, no parcel
+            // context). The auto-prompt-on-delivery path stays disabled —
+            // see comment on the parent `.overlay` above.
+            NavigationStack { NpsSurveyView(parcelId: nil) }
+                .glassSheet(detents: [.medium, .large])
         }
         .refreshable { dashVM?.refresh(); warehouseVM?.load() }
         .task {
@@ -149,7 +160,7 @@ struct CustomerDashboardView: View {
     // MARK: - Header (rotating greeting carousel)
 
     private var header: some View {
-        HomeGreetingCarousel(vm: dashVM)
+        HomeGreetingCarousel(vm: dashVM, onNpsTap: { npsSheetPresented = true })
     }
 
     // MARK: - Warehouse address card (matches mockup)
