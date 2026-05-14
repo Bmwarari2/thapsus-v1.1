@@ -28,6 +28,7 @@ import com.thapsus.cargo.db.TicketMessageEntity
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 /**
  * Offline-first cache. Repositories write through here on every Supabase fetch,
@@ -253,6 +254,19 @@ class ThapsusLocalCache(
         homeGreetingSeen.selectForUser(userId).executeAsList().associate {
             it.greeting_id to it.last_seen_at_ms
         }
+
+    /**
+     * Reactive variant of [homeGreetingSeenForUser]. Emits a fresh map every
+     * time a write hits `HomeGreetingSeenEntity`. The home VM observes this
+     * so a "ticket viewed" / "destination opened" write from any feature
+     * (e.g. TicketDetailScreen → [markHomeGreetingSeen]) shows up on the
+     * home carousel immediately, without waiting for a manual refresh.
+     */
+    fun observeHomeGreetingSeenForUser(userId: String): Flow<Map<String, Long>> =
+        homeGreetingSeen.selectForUser(userId)
+            .asFlow()
+            .mapToList(ioDispatcher)
+            .map { rows -> rows.associate { it.greeting_id to it.last_seen_at_ms } }
 
     fun markHomeGreetingSeen(userId: String, greetingId: String, nowMs: Long) {
         homeGreetingSeen.upsert(userId, greetingId, nowMs)

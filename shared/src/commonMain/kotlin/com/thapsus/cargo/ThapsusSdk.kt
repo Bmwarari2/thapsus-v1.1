@@ -142,6 +142,23 @@ object ThapsusSdk {
         return settings.getString(com.thapsus.cargo.data.remote.SecureKeys.SUPABASE_TOKEN)
     }
 
+    /**
+     * Record that the authed customer has just opened the destination behind
+     * a home-screen greeting. Writes a row to the seen-marker table; the home
+     * VM observes that table reactively so the relevant Status greeting
+     * drops on the next emission with no manual refresh.
+     *
+     * Called from non-home view-models (e.g. TicketDetailScreen) that don't
+     * hold a `CustomerDashboardViewModel` reference. Resolves the user-id
+     * from the current `AuthSession.Authenticated`; no-ops while signed out.
+     */
+    fun markHomeGreetingSeen(greetingId: String) {
+        val session = auth().state.value as? com.thapsus.cargo.data.repository.AuthSession.Authenticated
+            ?: return
+        val nowMs = kotlinx.datetime.Clock.System.now().toEpochMilliseconds()
+        cache().markHomeGreetingSeen(session.userId, greetingId, nowMs)
+    }
+
     // ----- View-model factories (Swift owns lifetime via clear()) -----
     fun authViewModel() = AuthViewModel(auth())
 
@@ -155,6 +172,7 @@ object ThapsusSdk {
             orders = orders(),
             dsar = dsar(),
             nps = nps(),
+            tickets = tickets(),
             referrals = referrals(),
             auth = auth(),
             cache = cache()

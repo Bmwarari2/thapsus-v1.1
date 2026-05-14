@@ -190,7 +190,15 @@ struct TicketDetailView: View {
         .liquidBackdrop()
         .navigationTitle(subject)
         .glassNavigationBar()
-        .task { bootstrap() }
+        .task {
+            bootstrap()
+            // Dismisses the home "support ticket has a new response"
+            // greeting next emission — see HomeGreetingBuilder's
+            // ticket-reply freshness rule.
+            if !asAdmin {
+                ThapsusSdk.shared.markHomeGreetingSeen(greetingId: "ticket_reply")
+            }
+        }
     }
 
     private var messageCount: Int {

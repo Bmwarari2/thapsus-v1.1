@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +50,14 @@ fun TicketDetailScreen(ticketId: String, onClose: () -> Unit) {
     DisposableEffect(vm) { onDispose { vm.clear() } }
     val state by vm.state.collectAsStateWithLifecycle()
     var reply by remember { mutableStateOf("") }
+
+    // Dismisses the home "support ticket has a new response" greeting on
+    // next emission — see HomeGreetingBuilder's ticket-reply freshness
+    // rule. Writes a marker to the SQLDelight seen-marker table; the
+    // home VM's reactive seenFlow picks it up automatically.
+    LaunchedEffect(ticketId) {
+        ThapsusSdk.markHomeGreetingSeen("ticket_reply")
+    }
 
     Column(
         modifier = Modifier
