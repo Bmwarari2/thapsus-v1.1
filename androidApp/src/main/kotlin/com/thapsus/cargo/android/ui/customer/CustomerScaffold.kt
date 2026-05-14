@@ -132,8 +132,49 @@ fun CustomerScaffold(
                             )
                         )
                     },
+                    onOpenPendingActions = {
+                        nav.navigate(CustomerRoutes.PENDING_ACTIONS)
+                    },
                     onGreetingTap = { destination ->
                         nav.navigate(destination.toCustomerRoute())
+                    }
+                )
+            }
+            composable(CustomerRoutes.PENDING_ACTIONS) {
+                PendingActionsScreen(
+                    session = session,
+                    onBack = { nav.popBackStack() },
+                    onPayConsolidation = { c ->
+                        val amount = c.invoiceAmount?.toLong() ?: 0L
+                        val title = c.description
+                            ?: if (c.isStandalone) "Standalone invoice" else "Shipping invoice"
+                        nav.navigate(CustomerRoutes.payInvoice("consolidation", c.id, amount, title))
+                    },
+                    onPayBfmQuote = { order ->
+                        val estimateGbp = order.estimateGbp ?: 0.0
+                        val totalGbp = estimateGbp * (1.0 + order.markupPct / 100.0)
+                        val approxKes = (totalGbp * 165.0).toLong().coerceAtLeast(0L)
+                        nav.navigate(
+                            CustomerRoutes.payInvoice(
+                                kind = "buy_for_me",
+                                id = order.id,
+                                amount = approxKes,
+                                title = "Buy-for-me · ${order.itemName}"
+                            )
+                        )
+                    },
+                    onPayBfmInvoice = { p ->
+                        val amount = if (p.amountDueKes > 0) p.amountDueKes else p.amountGrossKes
+                        val title = p.targetLabel?.takeIf { it.isNotBlank() }
+                            ?: "Buy-for-me order"
+                        nav.navigate(
+                            CustomerRoutes.payInvoice(
+                                kind = p.targetKind,
+                                id = p.targetId,
+                                amount = amount,
+                                title = title
+                            )
+                        )
                     }
                 )
             }
