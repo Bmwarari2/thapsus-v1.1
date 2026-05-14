@@ -101,6 +101,9 @@ fun CustomerScaffold(
                         val title = c.description
                             ?: if (c.isStandalone) "Standalone invoice" else "Shipping invoice"
                         nav.navigate(CustomerRoutes.payInvoice("consolidation", c.id, amount, title))
+                    },
+                    onGreetingTap = { destination ->
+                        nav.navigate(destination.toCustomerRoute())
                     }
                 )
             }

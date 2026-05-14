@@ -55,7 +55,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thapsus.cargo.ThapsusSdk
 import com.thapsus.cargo.android.ui.primitives.BigStatTile
 import com.thapsus.cargo.android.ui.primitives.BrandWordmark
-import com.thapsus.cargo.android.ui.primitives.EditorialHeader
 import com.thapsus.cargo.android.ui.primitives.EyebrowPill
 import com.thapsus.cargo.android.ui.primitives.InkCard
 import com.thapsus.cargo.android.ui.primitives.OrangeButton
@@ -65,6 +64,7 @@ import com.thapsus.cargo.android.ui.theme.Brand
 import com.thapsus.cargo.data.dto.CustomerConsolidationDto
 import com.thapsus.cargo.data.repository.AuthSession
 import com.thapsus.cargo.presentation.WarehouseViewModel
+import com.thapsus.cargo.presentation.home.HomeGreetingDestination
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -83,7 +83,8 @@ fun HomeScreen(
     onOpenPreRegister: () -> Unit,
     onOpenParcel: (String) -> Unit,
     onOpenNotifications: () -> Unit,
-    onPayInvoice: (CustomerConsolidationDto) -> Unit
+    onPayInvoice: (CustomerConsolidationDto) -> Unit,
+    onGreetingTap: (HomeGreetingDestination) -> Unit
 ) {
     val dashVm = remember(session.userId) {
         ThapsusSdk.customerDashboardViewModel(session.userId)
@@ -120,10 +121,6 @@ fun HomeScreen(
             .sortedByDescending { it.createdAt ?: "" }
     }
 
-    val firstName = remember(session) {
-        val name = session.profile?.fullName?.takeIf { it.isNotBlank() }
-        name?.split(" ")?.firstOrNull() ?: session.email ?: "there"
-    }
     val fullName = session.profile?.fullName?.takeIf { it.isNotBlank() } ?: "Customer"
     val warehouseCode = session.profile?.warehouseId?.takeIf { it.isNotBlank() } ?: "TC-XXXX"
     val lines = (warehouse as? WarehouseViewModel.UiState.Loaded)
@@ -142,10 +139,7 @@ fun HomeScreen(
             NotifBadge(onClick = onOpenNotifications)
         }
         EyebrowPill(label = "Client Terminal")
-        EditorialHeader(
-            title = "Welcome,\n$firstName",
-            subtitle = "Send us a UK retailer link and we'll do the rest."
-        )
+        HomeGreetingCarousel(dashVm = dashVm, onTap = onGreetingTap)
 
         // BFM-primary pivot: hero card leads with the concierge flow,
         // pre-register sits below as a co-equal secondary path. Mirrors
