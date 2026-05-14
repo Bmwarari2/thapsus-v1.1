@@ -1,0 +1,17 @@
+-- ============================================================
+-- Migration 5.sqm — add HomeGreetingSeenEntity table
+--
+-- Mirrors the new HomeGreetingSeen.sq schema. Adding a `.sq` file alone
+-- only updates fresh installs (the SQLDelight schema generator runs once
+-- at app first launch); existing installs need this migration to pick up
+-- the new table.
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS HomeGreetingSeenEntity (
+    user_id          TEXT NOT NULL,
+    greeting_id      TEXT NOT NULL,
+    last_seen_at_ms  INTEGER NOT NULL,
+    PRIMARY KEY (user_id, greeting_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_greeting_seen_user ON HomeGreetingSeenEntity(user_id);

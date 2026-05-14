@@ -1,0 +1,26 @@
+-- Per-user "I've seen this greeting" markers, keyed by (user_id, greeting_id).
+-- Drives the freshness rule: status greetings (parcels at hub, quote ready,
+-- consolidation ready, etc.) are filtered out by HomeGreetingBuilder once the
+-- underlying event timestamp is <= last_seen_at. Urgent greetings (invoices,
+-- failed payment) ignore this table — they keep firing until the state clears.
+CREATE TABLE IF NOT EXISTS HomeGreetingSeenEntity (
+    user_id          TEXT NOT NULL,
+    greeting_id      TEXT NOT NULL,
+    last_seen_at_ms  INTEGER NOT NULL,
+    PRIMARY KEY (user_id, greeting_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_greeting_seen_user ON HomeGreetingSeenEntity(user_id);
+
+upsert:
+INSERT OR REPLACE INTO HomeGreetingSeenEntity(user_id, greeting_id, last_seen_at_ms)
+VALUES (:user_id, :greeting_id, :last_seen_at_ms);
+
+selectForUser:
+SELECT greeting_id, last_seen_at_ms FROM HomeGreetingSeenEntity WHERE user_id = :user_id;
+
+deleteForUser:
+DELETE FROM HomeGreetingSeenEntity WHERE user_id = :user_id;
+
+deleteAll:
+DELETE FROM HomeGreetingSeenEntity;
