@@ -20,6 +20,8 @@
 		1A0001000000000000000009 /* ParcelDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000009 /* ParcelDetailView.swift */; };
 		1A0001000000000000000054 /* PaymentConfirmationOverlay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000054 /* PaymentConfirmationOverlay.swift */; };
 		1A0001000000000000000055 /* LipanaStkSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000055 /* LipanaStkSheet.swift */; };
+		1A0001000000000000003003 /* HomeGreetingCarousel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000003003 /* HomeGreetingCarousel.swift */; };
+		1A0001000000000000003004 /* HomeGreetingNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000003004 /* HomeGreetingNavigation.swift */; };
 		1A000100000000000000000A /* QuoteCalculatorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000200000000000000000A /* QuoteCalculatorView.swift */; };
 		1A000100000000000000000C /* RiderRunView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000200000000000000000C /* RiderRunView.swift */; };
 		1A000100000000000000000D /* PodCaptureView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A000200000000000000000D /* PodCaptureView.swift */; };
@@ -104,6 +106,8 @@
 		1A0002000000000000000009 /* ParcelDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ParcelDetailView.swift; sourceTree = "<group>"; };
 		1A0002000000000000000054 /* PaymentConfirmationOverlay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaymentConfirmationOverlay.swift; sourceTree = "<group>"; };
 		1A0002000000000000000055 /* LipanaStkSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LipanaStkSheet.swift; sourceTree = "<group>"; };
+		1A0002000000000000003003 /* HomeGreetingCarousel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeGreetingCarousel.swift; sourceTree = "<group>"; };
+		1A0002000000000000003004 /* HomeGreetingNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeGreetingNavigation.swift; sourceTree = "<group>"; };
 		1A000200000000000000000A /* QuoteCalculatorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuoteCalculatorView.swift; sourceTree = "<group>"; };
 		1A000200000000000000000C /* RiderRunView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RiderRunView.swift; sourceTree = "<group>"; };
 		1A000200000000000000000D /* PodCaptureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PodCaptureView.swift; sourceTree = "<group>"; };
@@ -262,6 +266,8 @@
 				1A0002000000000000000009 /* ParcelDetailView.swift */,
 				1A0002000000000000000054 /* PaymentConfirmationOverlay.swift */,
 				1A0002000000000000000055 /* LipanaStkSheet.swift */,
+				1A0002000000000000003003 /* HomeGreetingCarousel.swift */,
+				1A0002000000000000003004 /* HomeGreetingNavigation.swift */,
 				1A000200000000000000000A /* QuoteCalculatorView.swift */,
 				1A000200000000000000000C /* RiderRunView.swift */,
 				1A000200000000000000000D /* PodCaptureView.swift */,
@@ -448,6 +454,8 @@
 				1A0001000000000000000009 /* ParcelDetailView.swift in Sources */,
 				1A0001000000000000000054 /* PaymentConfirmationOverlay.swift in Sources */,
 				1A0001000000000000000055 /* LipanaStkSheet.swift in Sources */,
+				1A0001000000000000003003 /* HomeGreetingCarousel.swift in Sources */,
+				1A0001000000000000003004 /* HomeGreetingNavigation.swift in Sources */,
 				1A000100000000000000000A /* QuoteCalculatorView.swift in Sources */,
 				1A000100000000000000000C /* RiderRunView.swift in Sources */,
 				1A000100000000000000000D /* PodCaptureView.swift in Sources */,
