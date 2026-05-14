@@ -28,6 +28,12 @@ data class HomeGreetingSnapshot(
     val quoteExpiringSoon: PendingQuote? = null,
     val quoteReady: PendingQuote? = null,
     val ticketWithUnreadReply: String? = null,
+    /**
+     * `updated_at` of the ticket carried in [ticketWithUnreadReply]. The
+     * builder compares this against the local `"ticket_reply"` seen-marker
+     * to decide whether to fire the greeting — newer than seen → fires.
+     */
+    val ticketWithUnreadReplyAt: Instant? = null,
     val dsarReady: Boolean = false,
 
     // ----- Status -----

@@ -9,6 +9,7 @@ import com.thapsus.cargo.data.dto.PackageDto
 import com.thapsus.cargo.data.dto.PackageStatus
 import com.thapsus.cargo.data.dto.PaymentDto
 import com.thapsus.cargo.data.dto.ReferralSummaryResponse
+import com.thapsus.cargo.data.dto.TicketDto
 import com.thapsus.cargo.data.dto.UserDto
 import com.thapsus.cargo.data.local.ThapsusLocalCache
 import com.thapsus.cargo.data.repository.AuthRepository
@@ -21,6 +22,7 @@ import com.thapsus.cargo.data.repository.OrdersRepository
 import com.thapsus.cargo.data.repository.PackageRepository
 import com.thapsus.cargo.data.repository.PaymentsRepository
 import com.thapsus.cargo.data.repository.ReferralsRepository
+import com.thapsus.cargo.data.repository.TicketsRepository
 import com.thapsus.cargo.presentation.home.HomeGreeting
 import com.thapsus.cargo.presentation.home.HomeGreetingBuilder
 import com.thapsus.cargo.presentation.home.HomeGreetingSnapshot
@@ -62,6 +64,7 @@ class CustomerDashboardViewModel(
     private val dsar: DsarRepository,
     private val nps: NpsRepository,
     private val referrals: ReferralsRepository,
+    private val tickets: TicketsRepository,
     private val auth: AuthRepository,
     private val cache: ThapsusLocalCache,
     private val clock: Clock = Clock.System,
@@ -84,7 +87,16 @@ class CustomerDashboardViewModel(
     private val bfmFlow = MutableStateFlow<List<BuyForMeOrderDto>>(emptyList())
     private val paymentsFlow = MutableStateFlow<List<PaymentDto>>(emptyList())
     private val extrasFlow = MutableStateFlow(ExtraSources())
-    private val seenFlow = MutableStateFlow<Map<String, Instant>>(emptyMap())
+
+    /**
+     * Reactive seen-marker stream from the SQLDelight table. Updates whenever
+     * any code path (this VM's [markGreetingSeen], a ticket-detail screen
+     * calling [ThapsusSdk.markHomeGreetingSeen], etc.) writes to the table.
+     */
+    private val seenFlow: StateFlow<Map<String, Instant>> = cache
+        .observeHomeGreetingSeenForUser(userId)
+        .map { raw -> raw.mapValues { (_, ms) -> Instant.fromEpochMilliseconds(ms) } }
+        .stateIn(scope, SharingStarted.Eagerly, emptyMap())
 
     /** Friendly time-of-day prefix, e.g. "good morning, brian.". Recomputed every refresh. */
     private val _headlinePrefix = MutableStateFlow(
@@ -123,7 +135,15 @@ class CustomerDashboardViewModel(
 
     init {
         refresh()
-        loadSeenMarkers()
+        // The ticket-reply greeting reads its candidate from `ExtraSources.
+        // ticketWithUnreadReply`; subscribe to the live tickets feed so a
+        // fresh admin reply (which bumps `updated_at`) flows in without
+        // waiting for an explicit refresh.
+        scope.launch {
+            tickets.observeMine(userId).collect { ticketList ->
+                extrasFlow.value = extrasFlow.value.withTickets(ticketList)
+            }
+        }
     }
 
     fun refresh() {
@@ -139,7 +159,7 @@ class CustomerDashboardViewModel(
                 bfmFlow.value = list.filter { it.userId == userId }
             }
             payments.list().onSuccess { paymentsFlow.value = it }
-            extrasFlow.value = pullExtras()
+            extrasFlow.value = pullExtras().withTickets(tickets.list().getOrNull().orEmpty())
 
             _refreshing.value = false
         }
@@ -185,23 +205,20 @@ class CustomerDashboardViewModel(
 
     /**
      * Called by the UI after the user opens the destination behind a greeting.
+     * Writes to the SQLDelight seen-marker table; [seenFlow] observes that
+     * table reactively, so the next greeting emission reflects the new
+     * marker with no manual prodding.
+     *
      * Status greetings get filtered out on the next emission; urgent greetings
      * ignore the marker and keep firing until the underlying state clears.
      */
     fun markGreetingSeen(greetingId: String) {
         scope.launch {
-            val now = clock.now()
-            cache.markHomeGreetingSeen(userId, greetingId, now.toEpochMilliseconds())
-            seenFlow.value = seenFlow.value + (greetingId to now)
+            cache.markHomeGreetingSeen(userId, greetingId, clock.now().toEpochMilliseconds())
         }
     }
 
     fun dismissError() { _error.value = null }
-
-    private fun loadSeenMarkers() {
-        val raw = cache.homeGreetingSeenForUser(userId)
-        seenFlow.value = raw.mapValues { Instant.fromEpochMilliseconds(it.value) }
-    }
 
     private fun firstNameOf(profile: UserDto?): String {
         val full = profile?.fullName?.trim().orEmpty()
@@ -321,9 +338,8 @@ private object SnapshotAssembler {
             quoteReady = quoted?.let {
                 HomeGreetingSnapshot.PendingQuote(it.id, it.estimateGbp)
             },
-            // Ticket-reply detection needs a "last viewed at" marker per
-            // ticket that doesn't exist yet — left null until that lands.
-            ticketWithUnreadReply = null,
+            ticketWithUnreadReply = extras.ticketWithUnreadReply,
+            ticketWithUnreadReplyAt = extras.ticketWithUnreadReplyAt,
             dsarReady = extras.dsarReady,
 
             parcelsAtHubCount = atHub.size,
@@ -394,8 +410,38 @@ internal data class ExtraSources(
     val dsarReady: Boolean = false,
     val npsPromptDue: Boolean = false,
     val creditBalanceKes: Long = 0L,
-    val referralLatestJoinAt: Instant? = null
-)
+    val referralLatestJoinAt: Instant? = null,
+    /** Ticket id of the most-recently-updated open ticket — null if none. */
+    val ticketWithUnreadReply: String? = null,
+    /** `updated_at` of that ticket — used by the builder for freshness. */
+    val ticketWithUnreadReplyAt: Instant? = null
+) {
+    /**
+     * Folds an `observeMine`-emitted ticket list into the ticket-reply
+     * slot: the most-recently-updated `open` ticket wins. The greeting's
+     * freshness rule then uses `updatedAt` against the local
+     * `"ticket_reply"` seen-marker.
+     *
+     * Imperfect — it doesn't distinguish staff replies from customer
+     * replies (TicketDto has no such field today) — but in practice the
+     * customer hitting reply already viewed the ticket, so the seen-
+     * marker stays fresh.
+     */
+    internal fun withTickets(tickets: List<TicketDto>): ExtraSources {
+        val mostRecentOpen = tickets
+            .filter { it.status == "open" }
+            .mapNotNull { t ->
+                t.updatedAt
+                    ?.let { runCatching { Instant.parse(it) }.getOrNull() }
+                    ?.let { ts -> t to ts }
+            }
+            .maxByOrNull { it.second }
+        return copy(
+            ticketWithUnreadReply = mostRecentOpen?.first?.id,
+            ticketWithUnreadReplyAt = mostRecentOpen?.second
+        )
+    }
+}
 
 /** Best-effort ISO-8601 parser shared across the VM and SnapshotAssembler. */
 private fun parseInstant(raw: String): Instant? = runCatching { Instant.parse(raw) }.getOrNull()

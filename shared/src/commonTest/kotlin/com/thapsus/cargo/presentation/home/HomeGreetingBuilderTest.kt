@@ -160,6 +160,30 @@ class HomeGreetingBuilderTest {
     }
 
     @Test
+    fun `ticket reply is freshness-gated via per-ticket updatedAt`() {
+        val replyAt = Instant.parse("2026-05-14T09:00:00Z")
+        val snap = HomeGreetingSnapshot(
+            ticketWithUnreadReply = "t-1",
+            ticketWithUnreadReplyAt = replyAt
+        )
+        // No marker yet → fires.
+        val firstRun = HomeGreetingBuilder.build(snap, emptySeen, now)
+        assertTrue(firstRun.any { it is HomeGreeting.TicketReply })
+
+        // User opened the ticket at 09:30 — marker is newer than the reply,
+        // greeting drops.
+        val seen = mapOf("ticket_reply" to Instant.parse("2026-05-14T09:30:00Z"))
+        val secondRun = HomeGreetingBuilder.build(snap, seen, now)
+        assertTrue(secondRun.none { it is HomeGreeting.TicketReply })
+
+        // A fresher admin reply arrives — bumps updatedAt past the marker,
+        // greeting re-fires.
+        val refreshed = snap.copy(ticketWithUnreadReplyAt = Instant.parse("2026-05-14T09:45:00Z"))
+        val thirdRun = HomeGreetingBuilder.build(refreshed, seen, now)
+        assertTrue(thirdRun.any { it is HomeGreeting.TicketReply })
+    }
+
+    @Test
     fun `delivered greeting drops once outside the 48h window`() {
         val justNow = now - 1.days // within window
         val stale = now - 3.days   // outside the 2-day window

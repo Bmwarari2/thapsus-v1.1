@@ -56,7 +56,16 @@ object HomeGreetingBuilder {
                 out += HomeGreeting.QuoteReady(it.orderId, it.amountGbp)
             }
         }
-        snapshot.ticketWithUnreadReply?.let { out += HomeGreeting.TicketReply(it) }
+        snapshot.ticketWithUnreadReply?.let { ticketId ->
+            // Class-level seen marker ("ticket_reply") + per-ticket updatedAt:
+            // freshness fires whenever the latest-updated open ticket has a
+            // newer timestamp than the user's last marker. TicketDetailScreen
+            // writes that marker via ThapsusSdk.markHomeGreetingSeen on
+            // appear; the reactive seenFlow propagates it back here.
+            if (isFresh(HomeGreeting.TicketReply(ticketId).id, snapshot.ticketWithUnreadReplyAt, seenAt)) {
+                out += HomeGreeting.TicketReply(ticketId)
+            }
+        }
         if (snapshot.dsarReady) out += HomeGreeting.DsarReady
 
         // --- Status (priority 9-18) — freshness-gated. ---
