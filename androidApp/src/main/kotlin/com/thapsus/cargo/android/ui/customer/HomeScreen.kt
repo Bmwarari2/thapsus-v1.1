@@ -68,6 +68,7 @@ import com.thapsus.cargo.data.dto.BuyForMeOrderDto
 import com.thapsus.cargo.data.dto.CustomerConsolidationDto
 import com.thapsus.cargo.data.dto.PaymentDto
 import com.thapsus.cargo.data.repository.AuthSession
+import com.thapsus.cargo.presentation.CustomerDashboardViewModel
 import com.thapsus.cargo.presentation.WarehouseViewModel
 import com.thapsus.cargo.presentation.home.HomeGreetingDestination
 import kotlinx.coroutines.delay
@@ -85,6 +86,8 @@ private val DEFAULT_LINES = listOf(
 @Composable
 fun HomeScreen(
     session: AuthSession.Authenticated,
+    dashVm: CustomerDashboardViewModel,
+    activeInvoices: List<CustomerConsolidationDto>,
     onOpenBuyForMe: () -> Unit,
     onOpenPreRegister: () -> Unit,
     onOpenParcel: (String) -> Unit,
@@ -100,42 +103,18 @@ fun HomeScreen(
     // bottom-sheet (not a nav push) on both platforms.
     var npsSheetVisible by remember { mutableStateOf(false) }
     val npsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-    val dashVm = remember(session.userId) {
-        ThapsusSdk.customerDashboardViewModel(session.userId)
-    }
-    val warehouseVm = remember { ThapsusSdk.warehouseViewModel() }
-    val invoicesRepo = remember { ThapsusSdk.customerConsolidations() }
 
+    // `dashVm` and `activeInvoices` are hoisted to CustomerScaffold so the
+    // Home and PendingActions screens share a single VM + a single
+    // Supabase realtime channel for consolidations. See the comment in
+    // CustomerScaffold for the original crash this addresses.
+    val warehouseVm = remember { ThapsusSdk.warehouseViewModel() }
     LaunchedEffect(warehouseVm) { warehouseVm.load() }
-    DisposableEffect(dashVm) { onDispose { dashVm.clear() } }
 
     val state by dashVm.state.collectAsStateWithLifecycle()
     val warehouse by warehouseVm.state.collectAsStateWithLifecycle()
     val bfmPendingInvoices by dashVm.bfmPendingInvoices.collectAsStateWithLifecycle()
     val quotedBfmOrders by dashVm.quotedBfmOrders.collectAsStateWithLifecycle()
-
-    // Active invoices that the customer needs to clear. Mirrors iOS
-    // CustomerDashboardView's `activeInvoicesSection` — same Supabase
-    // path CustomerInvoicesScreen uses, so a status flip lands here
-    // without a manual refresh.
-    var invoices by remember(session.userId) {
-        mutableStateOf<List<CustomerConsolidationDto>>(emptyList())
-    }
-    LaunchedEffect(session.userId) {
-        runCatching { invoicesRepo.fetchForUser(session.userId) }
-            .onSuccess { invoices = it }
-        invoicesRepo.observeForUser(session.userId).collectLatest { updated ->
-            invoices = invoices.toMutableList().also { list ->
-                val idx = list.indexOfFirst { it.id == updated.id }
-                if (idx >= 0) list[idx] = updated else list.add(0, updated)
-            }
-        }
-    }
-    val activeInvoices = remember(invoices) {
-        invoices
-            .filter { it.status == "invoiced" }
-            .sortedByDescending { it.createdAt ?: "" }
-    }
 
     val fullName = session.profile?.fullName?.takeIf { it.isNotBlank() } ?: "Customer"
     val firstName = session.profile?.fullName

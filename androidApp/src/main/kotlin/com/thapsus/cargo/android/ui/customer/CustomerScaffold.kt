@@ -14,7 +14,12 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -26,8 +31,11 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.thapsus.cargo.ThapsusSdk
 import com.thapsus.cargo.android.ui.theme.Brand
+import com.thapsus.cargo.data.dto.CustomerConsolidationDto
 import com.thapsus.cargo.data.repository.AuthSession
+import kotlinx.coroutines.flow.collectLatest
 
 private data class TabSpec(val label: String, val route: String, val icon: ImageVector)
 
@@ -56,6 +64,37 @@ fun CustomerScaffold(
     val nav = rememberNavController()
     val backStack by nav.currentBackStackEntryAsState()
     val currentDestination = backStack?.destination
+
+    // Lifted to scaffold-level so Home + PendingActions share one VM /
+    // one Supabase realtime channel each. The previous design where each
+    // screen instantiated its own dashboard VM caused
+    // `IllegalStateException: You cannot call postgresChangeFlow after
+    // joining the channel` the moment the customer tapped Resolve —
+    // both screens raced to subscribe to the same per-user channel via
+    // `customerConsolidations().observeForUser(userId)` (and the VM's
+    // own `tickets.observeMine(userId)`).
+    val dashVm = remember(session.userId) {
+        ThapsusSdk.customerDashboardViewModel(session.userId)
+    }
+    DisposableEffect(dashVm) { onDispose { dashVm.clear() } }
+
+    val invoicesRepo = remember { ThapsusSdk.customerConsolidations() }
+    var customerConsolidations by remember(session.userId) {
+        mutableStateOf<List<CustomerConsolidationDto>>(emptyList())
+    }
+    LaunchedEffect(session.userId) {
+        runCatching { invoicesRepo.fetchForUser(session.userId) }
+            .onSuccess { customerConsolidations = it }
+        invoicesRepo.observeForUser(session.userId).collectLatest { updated ->
+            customerConsolidations = customerConsolidations.toMutableList().also { list ->
+                val idx = list.indexOfFirst { it.id == updated.id }
+                if (idx >= 0) list[idx] = updated else list.add(0, updated)
+            }
+        }
+    }
+    val activeInvoices = customerConsolidations
+        .filter { it.status == "invoiced" }
+        .sortedByDescending { it.createdAt ?: "" }
 
     Scaffold(
         containerColor = Color.Transparent,
@@ -92,6 +131,8 @@ fun CustomerScaffold(
             composable(CustomerRoutes.HOME) {
                 HomeScreen(
                     session = session,
+                    dashVm = dashVm,
+                    activeInvoices = activeInvoices,
                     onOpenBuyForMe = { nav.navigate(CustomerRoutes.SHOP) },
                     onOpenPreRegister = { nav.navigate(CustomerRoutes.NEW_ORDER) },
                     onOpenParcel = { nav.navigate(CustomerRoutes.parcelDetail(it)) },
@@ -142,7 +183,8 @@ fun CustomerScaffold(
             }
             composable(CustomerRoutes.PENDING_ACTIONS) {
                 PendingActionsScreen(
-                    session = session,
+                    dashVm = dashVm,
+                    activeInvoices = activeInvoices,
                     onBack = { nav.popBackStack() },
                     onPayConsolidation = { c ->
                         val amount = c.invoiceAmount?.toLong() ?: 0L
