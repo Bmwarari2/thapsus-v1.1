@@ -30,6 +30,11 @@ struct CustomerDashboardView: View {
     @State private var customerConsolidations: [CustomerConsolidationDto] = []
     @State private var customerConsolidationsTask: Task<Void, Never>?
     @State private var payTarget: PayTarget?
+    /// Pending buy-for-me payments — observed from the shared dashboard
+    /// VM's `bfmPendingInvoices` StateFlow. Surfaced as a persistent card
+    /// section so a customer who's accepted a quote always sees the
+    /// unpaid invoice, not just when the rotating greeting lands on it.
+    @State private var bfmPendingObs: StateFlowObserver<[PaymentDto]>? = nil
     /// True when the home carousel taps a greeting whose destination is
     /// `HomeGreetingDestinationNpsSurvey`. Drives the `.sheet` modifier
     /// below — NPS surveys are a sheet, not a stack push.
@@ -42,6 +47,7 @@ struct CustomerDashboardView: View {
                 header
                 CutoffBannerView()
                 warehouseCard
+                bfmPendingInvoicesSection
                 activeInvoicesSection
                 actionGrid
                 statsTiles
@@ -127,6 +133,7 @@ struct CustomerDashboardView: View {
         }
         .onDisappear {
             dashVM?.clear(); dashVM = nil; dashObs = nil
+            bfmPendingObs = nil
             warehouseVM = nil; warehouseObs = nil
             customerConsolidationsTask?.cancel()
             customerConsolidationsTask = nil
@@ -375,6 +382,9 @@ struct CustomerDashboardView: View {
             let vm = ThapsusSdk.shared.customerDashboardViewModel(userId: userID)
             dashVM = vm
             dashObs = StateFlowObserver(initial: vm.state.value) { vm.state }
+            bfmPendingObs = StateFlowObserver(initial: vm.bfmPendingInvoices.value) {
+                vm.bfmPendingInvoices
+            }
         }
         if warehouseVM == nil {
             let vm = ThapsusSdk.shared.warehouseViewModel()
@@ -409,6 +419,40 @@ struct CustomerDashboardView: View {
                 ForEach(activeInvoices, id: \.id) { c in
                     CustomerInvoiceCard(consolidation: c) {
                         payTarget = PayTarget.fromConsolidation(c)
+                    }
+                }
+            }
+            .padding(.top, 4)
+        }
+    }
+
+    // MARK: - Buy-for-me pending payments
+
+    /// Pending payment rows from `bfmPendingInvoices` — kept above the
+    /// consolidation invoices section so concierge orders read with
+    /// prominence. A customer who's accepted a BFM quote sees this card
+    /// persistently, independent of where the rotating greeting carousel
+    /// happens to be.
+    private var bfmPendingInvoices: [PaymentDto] {
+        bfmPendingObs?.value ?? []
+    }
+
+    @ViewBuilder
+    private var bfmPendingInvoicesSection: some View {
+        if !bfmPendingInvoices.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    LGEyebrow(text: bfmPendingInvoices.count == 1
+                        ? "Buy-for-me payment due"
+                        : "\(bfmPendingInvoices.count) buy-for-me payments due")
+                    Spacer()
+                    LGPill(text: "Action", tone: .accent)
+                }
+                .padding(.leading, 4)
+
+                ForEach(bfmPendingInvoices, id: \.id) { p in
+                    BfmPendingPaymentCard(payment: p) {
+                        payTarget = PayTarget.fromBfmPayment(p)
                     }
                 }
             }

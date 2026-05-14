@@ -89,6 +89,19 @@ class CustomerDashboardViewModel(
     private val extrasFlow = MutableStateFlow(ExtraSources())
 
     /**
+     * Pending buy-for-me payments — the rows the home tab surfaces as
+     * persistent invoice cards so a customer who accepts a BFM quote and
+     * then dismisses the rotating greeting still sees an actionable
+     * reminder. Filtered from the same payments feed the urgent-invoice
+     * greeting reads, so the two sources stay in sync.
+     */
+    val bfmPendingInvoices: StateFlow<List<PaymentDto>> = paymentsFlow
+        .map { list ->
+            list.filter { it.status == "pending" && it.targetKind == "buy_for_me" }
+        }
+        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+
+    /**
      * Reactive seen-marker stream from the SQLDelight table. Updates whenever
      * any code path (this VM's [markGreetingSeen], a ticket-detail screen
      * calling [ThapsusSdk.markHomeGreetingSeen], etc.) writes to the table.

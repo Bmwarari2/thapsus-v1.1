@@ -65,6 +65,7 @@ import com.thapsus.cargo.android.ui.primitives.SoftCard
 import com.thapsus.cargo.android.ui.primitives.WordmarkSize
 import com.thapsus.cargo.android.ui.theme.Brand
 import com.thapsus.cargo.data.dto.CustomerConsolidationDto
+import com.thapsus.cargo.data.dto.PaymentDto
 import com.thapsus.cargo.data.repository.AuthSession
 import com.thapsus.cargo.presentation.WarehouseViewModel
 import com.thapsus.cargo.presentation.home.HomeGreetingDestination
@@ -88,6 +89,7 @@ fun HomeScreen(
     onOpenParcel: (String) -> Unit,
     onOpenNotifications: () -> Unit,
     onPayInvoice: (CustomerConsolidationDto) -> Unit,
+    onPayBfmInvoice: (PaymentDto) -> Unit,
     onGreetingTap: (HomeGreetingDestination) -> Unit
 ) {
     // Carousel taps whose destination is `NpsSurvey` flip this; everything
@@ -106,6 +108,7 @@ fun HomeScreen(
 
     val state by dashVm.state.collectAsStateWithLifecycle()
     val warehouse by warehouseVm.state.collectAsStateWithLifecycle()
+    val bfmPendingInvoices by dashVm.bfmPendingInvoices.collectAsStateWithLifecycle()
 
     // Active invoices that the customer needs to clear. Mirrors iOS
     // CustomerDashboardView's `activeInvoicesSection` — same Supabase
@@ -168,6 +171,13 @@ fun HomeScreen(
         // CustomerDashboardView's actionGrid on iOS.
         BfmHeroCard(onClick = onOpenBuyForMe)
         PreRegisterCard(onClick = onOpenPreRegister)
+
+        if (bfmPendingInvoices.isNotEmpty()) {
+            BfmPendingInvoicesSection(
+                payments = bfmPendingInvoices,
+                onPay = onPayBfmInvoice
+            )
+        }
 
         if (activeInvoices.isNotEmpty()) {
             ActiveInvoicesSection(invoices = activeInvoices, onPay = onPayInvoice)
@@ -468,6 +478,61 @@ private fun WarehouseCard(name: String, code: String, lines: List<String>) {
                     }
                 }
             )
+        }
+    }
+}
+
+/**
+ * Persistent home section for pending buy-for-me payments — a customer who
+ * accepts a BFM quote should see the unpaid invoice without having to wait
+ * for the rotating greeting to land on it. Sits above the consolidation
+ * invoices section so concierge orders read with prominence.
+ */
+@Composable
+private fun BfmPendingInvoicesSection(
+    payments: List<PaymentDto>,
+    onPay: (PaymentDto) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        EyebrowPill(
+            label = if (payments.size == 1) "Buy-for-me payment due"
+            else "${payments.size} buy-for-me payments due",
+            icon = Icons.AutoMirrored.Filled.ReceiptLong
+        )
+        payments.forEach { p ->
+            BfmPendingInvoiceCard(payment = p, onPay = { onPay(p) })
+        }
+    }
+}
+
+@Composable
+private fun BfmPendingInvoiceCard(payment: PaymentDto, onPay: () -> Unit) {
+    InkCard {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                payment.targetLabel?.takeIf { it.isNotBlank() }
+                    ?: "Buy-for-me order",
+                color = Brand.cream,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 16.sp
+            )
+            val dueKes = if (payment.amountDueKes > 0) payment.amountDueKes
+            else payment.amountGrossKes
+            if (dueKes > 0) {
+                Text(
+                    "KES %,d".format(dueKes),
+                    color = Brand.Orange,
+                    fontFamily = FontFamily.Monospace,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 24.sp
+                )
+            }
+            Text(
+                "Complete payment to release the order to our hub.",
+                color = Brand.cream.copy(alpha = 0.7f),
+                fontSize = 12.sp
+            )
+            OrangeButton(text = "Pay invoice", onClick = onPay)
         }
     }
 }
