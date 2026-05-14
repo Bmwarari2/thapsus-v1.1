@@ -32,8 +32,25 @@ sealed class HomeGreetingDestination {
     /** Buy-for-me order detail. */
     data class BuyForMeOrder(val orderId: String) : HomeGreetingDestination()
 
-    /** Pay-invoice flow targeting a specific invoice. */
-    data class PayInvoice(val invoiceId: String) : HomeGreetingDestination()
+    /**
+     * Pay-invoice flow targeting a specific invoice. Carries the full set of
+     * fields the iOS `PayInvoiceView` and Android `payInvoice(...)` route
+     * already require so the UI can deep-link straight to the pay sheet
+     * instead of bouncing through the invoices list.
+     *
+     * - `targetKind`: payments.target_kind on the server ('order' |
+     *   'consolidation' | 'buy_for_me').
+     * - `targetId`: the row id matching the kind (consolidation id, etc.).
+     * - `amountKes`: KES amount due — drives the pay-sheet summary line.
+     * - `title`: human-readable label ("Shipping invoice", retailer name,
+     *   etc.) for the sheet header; null falls back to a generic title.
+     */
+    data class PayInvoice(
+        val targetKind: String,
+        val targetId: String,
+        val amountKes: Long,
+        val title: String?
+    ) : HomeGreetingDestination()
 
     /** Support ticket detail. */
     data class TicketDetail(val ticketId: String) : HomeGreetingDestination()

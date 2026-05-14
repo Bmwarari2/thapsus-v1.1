@@ -36,13 +36,13 @@ object HomeGreetingBuilder {
         // --- Urgent (priority 1-8) — freshness-immune. ---
 
         snapshot.urgentInvoice?.let { invoice ->
-            if (invoice.overdue) out += HomeGreeting.OverdueInvoice(invoice.id)
-            else out += HomeGreeting.UnpaidInvoice(invoice.id)
+            if (invoice.overdue) out += HomeGreeting.OverdueInvoice(invoice.ref)
+            else out += HomeGreeting.UnpaidInvoice(invoice.ref)
         }
-        snapshot.failedPaymentInvoiceId?.let {
+        snapshot.failedPayment?.let {
             out += HomeGreeting.FailedPayment(it)
         }
-        snapshot.mpesaPendingInvoiceId?.let {
+        snapshot.mpesaPending?.let {
             out += HomeGreeting.MpesaPending(it)
         }
         snapshot.quoteExpiringSoon?.let {

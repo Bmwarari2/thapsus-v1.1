@@ -154,10 +154,9 @@ fun HomeGreetingCarousel(
  * appropriate [CustomerRoutes] string. The carousel hands the destination
  * to the scaffold which dispatches via this helper.
  *
- * Per-record deep-links (specific invoice / BFM order / ticket) fall back
- * to the corresponding list screen for v1 — the customer reaches the
- * record with one more tap from there. A follow-up can route through to
- * detail screens once those are wired with their own deep-link routes.
+ * `PayInvoice` and `TicketDetail` carry the per-record payload and route
+ * straight to the detail screens. `BuyForMeOrder` keeps the list as its
+ * entry point — Android doesn't have a dedicated BFM detail route yet.
  */
 fun HomeGreetingDestination.toCustomerRoute(): String = when (this) {
     is HomeGreetingDestination.Shop -> CustomerRoutes.SHOP
@@ -168,8 +167,13 @@ fun HomeGreetingDestination.toCustomerRoute(): String = when (this) {
     is HomeGreetingDestination.Consolidations -> CustomerRoutes.CONSOLIDATIONS
     is HomeGreetingDestination.CreditCenter -> CustomerRoutes.CREDIT
     is HomeGreetingDestination.BuyForMeOrder -> CustomerRoutes.SHOP
-    is HomeGreetingDestination.PayInvoice -> CustomerRoutes.INVOICES
-    is HomeGreetingDestination.TicketDetail -> CustomerRoutes.TICKETS
+    is HomeGreetingDestination.PayInvoice -> CustomerRoutes.payInvoice(
+        kind = targetKind,
+        id = targetId,
+        amount = amountKes,
+        title = title ?: "Invoice"
+    )
+    is HomeGreetingDestination.TicketDetail -> CustomerRoutes.ticketDetail(ticketId)
     is HomeGreetingDestination.Dsar -> CustomerRoutes.DSAR
     is HomeGreetingDestination.Referral -> CustomerRoutes.REFERRAL
     is HomeGreetingDestination.NpsSurvey -> CustomerRoutes.ACTIVITY
