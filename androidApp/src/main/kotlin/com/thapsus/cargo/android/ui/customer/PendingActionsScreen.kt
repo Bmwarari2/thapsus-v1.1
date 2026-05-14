@@ -1,7 +1,6 @@
 package com.thapsus.cargo.android.ui.customer
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,76 +21,50 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.thapsus.cargo.ThapsusSdk
 import com.thapsus.cargo.android.ui.primitives.EyebrowPill
 import com.thapsus.cargo.android.ui.theme.Brand
+import com.thapsus.cargo.data.dto.BuyForMeOrderDto
 import com.thapsus.cargo.data.dto.CustomerConsolidationDto
-import com.thapsus.cargo.data.repository.AuthSession
-import kotlinx.coroutines.flow.collectLatest
+import com.thapsus.cargo.data.dto.PaymentDto
+import com.thapsus.cargo.presentation.CustomerDashboardViewModel
 
 /**
  * Unified pending-actions list. Surfaces every unpaid item the customer
  * has across all three "invoice" surfaces:
  *
- *   - Buy-for-me quotes (`status='quoted'`) — pre-accept, the customer
- *     was billed but hasn't approved yet.
+ *   - Buy-for-me quotes (`status='quoted'`) — pre-accept.
  *   - Buy-for-me pending payments (`PaymentDto.status='pending'` +
  *     `target_kind='buy_for_me'`) — post-accept, mid-payment.
  *   - Shipping/consolidation invoices (`status='invoiced'`).
  *
- * The home page's `BfmInvoicesSection` + `ActiveInvoicesSection` collapse
- * into a single "Pending actions" summary card once the total crosses 1;
- * tapping it brings the customer here. Card styling matches the home
- * surfaces 1:1 so the carry-over is seamless.
+ * The home page's invoice sections collapse into a single "Pending
+ * actions" card once the total crosses 1; tapping it brings the
+ * customer here. Card styling matches home 1:1 so the carry-over is
+ * seamless.
+ *
+ * Both `dashVm` and `activeInvoices` are owned by [CustomerScaffold] and
+ * passed in — that avoids a second `customerConsolidations.observeForUser
+ * (...)` subscription which would crash with `IllegalStateException: You
+ * cannot call postgresChangeFlow after joining the channel` (the
+ * underlying Supabase channel is keyed by user-id and only allows one
+ * `postgresChangeFlow` per join).
  */
 @Composable
 fun PendingActionsScreen(
-    session: AuthSession.Authenticated,
+    dashVm: CustomerDashboardViewModel,
+    activeInvoices: List<CustomerConsolidationDto>,
     onBack: () -> Unit,
     onPayConsolidation: (CustomerConsolidationDto) -> Unit,
-    onPayBfmQuote: (com.thapsus.cargo.data.dto.BuyForMeOrderDto) -> Unit,
-    onPayBfmInvoice: (com.thapsus.cargo.data.dto.PaymentDto) -> Unit
+    onPayBfmQuote: (BuyForMeOrderDto) -> Unit,
+    onPayBfmInvoice: (PaymentDto) -> Unit
 ) {
-    val dashVm = remember(session.userId) {
-        ThapsusSdk.customerDashboardViewModel(session.userId)
-    }
-    DisposableEffect(dashVm) { onDispose { dashVm.clear() } }
-
-    // Consolidation invoices come from the customer-consolidations repo
-    // with a Supabase-realtime observe — mirrors the same pattern
-    // HomeScreen uses so a status flip from `invoiced` → `paid` lands
-    // here without a refresh.
-    val invoicesRepo = remember { ThapsusSdk.customerConsolidations() }
-    var consolidations by remember(session.userId) {
-        mutableStateOf<List<CustomerConsolidationDto>>(emptyList())
-    }
-    LaunchedEffect(session.userId) {
-        runCatching { invoicesRepo.fetchForUser(session.userId) }
-            .onSuccess { consolidations = it }
-        invoicesRepo.observeForUser(session.userId).collectLatest { updated ->
-            consolidations = consolidations.toMutableList().also { list ->
-                val idx = list.indexOfFirst { it.id == updated.id }
-                if (idx >= 0) list[idx] = updated else list.add(0, updated)
-            }
-        }
-    }
-    val activeInvoices = remember(consolidations) {
-        consolidations
-            .filter { it.status == "invoiced" }
-            .sortedByDescending { it.createdAt ?: "" }
-    }
     val bfmPending by dashVm.bfmPendingInvoices.collectAsStateWithLifecycle()
     val bfmQuoted by dashVm.quotedBfmOrders.collectAsStateWithLifecycle()
     val total = activeInvoices.size + bfmPending.size + bfmQuoted.size
