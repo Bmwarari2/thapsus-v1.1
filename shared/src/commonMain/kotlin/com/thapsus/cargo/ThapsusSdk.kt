@@ -146,7 +146,15 @@ object ThapsusSdk {
     fun authViewModel() = AuthViewModel(auth())
 
     fun customerDashboardViewModel(userId: String) =
-        CustomerDashboardViewModel(userId, packages())
+        CustomerDashboardViewModel(
+            userId = userId,
+            packages = packages(),
+            consolidations = customerConsolidations(),
+            buyForMe = buyForMe(),
+            payments = payments(),
+            auth = auth(),
+            cache = cache()
+        )
 
     fun parcelPreRegViewModel(userId: String) =
         ParcelPreRegViewModel(userId, orders(), packages())

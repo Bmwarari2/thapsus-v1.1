@@ -50,6 +50,7 @@ class ThapsusLocalCache(
     private val notifications = database.notificationQueries
     private val tickets = database.ticketQueries
     private val ticketMessages = database.ticketMessageQueries
+    private val homeGreetingSeen = database.homeGreetingSeenQueries
 
     // ----------------------- Packages -----------------------
 
@@ -241,6 +242,22 @@ class ThapsusLocalCache(
         )
     }
 
+    // ----------------------- Home greeting "seen" markers -----------------------
+
+    /**
+     * Returns a map of greeting-id → last-seen-epoch-ms for the user. Used by
+     * HomeGreetingBuilder to filter status greetings whose underlying event
+     * timestamp is older than the last time the customer opened the destination.
+     */
+    fun homeGreetingSeenForUser(userId: String): Map<String, Long> =
+        homeGreetingSeen.selectForUser(userId).executeAsList().associate {
+            it.greeting_id to it.last_seen_at_ms
+        }
+
+    fun markHomeGreetingSeen(userId: String, greetingId: String, nowMs: Long) {
+        homeGreetingSeen.upsert(userId, greetingId, nowMs)
+    }
+
     // ----------------------- Outbox -----------------------
 
     fun enqueueMutation(
@@ -349,6 +366,7 @@ class ThapsusLocalCache(
             tickets.deleteAll()
             outbox.deleteAll()
             outboxFailures.deleteAll()
+            homeGreetingSeen.deleteAll()
         }
     }
 
