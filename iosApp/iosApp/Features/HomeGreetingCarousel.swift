@@ -8,6 +8,19 @@
 // emission on iOS — the host already has reliable access via
 // `env.session.profile.fullName`.
 //
+// **Why this view subscribes via `.task` + for-await directly rather than
+// the project-standard `StateFlowObserver`:** an earlier iteration used
+// `StateFlowObserver<[HomeGreeting]>`, but iOS reliably caught only the
+// initial `[Default]` emission from `vm.greetings`. Sibling observers
+// (`quotedBfmObs`, `bfmPendingObs`) updated fine because they wrap a
+// `bfmFlow.map(...).stateIn(...)` chain — a single transformation. The
+// `greetings` flow goes through `combine(4 flows).stateIn(Eagerly)`, and
+// SKIE's `AsyncSequence` bridge over that composite was missing the post-
+// bootstrap re-emissions for this particular consumer. Subscribing
+// directly via `.task(id: vm)` + `for await items in vm.greetings`
+// matches SKIE's documented happy-path for Kotlin Flows and resolves
+// the staleness without changes on the Kotlin side.
+//
 // Behaviour:
 //   - One continuous line ("Good morning, Brian. Your shipment is on
 //     its way to Kenya.") at the display font, not two lines at
@@ -35,7 +48,7 @@ struct HomeGreetingCarousel: View {
     /// state and presents `NpsSurveyView` — surveys aren't a push.
     var onNpsTap: () -> Void = {}
 
-    @State private var greetingsObs: StateFlowObserver<[HomeGreeting]>? = nil
+    @State private var greetings: [HomeGreeting] = []
     @State private var index: Int = 0
     @State private var paused: Bool = false
 
@@ -53,7 +66,15 @@ struct HomeGreetingCarousel: View {
         .padding(.top, 8)
         .padding(.bottom, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .onAppear { bootstrap() }
+        // Tie the subscription task's lifetime to the VM identity. When
+        // the parent rebuilds the VM (sign out + back in), `id` flips
+        // and `.task(id:)` restarts subscribe() against the fresh
+        // instance. While `vm` is still nil during initial parent
+        // bootstrap, id is `nil` and subscribe() bails fast; once vm
+        // lands, id changes and the task fires again.
+        .task(id: vm.map(ObjectIdentifier.init)) {
+            await subscribe()
+        }
         .task { await rotationLoop() }
     }
 
@@ -61,8 +82,7 @@ struct HomeGreetingCarousel: View {
 
     @ViewBuilder
     private var content: some View {
-        let list = currentGreetings
-        if let current = list[safe: index] {
+        if let current = greetings[safe: index] {
             interactiveGreeting(current)
                 .simultaneousGesture(
                     LongPressGesture(minimumDuration: 0.15)
@@ -70,9 +90,9 @@ struct HomeGreetingCarousel: View {
                         .onEnded { _ in paused = false }
                 )
 
-            if list.count > 1 {
+            if greetings.count > 1 {
                 HStack(spacing: 6) {
-                    ForEach(0..<list.count, id: \.self) { i in
+                    ForEach(0..<greetings.count, id: \.self) { i in
                         Capsule()
                             .fill(i == index ? LG.fg.opacity(0.85) : LG.fg.opacity(0.20))
                             .frame(width: i == index ? 18 : 6, height: 4)
@@ -140,17 +160,24 @@ struct HomeGreetingCarousel: View {
         return "\(prefix) \(body)"
     }
 
-    // MARK: - State helpers
+    // MARK: - Subscription
 
-    private var currentGreetings: [HomeGreeting] {
-        greetingsObs?.value ?? []
-    }
-
-    private func bootstrap() {
+    /// Drives `greetings` directly off `vm.greetings`. Runs as long as
+    /// the parent `.task(id:)` is alive; cancels + restarts when the VM
+    /// instance changes.
+    private func subscribe() async {
         guard let vm else { return }
-        if greetingsObs == nil {
-            greetingsObs = StateFlowObserver(initial: vm.greetings.value) {
-                vm.greetings
+        // Seed immediately so the first frame after VM creation reads the
+        // current StateFlow value rather than the empty array.
+        let seed = vm.greetings.value
+        await MainActor.run {
+            greetings = seed
+            if index >= seed.count { index = 0 }
+        }
+        for await items in vm.greetings {
+            await MainActor.run {
+                greetings = items
+                if index >= items.count { index = 0 }
             }
         }
     }
@@ -159,10 +186,12 @@ struct HomeGreetingCarousel: View {
         while !Task.isCancelled {
             try? await Task.sleep(for: rotateInterval)
             if paused { continue }
-            let count = currentGreetings.count
+            let count = greetings.count
             guard count > 1 else { continue }
-            withAnimation(fade) {
-                index = (index + 1) % count
+            await MainActor.run {
+                withAnimation(fade) {
+                    index = (index + 1) % count
+                }
             }
         }
     }
@@ -175,3 +204,4 @@ private extension Array {
         return (i >= 0 && i < count) ? self[i] : nil
     }
 }
+
