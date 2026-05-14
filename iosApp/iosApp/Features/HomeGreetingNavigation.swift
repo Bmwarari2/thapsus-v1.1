@@ -3,6 +3,12 @@
 // to a SwiftUI destination view. Tapping a greeting on the home carousel
 // pushes the resulting view onto the Home tab's NavigationStack.
 //
+// SKIE 0.10 bridges `sealed class` variants as Swift **nested** types
+// (e.g. `HomeGreetingDestination.Shop`) rather than the flattened
+// names (`HomeGreetingDestinationShop`) it generates for `sealed
+// interface` variants. The dot syntax below is the load-bearing
+// difference — flattened-name pattern matching does not compile.
+//
 // `PayInvoice` and `TicketDetail` deep-link straight to the per-record
 // screens (PR D — `HomeGreetingDestination` carries the payload now).
 // `BuyForMeOrder` keeps the list as the entry point because the iOS BFM
@@ -19,39 +25,39 @@ extension HomeGreetingDestination {
     @ViewBuilder
     func makeDestinationView() -> some View {
         switch self {
-        case _ as HomeGreetingDestinationShop:
+        case _ as HomeGreetingDestination.Shop:
             BuyForMeView()
-        case _ as HomeGreetingDestinationActivityHub:
+        case _ as HomeGreetingDestination.ActivityHub:
             CustomerActivityHubView()
-        case _ as HomeGreetingDestinationParcels:
+        case _ as HomeGreetingDestination.Parcels:
             TrackingView()
-        case _ as HomeGreetingDestinationInvoices:
+        case _ as HomeGreetingDestination.Invoices:
             CustomerInvoicesView()
-        case _ as HomeGreetingDestinationTransactions:
+        case _ as HomeGreetingDestination.Transactions:
             TransactionsView()
-        case _ as HomeGreetingDestinationConsolidations:
+        case _ as HomeGreetingDestination.Consolidations:
             CustomerActivityHubView()
-        case _ as HomeGreetingDestinationCreditCenter:
+        case _ as HomeGreetingDestination.CreditCenter:
             CreditCenterView()
-        case _ as HomeGreetingDestinationBuyForMeOrder:
+        case _ as HomeGreetingDestination.BuyForMeOrder:
             BuyForMeView()
-        case let pay as HomeGreetingDestinationPayInvoice:
+        case let pay as HomeGreetingDestination.PayInvoice:
             PayInvoiceView(
                 targetKind: pay.targetKind,
                 targetId: pay.targetId,
                 targetTitle: pay.title ?? "Invoice",
                 amountKesGross: pay.amountKes
             )
-        case let ticket as HomeGreetingDestinationTicketDetail:
+        case let ticket as HomeGreetingDestination.TicketDetail:
             // `subject` is the nav-title hint — TicketDetailViewModel
             // loads the real ticket on appear, so an empty initial
             // label resolves once the data arrives.
             TicketDetailView(ticketId: ticket.ticketId, subject: "", asAdmin: false)
-        case _ as HomeGreetingDestinationDsar:
+        case _ as HomeGreetingDestination.Dsar:
             DsarView()
-        case _ as HomeGreetingDestinationReferral:
+        case _ as HomeGreetingDestination.Referral:
             ReferralView()
-        case _ as HomeGreetingDestinationNpsSurvey:
+        case _ as HomeGreetingDestination.NpsSurvey:
             CustomerActivityHubView()
         default:
             BuyForMeView()
