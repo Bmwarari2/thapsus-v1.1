@@ -2,17 +2,25 @@ package com.thapsus.cargo.presentation
 
 import com.thapsus.cargo.data.dto.BuyForMeOrderDto
 import com.thapsus.cargo.data.dto.CustomerConsolidationDto
+import com.thapsus.cargo.data.dto.DsarRequestDto
+import com.thapsus.cargo.data.dto.OrderDto
+import com.thapsus.cargo.data.dto.OrderStatus
 import com.thapsus.cargo.data.dto.PackageDto
 import com.thapsus.cargo.data.dto.PackageStatus
 import com.thapsus.cargo.data.dto.PaymentDto
+import com.thapsus.cargo.data.dto.ReferralSummaryResponse
 import com.thapsus.cargo.data.dto.UserDto
 import com.thapsus.cargo.data.local.ThapsusLocalCache
 import com.thapsus.cargo.data.repository.AuthRepository
 import com.thapsus.cargo.data.repository.AuthSession
 import com.thapsus.cargo.data.repository.BuyForMeRepository
 import com.thapsus.cargo.data.repository.CustomerConsolidationsRepository
+import com.thapsus.cargo.data.repository.DsarRepository
+import com.thapsus.cargo.data.repository.NpsRepository
+import com.thapsus.cargo.data.repository.OrdersRepository
 import com.thapsus.cargo.data.repository.PackageRepository
 import com.thapsus.cargo.data.repository.PaymentsRepository
+import com.thapsus.cargo.data.repository.ReferralsRepository
 import com.thapsus.cargo.presentation.home.HomeGreeting
 import com.thapsus.cargo.presentation.home.HomeGreetingBuilder
 import com.thapsus.cargo.presentation.home.HomeGreetingSnapshot
@@ -50,6 +58,10 @@ class CustomerDashboardViewModel(
     private val consolidations: CustomerConsolidationsRepository,
     private val buyForMe: BuyForMeRepository,
     private val payments: PaymentsRepository,
+    private val orders: OrdersRepository,
+    private val dsar: DsarRepository,
+    private val nps: NpsRepository,
+    private val referrals: ReferralsRepository,
     private val auth: AuthRepository,
     private val cache: ThapsusLocalCache,
     private val clock: Clock = Clock.System,
@@ -71,6 +83,7 @@ class CustomerDashboardViewModel(
     private val consolidationsFlow = MutableStateFlow<List<CustomerConsolidationDto>>(emptyList())
     private val bfmFlow = MutableStateFlow<List<BuyForMeOrderDto>>(emptyList())
     private val paymentsFlow = MutableStateFlow<List<PaymentDto>>(emptyList())
+    private val extrasFlow = MutableStateFlow(ExtraSources())
     private val seenFlow = MutableStateFlow<Map<String, Instant>>(emptyMap())
 
     /** Friendly time-of-day prefix, e.g. "good morning, brian.". Recomputed every refresh. */
@@ -87,10 +100,11 @@ class CustomerDashboardViewModel(
     val greetings: StateFlow<List<HomeGreeting>> = combine(
         packages.observeForUser(userId),
         consolidationsFlow,
-        bfmFlow,
-        paymentsFlow,
+        // combine() caps at 5 args, and we already need 6 inputs, so bundle
+        // the three pull-only flows into a single triple.
+        combine(bfmFlow, paymentsFlow, extrasFlow) { b, p, e -> Triple(b, p, e) },
         combine(auth.state, seenFlow) { authState, seen -> authState to seen }
-    ) { parcels, cons, bfm, pays, (authState, seen) ->
+    ) { parcels, cons, (bfm, pays, extras), (authState, seen) ->
         val profile = (authState as? AuthSession.Authenticated)?.profile
         val firstName = firstNameOf(profile)
         val now = clock.now()
@@ -99,6 +113,7 @@ class CustomerDashboardViewModel(
             consolidations = cons,
             buyForMe = bfm,
             payments = pays,
+            extras = extras,
             authProfile = profile,
             now = now
         )
@@ -124,9 +139,48 @@ class CustomerDashboardViewModel(
                 bfmFlow.value = list.filter { it.userId == userId }
             }
             payments.list().onSuccess { paymentsFlow.value = it }
+            extrasFlow.value = pullExtras()
 
             _refreshing.value = false
         }
+    }
+
+    /**
+     * Pulls the five auxiliary greeting feeds (pre-register orders, DSAR,
+     * NPS, credit balance, referrals) in parallel-ish via independent
+     * suspend calls. Each leg degrades to its zero-state on failure so the
+     * carousel keeps rendering whatever else is signalling.
+     */
+    private suspend fun pullExtras(): ExtraSources {
+        val pendingOrders = runCatching { orders.fetchOrders(userId) }
+            .getOrNull().orEmpty()
+            .filter { it.status == OrderStatus.PENDING }
+        val mostRecentPreReg = pendingOrders
+            .mapNotNull { it.updatedAt?.let(::parseInstant) ?: it.createdAt?.let(::parseInstant) }
+            .maxOrNull()
+
+        val dsarRequests = dsar.listMine().getOrNull().orEmpty()
+        val dsarReady = dsarRequests.any { req ->
+            req.status == "fulfilled" && !req.exportUrl.isNullOrBlank()
+        }
+
+        val npsPending = nps.fetchPending()
+        val credit = payments.myCredit().getOrNull()?.balanceKes ?: 0L
+
+        val referralSummary: ReferralSummaryResponse? = referrals.summary().getOrNull()
+        val latestRefereeJoin = referralSummary
+            ?.referredUsers
+            ?.mapNotNull { it.refereeJoinedAt?.let(::parseInstant) }
+            ?.maxOrNull()
+
+        return ExtraSources(
+            preRegisterProcessing = pendingOrders.isNotEmpty(),
+            preRegisterAt = mostRecentPreReg,
+            dsarReady = dsarReady,
+            npsPromptDue = npsPending.isNotEmpty(),
+            creditBalanceKes = credit,
+            referralLatestJoinAt = latestRefereeJoin
+        )
     }
 
     /**
@@ -199,6 +253,7 @@ private object SnapshotAssembler {
         consolidations: List<CustomerConsolidationDto>,
         buyForMe: List<BuyForMeOrderDto>,
         payments: List<PaymentDto>,
+        extras: ExtraSources,
         authProfile: UserDto?,
         now: Instant
     ): HomeGreetingSnapshot {
@@ -266,8 +321,10 @@ private object SnapshotAssembler {
             quoteReady = quoted?.let {
                 HomeGreetingSnapshot.PendingQuote(it.id, it.estimateGbp)
             },
+            // Ticket-reply detection needs a "last viewed at" marker per
+            // ticket that doesn't exist yet — left null until that lands.
             ticketWithUnreadReply = null,
-            dsarReady = false,
+            dsarReady = extras.dsarReady,
 
             parcelsAtHubCount = atHub.size,
             parcelsAtHubLatestAt = atHub.mapNotNull { it.updatedAt?.let(::parseInstant) }.maxOrNull(),
@@ -284,12 +341,12 @@ private object SnapshotAssembler {
             },
             parcelsInTransitCount = inTransit.size,
             parcelsInTransitLatestAt = inTransit.mapNotNull { it.updatedAt?.let(::parseInstant) }.maxOrNull(),
-            preRegisterProcessing = false,
-            preRegisterAt = null,
+            preRegisterProcessing = extras.preRegisterProcessing,
+            preRegisterAt = extras.preRegisterAt,
 
-            creditBalanceGbp = 0.0,
-            referralMilestoneAt = null,
-            npsPromptDue = false
+            creditBalanceKes = extras.creditBalanceKes,
+            referralMilestoneAt = extras.referralLatestJoinAt,
+            npsPromptDue = extras.npsPromptDue
         )
     }
 
@@ -308,5 +365,21 @@ private object SnapshotAssembler {
         return host.takeIf { it.isNotBlank() }
     }
 
-    private fun parseInstant(raw: String): Instant? = runCatching { Instant.parse(raw) }.getOrNull()
 }
+
+/**
+ * Pull-only auxiliary feeds for the home greeting carousel. Lives at file
+ * scope (not inside the VM class) so [SnapshotAssembler] can take it as a
+ * parameter without bumping into private-visibility issues.
+ */
+internal data class ExtraSources(
+    val preRegisterProcessing: Boolean = false,
+    val preRegisterAt: Instant? = null,
+    val dsarReady: Boolean = false,
+    val npsPromptDue: Boolean = false,
+    val creditBalanceKes: Long = 0L,
+    val referralLatestJoinAt: Instant? = null
+)
+
+/** Best-effort ISO-8601 parser shared across the VM and SnapshotAssembler. */
+private fun parseInstant(raw: String): Instant? = runCatching { Instant.parse(raw) }.getOrNull()

@@ -212,12 +212,17 @@ sealed class HomeGreeting(
 
     // ---------- Engagement (19-21) ----------
 
-    /** P=19. Credit balance available to spend (UK side, £). */
-    class CreditBalance(val balanceGbp: Double) : HomeGreeting(
+    /**
+     * P=19. Credit balance available to spend. Denominated in KES because the
+     * server-side credit ledger and `/payments/me/credit` operate in KES, and
+     * the credit offsets KES invoices — showing £ would be a misleading
+     * client-side conversion. £ is reserved for buy-for-me quotes.
+     */
+    class CreditBalance(val balanceKes: Long) : HomeGreeting(
         id = "credit_balance",
         priority = 19,
         category = Category.Engagement,
-        body = "you have £${formatGbp(balanceGbp)} in credit ready to spend.",
+        body = "you have KES ${formatKes(balanceKes)} in credit ready to spend.",
         destination = HomeGreetingDestination.CreditCenter
     )
 
@@ -293,6 +298,22 @@ private fun formatGbp(amount: Double): String {
     if (frac == 0) return "$whole"
     val pad = if (frac < 10) "0$frac" else "$frac"
     return "$whole.$pad"
+}
+
+/**
+ * Renders a KES figure with thousands separators ("1,250", "0", "2,500,000").
+ * KES is a whole-currency value server-side, so no decimal handling.
+ */
+private fun formatKes(amount: Long): String {
+    val abs = if (amount < 0) -amount else amount
+    val raw = abs.toString()
+    val sb = StringBuilder()
+    val len = raw.length
+    for (i in 0 until len) {
+        if (i > 0 && (len - i) % 3 == 0) sb.append(',')
+        sb.append(raw[i])
+    }
+    return if (amount < 0) "-$sb" else sb.toString()
 }
 
 /**

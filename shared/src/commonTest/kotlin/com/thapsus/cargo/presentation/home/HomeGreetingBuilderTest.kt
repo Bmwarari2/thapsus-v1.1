@@ -243,19 +243,79 @@ class HomeGreetingBuilderTest {
     }
 
     @Test
-    fun `credit balance always uses £ and 2dp when fractional`() {
+    fun `credit balance renders KES with thousands separators (server ledger is KES)`() {
         assertEquals(
-            "you have £15 in credit ready to spend.",
-            HomeGreeting.CreditBalance(15.0).body
+            "you have KES 250 in credit ready to spend.",
+            HomeGreeting.CreditBalance(250L).body
         )
         assertEquals(
-            "you have £15.50 in credit ready to spend.",
-            HomeGreeting.CreditBalance(15.5).body
+            "you have KES 1,500 in credit ready to spend.",
+            HomeGreeting.CreditBalance(1_500L).body
         )
         assertEquals(
-            "you have £15.05 in credit ready to spend.",
-            HomeGreeting.CreditBalance(15.05).body
+            "you have KES 2,500,000 in credit ready to spend.",
+            HomeGreeting.CreditBalance(2_500_000L).body
         )
+    }
+
+    @Test
+    fun `credit-balance greeting only fires when balance is at least 1 KES`() {
+        val snapNone = HomeGreetingSnapshot(creditBalanceKes = 0L)
+        val snapOne = HomeGreetingSnapshot(creditBalanceKes = 1L)
+        assertTrue(
+            HomeGreetingBuilder.build(snapNone, emptySeen, now)
+                .none { it is HomeGreeting.CreditBalance }
+        )
+        assertTrue(
+            HomeGreetingBuilder.build(snapOne, emptySeen, now)
+                .any { it is HomeGreeting.CreditBalance }
+        )
+    }
+
+    @Test
+    fun `referral milestone fires off referralMilestoneAt and is freshness-gated`() {
+        val joinedAt = now - 2.days
+        val snap = HomeGreetingSnapshot(referralMilestoneAt = joinedAt)
+        val firstRun = HomeGreetingBuilder.build(snap, emptySeen, now)
+        assertTrue(firstRun.any { it is HomeGreeting.ReferralMilestone })
+
+        // After the user opens the destination an hour after the join, the
+        // greeting drops — until a fresher referee joins.
+        val seenAfter = mapOf("referral_milestone" to (joinedAt + 1.hours))
+        val secondRun = HomeGreetingBuilder.build(snap, seenAfter, now)
+        assertTrue(secondRun.none { it is HomeGreeting.ReferralMilestone })
+    }
+
+    @Test
+    fun `nps prompt keeps firing while pending — seen-marker doesn't suppress it`() {
+        val snap = HomeGreetingSnapshot(npsPromptDue = true)
+        val seenForever = mapOf(
+            "nps_prompt_due" to Instant.parse("2030-01-01T00:00:00Z")
+        )
+        val out = HomeGreetingBuilder.build(snap, seenForever, now)
+        assertTrue(out.any { it is HomeGreeting.NpsPromptDue })
+    }
+
+    @Test
+    fun `dsar ready surfaces as an urgent signal when feed flags it`() {
+        val snap = HomeGreetingSnapshot(dsarReady = true)
+        val out = HomeGreetingBuilder.build(snap, emptySeen, now)
+        assertEquals(HomeGreeting.DsarReady, out.first())
+    }
+
+    @Test
+    fun `pre-register processing is status-gated by preRegisterAt`() {
+        val submittedAt = now - 1.days
+        val snap = HomeGreetingSnapshot(
+            preRegisterProcessing = true,
+            preRegisterAt = submittedAt
+        )
+        val firstRun = HomeGreetingBuilder.build(snap, emptySeen, now)
+        assertTrue(firstRun.any { it is HomeGreeting.PreRegisterProcessing })
+
+        val seenAfter = mapOf("pre_register_processing" to now)
+        val secondRun = HomeGreetingBuilder.build(snap, seenAfter, now)
+        assertTrue(secondRun.none { it is HomeGreeting.PreRegisterProcessing })
     }
 
     @Test

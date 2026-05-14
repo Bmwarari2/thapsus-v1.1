@@ -111,10 +111,10 @@ object HomeGreetingBuilder {
 
         // --- Engagement (priority 19-21). ---
 
-        if (snapshot.creditBalanceGbp >= 0.01 &&
-            isFresh(HomeGreeting.CreditBalance(snapshot.creditBalanceGbp).id, now, seenAt, sevenDayCooldown = true)
+        if (snapshot.creditBalanceKes >= 1L &&
+            isFresh(HomeGreeting.CreditBalance(snapshot.creditBalanceKes).id, now, seenAt, sevenDayCooldown = true)
         ) {
-            out += HomeGreeting.CreditBalance(snapshot.creditBalanceGbp)
+            out += HomeGreeting.CreditBalance(snapshot.creditBalanceKes)
         }
         snapshot.referralMilestoneAt?.let {
             if (isFresh(HomeGreeting.ReferralMilestone.id, it, seenAt)) {
