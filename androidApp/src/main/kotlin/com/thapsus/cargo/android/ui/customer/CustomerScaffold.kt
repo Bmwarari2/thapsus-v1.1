@@ -102,6 +102,19 @@ fun CustomerScaffold(
                             ?: if (c.isStandalone) "Standalone invoice" else "Shipping invoice"
                         nav.navigate(CustomerRoutes.payInvoice("consolidation", c.id, amount, title))
                     },
+                    onPayBfmInvoice = { p ->
+                        val amount = if (p.amountDueKes > 0) p.amountDueKes else p.amountGrossKes
+                        val title = p.targetLabel?.takeIf { it.isNotBlank() }
+                            ?: "Buy-for-me order"
+                        nav.navigate(
+                            CustomerRoutes.payInvoice(
+                                kind = p.targetKind,
+                                id = p.targetId,
+                                amount = amount,
+                                title = title
+                            )
+                        )
+                    },
                     onGreetingTap = { destination ->
                         nav.navigate(destination.toCustomerRoute())
                     }

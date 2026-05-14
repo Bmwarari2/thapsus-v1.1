@@ -955,6 +955,61 @@ struct CustomerInvoiceCard: View {
     }
 }
 
+/// Persistent home-screen card for a pending buy-for-me payment.
+/// Mirrors `CustomerInvoiceCard` styling so the two invoice-due sections
+/// (BFM + consolidation) read as a coherent group on the dashboard.
+struct BfmPendingPaymentCard: View {
+    let payment: PaymentDto
+    let onPay: () -> Void
+
+    var body: some View {
+        SoftCard {
+            VStack(alignment: .leading, spacing: 10) {
+                HStack {
+                    Label("Buy-for-me payment", systemImage: "wand.and.stars")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Brand.ink)
+                    Spacer()
+                    Text("PAY NOW")
+                        .font(.caption2.weight(.heavy)).tracking(2)
+                        .foregroundStyle(.orange)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(Capsule().fill(Color.orange.opacity(0.16)))
+                }
+                if let title = payment.targetLabel, !title.isEmpty {
+                    Text(title)
+                        .font(.subheadline)
+                        .foregroundStyle(Brand.ink.opacity(0.8))
+                }
+                let amount = payment.amountDueKes > 0 ? payment.amountDueKes : payment.amountGrossKes
+                if amount > 0 {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("KES")
+                            .font(.caption.weight(.semibold))
+                            .foregroundStyle(.secondary)
+                        Text(formatAmount(Double(amount)))
+                            .font(.title2.weight(.bold))
+                            .foregroundStyle(Brand.ink)
+                    }
+                }
+                Text("Complete payment to release the order to our hub.")
+                    .font(.caption).foregroundStyle(.secondary)
+                Button(action: onPay) {
+                    Label("Pay invoice", systemImage: "creditcard.fill")
+                        .frame(maxWidth: .infinity)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(GlassSheenButtonStyle(fill: Brand.orange, foreground: .white))
+            }
+        }
+    }
+
+    private func formatAmount(_ value: Double) -> String {
+        let f = NumberFormatter(); f.numberStyle = .decimal
+        return f.string(from: NSNumber(value: value)) ?? "\(Int(value))"
+    }
+}
+
 
 // MARK: - Buy-for-me quote card on the Orders page
 
@@ -1152,6 +1207,22 @@ struct PayTarget: Identifiable, Hashable {
             id: c.id,
             title: "Shipping invoice",
             amountKes: Int64(amount.rounded())
+        )
+    }
+
+    /// Builds a PayTarget from a server-issued `PaymentDto` row. Used by the
+    /// home BFM-pending section — unlike `fromBfm(BuyForMeOrderDto)` which
+    /// estimates the amount client-side, this reads the authoritative
+    /// `amount_due_kes` (falling back to gross) the server has already
+    /// computed.
+    static func fromBfmPayment(_ p: PaymentDto) -> PayTarget {
+        let amount = p.amountDueKes > 0 ? p.amountDueKes : p.amountGrossKes
+        let title = (p.targetLabel?.isEmpty == false ? p.targetLabel! : "Buy-for-me order")
+        return PayTarget(
+            kind: p.targetKind,
+            id: p.targetId,
+            title: title,
+            amountKes: amount
         )
     }
 }
