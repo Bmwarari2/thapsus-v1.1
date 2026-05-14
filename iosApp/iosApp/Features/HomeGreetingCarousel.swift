@@ -83,7 +83,9 @@ struct HomeGreetingCarousel: View {
     private func interactiveGreeting(_ current: HomeGreeting) -> some View {
         // NPS surveys are a sheet, not a stack push. Branch here so the
         // host view can mount `NpsSurveyView` via its own state binding.
-        if current.destination is HomeGreetingDestinationNpsSurvey {
+        // SKIE bridges sealed-class variants as nested types (dot syntax) —
+        // see HomeGreetingNavigation.swift for the load-bearing comment.
+        if current.destination is HomeGreetingDestination.NpsSurvey {
             Button {
                 vm?.markGreetingSeen(greetingId: current.id)
                 onNpsTap()
