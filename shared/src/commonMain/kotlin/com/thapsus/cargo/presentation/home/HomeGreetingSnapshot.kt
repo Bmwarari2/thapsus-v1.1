@@ -48,7 +48,13 @@ data class HomeGreetingSnapshot(
     val preRegisterAt: Instant? = null,
 
     // ----- Engagement -----
-    val creditBalanceGbp: Double = 0.0,
+    /** KES credit balance from `/payments/me/credit`. Greeting fires when >= 1 KES. */
+    val creditBalanceKes: Long = 0,
+    /**
+     * Most recent referee-join timestamp. When newer than the seen-marker the
+     * milestone greeting fires; the marker then dismisses it until the *next*
+     * referee joins.
+     */
     val referralMilestoneAt: Instant? = null,
     val npsPromptDue: Boolean = false
 ) {

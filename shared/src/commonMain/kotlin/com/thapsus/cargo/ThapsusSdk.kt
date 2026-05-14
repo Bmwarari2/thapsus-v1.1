@@ -152,6 +152,10 @@ object ThapsusSdk {
             consolidations = customerConsolidations(),
             buyForMe = buyForMe(),
             payments = payments(),
+            orders = orders(),
+            dsar = dsar(),
+            nps = nps(),
+            referrals = referrals(),
             auth = auth(),
             cache = cache()
         )
