@@ -15,6 +15,7 @@ object CustomerRoutes {
     const val QUOTE = "customer/quote"
     const val ACCOUNT = "customer/account"
 
+    const val PENDING_ACTIONS = "customer/pending-actions"
     const val NEW_ORDER = "customer/new-order"
     const val PARCEL_DETAIL = "customer/parcel/{parcelId}"
     fun parcelDetail(parcelId: String) = "customer/parcel/$parcelId"

@@ -92,6 +92,7 @@ fun HomeScreen(
     onPayInvoice: (CustomerConsolidationDto) -> Unit,
     onPayBfmInvoice: (PaymentDto) -> Unit,
     onPayBfmQuote: (BuyForMeOrderDto) -> Unit,
+    onOpenPendingActions: () -> Unit,
     onGreetingTap: (HomeGreetingDestination) -> Unit
 ) {
     // Carousel taps whose destination is `NpsSurvey` flip this; everything
@@ -175,17 +176,31 @@ fun HomeScreen(
         BfmHeroCard(onClick = onOpenBuyForMe)
         PreRegisterCard(onClick = onOpenPreRegister)
 
-        if (bfmPendingInvoices.isNotEmpty() || quotedBfmOrders.isNotEmpty()) {
-            BfmInvoicesSection(
-                quotedOrders = quotedBfmOrders,
-                pendingPayments = bfmPendingInvoices,
-                onPayQuote = onPayBfmQuote,
-                onPayPending = onPayBfmInvoice
+        // Combined pending-action total across all three invoice surfaces.
+        // When more than one item is outstanding, collapse the inline
+        // sections into a single summary card with a Resolve CTA — the
+        // home tab stays readable instead of scrolling through five+
+        // identical-looking cards.
+        val pendingActionsTotal = quotedBfmOrders.size +
+            bfmPendingInvoices.size +
+            activeInvoices.size
+        if (pendingActionsTotal > 1) {
+            PendingActionsSummaryCard(
+                total = pendingActionsTotal,
+                onOpen = onOpenPendingActions
             )
-        }
-
-        if (activeInvoices.isNotEmpty()) {
-            ActiveInvoicesSection(invoices = activeInvoices, onPay = onPayInvoice)
+        } else {
+            if (bfmPendingInvoices.isNotEmpty() || quotedBfmOrders.isNotEmpty()) {
+                BfmInvoicesSection(
+                    quotedOrders = quotedBfmOrders,
+                    pendingPayments = bfmPendingInvoices,
+                    onPayQuote = onPayBfmQuote,
+                    onPayPending = onPayBfmInvoice
+                )
+            }
+            if (activeInvoices.isNotEmpty()) {
+                ActiveInvoicesSection(invoices = activeInvoices, onPay = onPayInvoice)
+            }
         }
 
         WarehouseCard(name = fullName, code = warehouseCode, lines = lines)
@@ -488,6 +503,52 @@ private fun WarehouseCard(name: String, code: String, lines: List<String>) {
 }
 
 /**
+ * Single home-tab summary card shown when the customer has more than one
+ * outstanding invoice (BFM quote + BFM pending payment + consolidation,
+ * summed). Replaces the per-kind sections so the tab stays readable
+ * instead of scrolling through five-plus identical cards. Tap opens
+ * [PendingActionsScreen] which lists every item grouped by kind.
+ */
+@Composable
+private fun PendingActionsSummaryCard(
+    total: Int,
+    onOpen: () -> Unit
+) {
+    InkCard {
+        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ReceiptLong,
+                    contentDescription = null,
+                    tint = Brand.Orange,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "PENDING ACTIONS",
+                    color = Brand.cream,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 13.sp,
+                    letterSpacing = 2.sp
+                )
+            }
+            Text(
+                "$total invoices",
+                color = Brand.Orange,
+                fontWeight = FontWeight.ExtraBold,
+                fontSize = 28.sp
+            )
+            Text(
+                "Buy-for-me requests and shipping invoices waiting on your action.",
+                color = Brand.cream.copy(alpha = 0.7f),
+                fontSize = 13.sp
+            )
+            OrangeButton(text = "Resolve pending actions", onClick = onOpen)
+        }
+    }
+}
+
+/**
  * Persistent home section for buy-for-me invoices. Covers both
  * pre-accept (status='quoted' on [BuyForMeOrderDto] — the customer was
  * billed and hasn't approved yet) and post-accept (status='pending' on
@@ -524,7 +585,7 @@ private fun BfmInvoicesSection(
 }
 
 @Composable
-private fun BfmQuotedInvoiceCard(order: BuyForMeOrderDto, onPay: () -> Unit) {
+internal fun BfmQuotedInvoiceCard(order: BuyForMeOrderDto, onPay: () -> Unit) {
     InkCard {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
@@ -559,7 +620,7 @@ private fun BfmQuotedInvoiceCard(order: BuyForMeOrderDto, onPay: () -> Unit) {
 }
 
 @Composable
-private fun BfmPendingInvoiceCard(payment: PaymentDto, onPay: () -> Unit) {
+internal fun BfmPendingInvoiceCard(payment: PaymentDto, onPay: () -> Unit) {
     InkCard {
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Text(
@@ -607,7 +668,7 @@ private fun ActiveInvoicesSection(
 }
 
 @Composable
-private fun ActiveInvoiceCard(
+internal fun ActiveInvoiceCard(
     consolidation: CustomerConsolidationDto,
     onPay: () -> Unit
 ) {

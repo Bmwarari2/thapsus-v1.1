@@ -53,8 +53,7 @@ struct CustomerDashboardView: View {
                 header
                 CutoffBannerView()
                 warehouseCard
-                bfmPendingInvoicesSection
-                activeInvoicesSection
+                pendingActionsArea
                 actionGrid
                 statsTiles
 
@@ -448,6 +447,74 @@ struct CustomerDashboardView: View {
     /// hasn't approved yet.
     private var quotedBfmOrders: [BuyForMeOrderDto] {
         quotedBfmObs?.value ?? []
+    }
+
+    // MARK: - Pending actions area (collapses to a summary when > 1)
+
+    /// Total unpaid items across all three invoice surfaces.
+    private var pendingActionsTotal: Int {
+        quotedBfmOrders.count + bfmPendingInvoices.count + activeInvoices.count
+    }
+
+    /// Renders either the existing inline BFM + consolidation sections
+    /// (when there's at most one item across both kinds) or a single
+    /// summary card with a Resolve CTA → `PendingActionsView` (when
+    /// the customer has multiple things to settle).
+    @ViewBuilder
+    private var pendingActionsArea: some View {
+        if pendingActionsTotal > 1 {
+            pendingActionsSummaryCard
+        } else {
+            bfmPendingInvoicesSection
+            activeInvoicesSection
+        }
+    }
+
+    private var pendingActionsSummaryCard: some View {
+        NavigationLink {
+            PendingActionsView(
+                consolidations: activeInvoices,
+                bfmQuoted: quotedBfmOrders,
+                bfmPending: bfmPendingInvoices,
+                onPickConsolidation: { c in payTarget = PayTarget.fromConsolidation(c) },
+                onPickBfmQuote: { o in payTarget = PayTarget.fromBfm(o) },
+                onPickBfmPending: { p in payTarget = PayTarget.fromBfmPayment(p) }
+            )
+        } label: {
+            SoftCard {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack {
+                        Label("Pending actions", systemImage: "tray.full.fill")
+                            .font(.caption.weight(.heavy)).tracking(2)
+                            .textCase(.uppercase)
+                            .foregroundStyle(Brand.ink.opacity(0.8))
+                        Spacer()
+                        LGPill(text: "Action", tone: .accent)
+                    }
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        Text("\(pendingActionsTotal)")
+                            .font(.system(size: 36, weight: .heavy))
+                            .foregroundStyle(Brand.orange)
+                        Text("invoice\(pendingActionsTotal == 1 ? "" : "s")")
+                            .font(.title3.weight(.semibold))
+                            .foregroundStyle(Brand.ink)
+                    }
+                    Text("Buy-for-me requests and shipping invoices waiting on your action.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                    HStack(spacing: 6) {
+                        Text("Resolve pending actions")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Brand.orange)
+                        Image(systemName: "arrow.right")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Brand.orange)
+                    }
+                }
+            }
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
     }
 
     /// Persistent invoice-due section that covers both BFM states. Sits
