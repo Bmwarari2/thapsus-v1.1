@@ -213,31 +213,43 @@ struct CustomerDashboardView: View {
             return ["Unit 12, Pinewood Court", "Stockport, SK6 1AA, UK"]
         }()
 
-        GlassPanel(corner: LG.Radius.xl, padding: 18) {
-            VStack(alignment: .leading, spacing: 14) {
-                HStack {
-                    LGEyebrow(text: "Your routing reference")
+        // High-contrast "ink terminal" — matches the Android InkCard
+        // warehouse card so the customer's routing reference reads with
+        // the same weight on both platforms. The card is the only place
+        // on Home that drops the translucent glass treatment; the
+        // editorial intent is "this is your fixed reference, treat it
+        // like a hardware terminal screen", and the dark surface gives
+        // mono cream+orange text the contrast iOS otherwise lacked.
+        InkCard {
+            VStack(alignment: .leading, spacing: 16) {
+                HStack(spacing: 8) {
+                    Image(systemName: "mappin.and.ellipse")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(Brand.orange)
+                    Text("YOUR WAREHOUSE ADDRESS")
+                        .font(.caption.weight(.heavy))
+                        .tracking(2)
+                        .foregroundStyle(Brand.cream)
                     Spacer()
-                    LGPill(text: "Active", tone: .ok)
                 }
-                Text(warehouseCode)
-                    .font(.mono(22, weight: .bold))
-                    .foregroundStyle(LG.fg)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Thapsus Cargo · \(warehouseCode)")
-                        .font(.body(13, weight: .semibold))
-                        .foregroundStyle(LG.fg2)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(userName)
+                        .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(Brand.orange)
+                    Text(warehouseCode)
+                        .font(.system(size: 18, weight: .heavy, design: .monospaced))
+                        .foregroundStyle(Brand.orange)
                     ForEach(lines, id: \.self) { line in
                         Text(line)
-                            .font(.body(13, weight: .medium))
-                            .foregroundStyle(LG.fg3)
+                            .font(.system(size: 14, weight: .regular, design: .monospaced))
+                            .foregroundStyle(Brand.cream.opacity(0.85))
                     }
                 }
-                .padding(12)
+                .padding(14)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(
-                    RoundedRectangle(cornerRadius: LG.Radius.md, style: .continuous)
-                        .fill(LG.line)
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color.white.opacity(0.06))
                 )
 
                 Button {
@@ -249,8 +261,10 @@ struct CustomerDashboardView: View {
                         Image(systemName: copied ? "checkmark.circle.fill" : "doc.on.doc")
                         Text(copied ? "Copied!" : "Copy address")
                     }
+                    .frame(maxWidth: .infinity)
+                    .contentShape(Rectangle())
                 }
-                .buttonStyle(LGGlassButtonStyle(compact: true))
+                .buttonStyle(GlassSheenButtonStyle(fill: Brand.orange, foreground: .white))
             }
         }
     }

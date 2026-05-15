@@ -1,5 +1,6 @@
 package com.thapsus.cargo.android.ui.primitives
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -11,22 +12,20 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.FlightTakeoff
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.thapsus.cargo.android.R
 import com.thapsus.cargo.android.ui.theme.Brand
 
 enum class WordmarkSize(val logo: Dp, val text: androidx.compose.ui.unit.TextUnit) {
@@ -36,8 +35,11 @@ enum class WordmarkSize(val logo: Dp, val text: androidx.compose.ui.unit.TextUni
 }
 
 /**
- * Brand wordmark — chevron logo + "Thapsus" (ink) + "Cargo" (orange).
- * Mirrors the iOS `BrandWordmark(size:)` view.
+ * Brand wordmark — chevron logo PNG + "Thapsus" (ink) + "Cargo" (orange).
+ * Mirrors the iOS `BrandWordmark(size:)` view. The drawable
+ * `thapsus_logo.png` is the same 180×180 asset iOS uses, ported into
+ * Android's drawable bucket so the splash, sign-in hero, and home
+ * top-bar all show identical artwork.
  */
 @Composable
 fun BrandWordmark(
@@ -48,22 +50,11 @@ fun BrandWordmark(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // Placeholder chevron disc — the iOS app uses a real PNG; we'll port that
-        // asset into drawable/ during Phase B polish. For now a solid orange dot
-        // keeps layout intact and matches brand color.
-        Box(
-            modifier = Modifier
-                .size(size.logo)
-                .background(Brand.Orange, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                Icons.Filled.FlightTakeoff,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(size.logo * 0.55f)
-            )
-        }
+        Image(
+            painter = painterResource(R.drawable.thapsus_logo),
+            contentDescription = "Thapsus Cargo",
+            modifier = Modifier.size(size.logo)
+        )
         Spacer(Modifier.width(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
