@@ -21,7 +21,7 @@ enum class ThapsusThemePreference(
 ) {
     System("system", "System", "Follow device setting"),
     Light("light", "Light", "Cream background, ink text"),
-    Dark("dark", "Warm charcoal background, cream text");
+    Dark("dark", "Dark", "Warm charcoal background, cream text");
 
     companion object {
         fun fromKey(key: String?): ThapsusThemePreference =
