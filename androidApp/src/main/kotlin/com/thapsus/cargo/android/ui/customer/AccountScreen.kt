@@ -28,6 +28,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Brightness6
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Search
@@ -68,7 +69,8 @@ fun AccountScreen(
     onOpenTickets: () -> Unit = {},
     onOpenReferral: () -> Unit = {},
     onOpenProhibitedSearch: () -> Unit = {},
-    onOpenDsar: () -> Unit = {}
+    onOpenDsar: () -> Unit = {},
+    onOpenAppearance: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -148,6 +150,8 @@ fun AccountScreen(
             LinkRow("Notifications", Icons.Filled.Notifications, onOpenNotifications)
             HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
             LinkRow("Edit profile", Icons.Filled.Edit, onOpenProfileEdit)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("Appearance", Icons.Filled.Brightness6, onOpenAppearance)
         }
 
         Section(title = "Help & rewards") {

@@ -267,8 +267,12 @@ fun CustomerScaffold(
                     onOpenTickets = { nav.navigate(CustomerRoutes.TICKETS) },
                     onOpenReferral = { nav.navigate(CustomerRoutes.REFERRAL) },
                     onOpenProhibitedSearch = { nav.navigate(CustomerRoutes.PROHIBITED) },
-                    onOpenDsar = { nav.navigate(CustomerRoutes.DSAR) }
+                    onOpenDsar = { nav.navigate(CustomerRoutes.DSAR) },
+                    onOpenAppearance = { nav.navigate(CustomerRoutes.APPEARANCE) }
                 )
+            }
+            composable(CustomerRoutes.APPEARANCE) {
+                AppearanceSettingsScreen()
             }
             composable(CustomerRoutes.TRACKING) {
                 TrackingScreen(
