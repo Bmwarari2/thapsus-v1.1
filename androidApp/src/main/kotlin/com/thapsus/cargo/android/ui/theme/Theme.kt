@@ -5,12 +5,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.graphics.Color
 
 @Composable
 fun ThapsusTheme(content: @Composable () -> Unit) {
-    val dark = isSystemInDarkTheme()
-    val scheme = if (dark) {
+    val store = rememberAppearanceStore()
+    val systemDark = isSystemInDarkTheme()
+    val resolvedDark = when (store.theme) {
+        ThapsusThemePreference.System -> systemDark
+        ThapsusThemePreference.Light -> false
+        ThapsusThemePreference.Dark -> true
+    }
+    val scheme = if (resolvedDark) {
         darkColorScheme(
             primary = Brand.Orange,
             onPrimary = Color.White,
@@ -31,9 +38,14 @@ fun ThapsusTheme(content: @Composable () -> Unit) {
             onSurface = Color(0xFF101214)
         )
     }
-    MaterialTheme(
-        colorScheme = scheme,
-        typography = ThapsusTypography,
-        content = content
-    )
+    CompositionLocalProvider(
+        LocalAppearanceStore provides store,
+        LocalIsDarkTheme provides resolvedDark
+    ) {
+        MaterialTheme(
+            colorScheme = scheme,
+            typography = ThapsusTypography,
+            content = content
+        )
+    }
 }

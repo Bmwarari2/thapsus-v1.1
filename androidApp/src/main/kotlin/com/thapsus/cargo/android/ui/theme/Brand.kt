@@ -1,12 +1,13 @@
 package com.thapsus.cargo.android.ui.theme
 
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 
 // Brand tokens — exact hex match for the iOS BrandOrange/Ink/Cream/Peach/Navy/Gold colorsets.
-// Light/dark variants on Ink/Cream/Peach mirror the iOS asset catalog appearance entries.
+// Light/dark variants on Ink/Cream/Peach mirror the iOS asset catalog appearance entries
+// and resolve through [LocalIsDarkTheme] so a user-overridden Light/Dark choice
+// (driven by [AppearanceStore]) flips the entire palette, not just MaterialTheme.
 object Brand {
     val Orange = Color(0xFFF5731A)
     val Navy = Color(0xFF1E3A5F)
@@ -23,13 +24,13 @@ object Brand {
 
     val ink: Color
         @Composable @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) InkDark else InkLight
+        get() = if (LocalIsDarkTheme.current) InkDark else InkLight
 
     val cream: Color
         @Composable @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) CreamDark else CreamLight
+        get() = if (LocalIsDarkTheme.current) CreamDark else CreamLight
 
     val peach: Color
         @Composable @ReadOnlyComposable
-        get() = if (isSystemInDarkTheme()) PeachDark else PeachLight
+        get() = if (LocalIsDarkTheme.current) PeachDark else PeachLight
 }

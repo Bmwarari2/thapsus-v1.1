@@ -14,6 +14,7 @@ object CustomerRoutes {
     const val WALLET = "customer/wallet"
     const val QUOTE = "customer/quote"
     const val ACCOUNT = "customer/account"
+    const val APPEARANCE = "customer/appearance"
 
     const val PENDING_ACTIONS = "customer/pending-actions"
     const val NEW_ORDER = "customer/new-order"
