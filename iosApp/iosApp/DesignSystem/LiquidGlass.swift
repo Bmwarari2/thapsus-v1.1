@@ -87,13 +87,16 @@ enum LG {
     static let glassBgStrong = Color.dynamic(light: 0xFFFFFF, dark: 0x44403A, lightAlpha: 0.40, darkAlpha: 0.70)
     static let glassBorder   = Color.dynamic(light: 0xFFFFFF, dark: 0xFFFFFF, lightAlpha: 0.30, darkAlpha: 0.10)
 
-    // Accent (logo orange)
-    static let accent   = Color(hex: 0xE58D40) // oklch(0.72 0.18 52)
-    static let accent2  = Color(hex: 0xD85D2A) // oklch(0.66 0.20 42)
-    static let accentSoft = Color.dynamic(light: 0xE58D40, dark: 0xE58D40, lightAlpha: 0.14, darkAlpha: 0.22)
+    // Accent (logo orange) — matches Android Brand.Orange (0xFFF5731A) so
+    // the brand reads at the same saturation across platforms. The earlier
+    // softer oklch(0.72 0.18 52) values made the iOS CTA look peachy/washed
+    // next to Android's deeper hex.
+    static let accent   = Color(hex: 0xF5731A)
+    static let accent2  = Color(hex: 0xC85A0E)
+    static let accentSoft = Color.dynamic(light: 0xF5731A, dark: 0xF5731A, lightAlpha: 0.14, darkAlpha: 0.22)
 
     static let accentGradient = LinearGradient(
-        colors: [Color(hex: 0xE69245), Color(hex: 0xD05122)],
+        colors: [Color(hex: 0xF5731A), Color(hex: 0xC85A0E)],
         startPoint: .topLeading,
         endPoint: .bottomTrailing
     )
