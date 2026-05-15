@@ -119,7 +119,17 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
                 AdminAccountScreen(session = session, onSignOut = onSignOut)
             }
             composable(AdminRoutes.USERS) {
-                AdminUsersScreen(onBack = { nav.popBackStack() })
+                AdminUsersScreen(
+                    onBack = { nav.popBackStack() },
+                    onOpenUser = { id -> nav.navigate(AdminRoutes.userDetail(id)) }
+                )
+            }
+            composable(
+                route = AdminRoutes.USER_DETAIL,
+                arguments = listOf(navArgument("userId") { type = NavType.StringType })
+            ) { entry ->
+                val id = entry.arguments?.getString("userId") ?: ""
+                AdminUserDetailScreen(userId = id, onBack = { nav.popBackStack() })
             }
             composable(AdminRoutes.PAYMENTS) {
                 AdminPaymentsScreen(onBack = { nav.popBackStack() })
