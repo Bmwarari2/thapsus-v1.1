@@ -26,6 +26,7 @@ import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.RequestQuote
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -62,7 +63,8 @@ fun AdminConsoleScreen(
     onOpenRevenue: () -> Unit = {},
     onOpenAuditLogs: () -> Unit = {},
     onOpenErrorLogs: () -> Unit = {},
-    onOpenDsarQueue: () -> Unit = {}
+    onOpenDsarQueue: () -> Unit = {},
+    onOpenAmlQueue: () -> Unit = {}
 ) {
     val vm = remember { ThapsusSdk.adminDashboardViewModel() }
     DisposableEffect(vm) { onDispose { vm.clear() } }
@@ -95,7 +97,7 @@ fun AdminConsoleScreen(
                         eyebrow = "Open AML flags",
                         value = "${s.flags.size}",
                         icon = Icons.Filled.Group,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).clickable(onClick = onOpenAmlQueue),
                         accent = Color(0xFFD32F2F)
                     )
                 }
@@ -162,6 +164,8 @@ fun AdminConsoleScreen(
         Text("Compliance & logs", color = Brand.ink, style = MaterialTheme.typography.titleLarge)
         SoftCard {
             Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                LinkRow("AML risk queue", Icons.Filled.Shield, onOpenAmlQueue)
+                Spacer(Modifier.height(1.dp))
                 LinkRow("DSAR queue", Icons.Filled.PrivacyTip, onOpenDsarQueue)
                 Spacer(Modifier.height(1.dp))
                 LinkRow("Audit logs", Icons.Filled.History, onOpenAuditLogs)
