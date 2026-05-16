@@ -39,9 +39,13 @@ struct CustomerHomeView: View {
                         systemImage: "questionmark.bubble.fill",
                         destination: AnyView(TicketsListView())),
                     Row(title: "Data rights (GDPR)",
-                        subtitle: "Export or delete data",
+                        subtitle: "Export your data",
                         systemImage: "lock.shield.fill",
                         destination: AnyView(DsarView())),
+                    Row(title: "Delete account",
+                        subtitle: "14-day cooldown, with data export",
+                        systemImage: "person.crop.circle.badge.xmark",
+                        destination: AnyView(AccountDeletionView())),
                 ])
 
                 MarketingLinksSection()

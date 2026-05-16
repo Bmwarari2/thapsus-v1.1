@@ -242,6 +242,12 @@ object ThapsusSdk {
 
     fun dsarViewModel() = DsarViewModel(dsar())
 
+    fun accountDeletionRepo(): com.thapsus.cargo.data.repository.AccountDeletionRepository =
+        koin().get()
+
+    fun accountDeletionViewModel() =
+        com.thapsus.cargo.presentation.AccountDeletionViewModel(accountDeletionRepo())
+
     fun ticketsListViewModel(userId: String) = TicketsListViewModel(tickets(), userId = userId, asAdmin = false)
 
     fun adminTicketsListViewModel() = TicketsListViewModel(tickets(), userId = null, asAdmin = true)

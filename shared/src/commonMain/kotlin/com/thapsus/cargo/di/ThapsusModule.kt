@@ -118,6 +118,7 @@ object ThapsusKoin {
         single { TicketsRepository(api = get(), supabase = get(), cache = get()) }
         single { ReferralsRepository(api = get()) }
         single { DsarRepository(api = get()) }
+        single { com.thapsus.cargo.data.repository.AccountDeletionRepository(api = get()) }
         single { BuyForMeRepository(api = get(), supabase = get()) }
         single { WarehouseRepository(api = get()) }
         single { InsuranceRepository(api = get()) }
