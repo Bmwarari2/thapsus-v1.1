@@ -90,7 +90,8 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
                     onOpenRevenue = { nav.navigate(AdminRoutes.REVENUE) },
                     onOpenAuditLogs = { nav.navigate(AdminRoutes.AUDIT_LOGS) },
                     onOpenErrorLogs = { nav.navigate(AdminRoutes.ERROR_LOGS) },
-                    onOpenDsarQueue = { nav.navigate(AdminRoutes.DSAR_QUEUE) }
+                    onOpenDsarQueue = { nav.navigate(AdminRoutes.DSAR_QUEUE) },
+                    onOpenAmlQueue = { nav.navigate(AdminRoutes.AML_QUEUE) }
                 )
             }
             composable(AdminRoutes.KPI) {
@@ -167,6 +168,9 @@ fun AdminScaffold(session: AuthSession.Authenticated, onSignOut: () -> Unit) {
             }
             composable(AdminRoutes.DSAR_QUEUE) {
                 AdminDsarQueueScreen(onBack = { nav.popBackStack() })
+            }
+            composable(AdminRoutes.AML_QUEUE) {
+                AdminAmlQueueScreen(onBack = { nav.popBackStack() })
             }
         }
     }
