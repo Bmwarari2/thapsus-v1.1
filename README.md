@@ -223,6 +223,14 @@ The `server-patches/README.md` describes the apply order. When a public API cont
 
 See the PR history on `main` for the full audit-driven workstream (W4–W6, F-6 through F-12, H-4) and the iOS/Android parity tracker.
 
+## Roadmap / Next plans
+
+The next workstream focuses on customer-experience polish across both platforms:
+
+- **Enable notifications** — wire up transactional push end-to-end so customers receive timely alerts for BFM quote-ready, invoice-due, payment-confirmed, and parcel-status transitions. Builds on `server-patches/PUSH_NOTIFICATIONS_SETUP.md` and the existing Supabase Realtime `notifications` channel.
+- **Introduce haptics on iOS** — add `UIImpactFeedbackGenerator` / `UINotificationFeedbackGenerator` cues across key customer interactions (Shop checkout, quote submit, payment confirmation overlay, pull-to-refresh, tab switches) to align the SwiftUI surface with iOS 26 Liquid Glass expectations.
+- **Fix UI readability in the customer Shop section** — improve contrast, typography hierarchy, and spacing in the Buy-for-me Shop tab (product cards, request form, status chips) so the primary customer journey meets Dynamic Type + WCAG AA targets on both light and dark themes.
+
 ## License
 
 Proprietary. Thapsus Cargo team.
