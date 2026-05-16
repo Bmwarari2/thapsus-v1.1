@@ -13,6 +13,14 @@ struct NewOrderView: View {
     @State private var vm: ParcelPreRegViewModel? = nil
     @State private var observer: StateFlowObserver<ParcelPreRegViewModelState>? = nil
 
+    // Warehouse address VM is observed here too so the customer can see
+    // (and copy) the shipping address before picking a retailer on
+    // step 0 — the warehouse-address standalone screen was rolled into
+    // this flow so customers see the address right when they need it.
+    @State private var warehouseVm: WarehouseViewModel? = nil
+    @State private var warehouseObserver: StateFlowObserver<WarehouseViewModelUiState>? = nil
+    @State private var addressCopied: Bool = false
+
     @State private var step: Int = 0
     @State private var market: String = "UK"
     @State private var retailer: String = ""
@@ -27,6 +35,13 @@ struct NewOrderView: View {
 
     private let retailers = ["Amazon", "Shein", "Next", "Asos", "Superdrug", "eBay", "ZARA", "H&M", "Other"]
 
+    private static let defaultWarehouseLines: [String] = [
+        "31 Collingwood Close",
+        "Hazel Grove, Stockport",
+        "SK7 4LB",
+        "United Kingdom"
+    ]
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -34,17 +49,20 @@ struct NewOrderView: View {
                 EditorialHeader(title: "New order",
                                 subtitle: "We'll generate a label and book a slot on the next weekly flight.")
 
-                // Compact process explainer — only shown before the
-                // customer starts filling the form. Once they're past
-                // step 0 we hide it so the progress bar + step content
-                // get full focus and the screen doesn't grow stale
-                // copy on every step.
+                // Warehouse address + process explainer. Only shown on
+                // step 0 so the form gets full focus from step 1
+                // onwards. The address card was previously its own
+                // standalone screen — folded in here because the
+                // customer needs the address at exactly this moment
+                // (right before they check out at a UK retailer).
                 if step == 0 {
+                    warehouseAddressCard
+
                     ProcessStepsCard(
                         title: "How New order works",
                         steps: [
                             ("1", "Tell us about it", "Pick the retailer and what you're sending."),
-                            ("2", "Ship to our UK warehouse", "Use your warehouse address — we'll receive and weigh it."),
+                            ("2", "Ship to the address above", "Use your warehouse address at checkout — we'll receive and weigh the parcel."),
                             ("3", "We quote on receipt", "You'll get an emailed shipping invoice once it's measured."),
                             ("4", "Pay and we fly", "Pay from wallet or card; your parcel rides the next weekly flight."),
                         ]
@@ -314,5 +332,90 @@ struct NewOrderView: View {
         observer = StateFlowObserver(initial: model.state.value) {
             model.state
         }
+        if warehouseVm == nil {
+            let wh = ThapsusSdk.shared.warehouseViewModel()
+            warehouseVm = wh
+            wh.load()
+            warehouseObserver = StateFlowObserver(initial: wh.state.value) {
+                wh.state
+            }
+        }
     }
+
+    // MARK: - Warehouse address card
+
+    @ViewBuilder
+    private var warehouseAddressCard: some View {
+        let auth = env.session as? AuthSessionAuthenticated
+        let displayName = auth?.profile?.fullName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let warehouseCode = auth?.profile?.warehouseId?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .nilIfEmpty ?? "TC-XXXX"
+        let lines: [String] = {
+            if let loaded = warehouseObserver?.value as? WarehouseViewModelUiStateLoaded,
+               let uk = loaded.addresses["UK"], !uk.lines.isEmpty {
+                return uk.lines
+            }
+            return Self.defaultWarehouseLines
+        }()
+
+        InkFeatureCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 8) {
+                    Image(systemName: "mappin.and.ellipse").foregroundStyle(Brand.orange)
+                    Text("Ship your parcel here")
+                        .font(.headline)
+                        .foregroundStyle(Brand.cream)
+                }
+                Text("Use this address when you check out at the UK retailer.")
+                    .font(.footnote)
+                    .foregroundStyle(Brand.cream.opacity(0.7))
+
+                VStack(alignment: .leading, spacing: 6) {
+                    if let name = displayName, !name.isEmpty {
+                        Text(name)
+                            .font(.system(.title3, design: .monospaced).weight(.heavy))
+                            .foregroundStyle(Brand.orange)
+                    }
+                    Text(warehouseCode)
+                        .font(.system(.title3, design: .monospaced).weight(.heavy))
+                        .foregroundStyle(Brand.orange)
+                    ForEach(lines, id: \.self) { line in
+                        Text(line)
+                            .font(.system(.callout, design: .monospaced))
+                            .foregroundStyle(Brand.cream.opacity(0.85))
+                    }
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.white.opacity(0.06))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .stroke(.white.opacity(0.12), lineWidth: 1)
+                )
+
+                Button(action: { copyAddress(lines: lines, code: warehouseCode, name: displayName) }) {
+                    HStack(spacing: 8) {
+                        Image(systemName: addressCopied ? "checkmark.circle.fill" : "doc.on.doc")
+                        Text(addressCopied ? "Copied!" : "Copy address")
+                    }
+                }
+                .buttonStyle(GlassSheenButtonStyle(fill: Brand.orange, foreground: .white))
+            }
+        }
+    }
+
+    private func copyAddress(lines: [String], code: String, name: String?) {
+        let header = [name?.nilIfEmpty, code].compactMap { $0 }
+        UIPasteboard.general.string = (header + lines).joined(separator: "\n")
+        addressCopied = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { addressCopied = false }
+    }
+}
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
 }

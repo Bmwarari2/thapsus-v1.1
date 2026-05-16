@@ -47,10 +47,40 @@ struct HowItWorksView: View {
             stepCard(
                 number: "04",
                 title: "Door-step delivery in Kenya",
-                body: "A rider drops it at your address within 48 hours of touchdown. Already bought somewhere else? Pre-register the parcel and it joins the same flight.",
+                body: "A rider drops it at your address within 48 hours of touchdown.",
                 icon: "scooter",
                 style: .dark
             )
+
+            // Pre-register branch — explicitly called out so customers
+            // already mid-purchase elsewhere know the same pipeline is
+            // available to them. Picks up the same warehouse address
+            // surfaced inside the New order flow.
+            preRegisterBranchCard
+        }
+    }
+
+    @ViewBuilder
+    private var preRegisterBranchCard: some View {
+        CrystalCard {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 10) {
+                    Image(systemName: "plus.rectangle.on.rectangle")
+                        .font(.title3)
+                        .foregroundStyle(.white)
+                        .frame(width: 40, height: 40)
+                        .background(
+                            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                                .fill(Brand.ink)
+                        )
+                    Text("Already bought somewhere else?")
+                        .font(.subheadline.weight(.heavy))
+                        .foregroundStyle(Brand.ink)
+                }
+                Text("Pre-register the parcel and it joins the next weekly flight. Your UK warehouse address is on the Pre-register screen — ship to it at checkout and tap Pre-register when it's on its way.")
+                    .font(.footnote)
+                    .foregroundStyle(.secondary)
+            }
         }
     }
 

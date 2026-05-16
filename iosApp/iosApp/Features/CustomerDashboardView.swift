@@ -347,7 +347,7 @@ struct CustomerDashboardView: View {
                         .font(.body(17, weight: .bold))
                         .foregroundStyle(LG.fg)
                         .multilineTextAlignment(.leading)
-                    Text("Already bought somewhere we don't cover? Tell us it's coming.")
+                    Text("Already bought somewhere we don't cover? Tell us it's coming — your UK warehouse address is here too.")
                         .font(.body(13, weight: .medium))
                         .foregroundStyle(LG.fg3)
                         .multilineTextAlignment(.leading)
