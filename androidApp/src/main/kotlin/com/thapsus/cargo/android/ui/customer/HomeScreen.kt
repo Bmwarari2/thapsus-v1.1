@@ -25,7 +25,6 @@ import androidx.compose.material.icons.filled.AirplanemodeActive
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Link
-import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PostAdd
 import androidx.compose.material.icons.filled.TwoWheeler
@@ -37,19 +36,15 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalClipboardManager
-import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -69,18 +64,8 @@ import com.thapsus.cargo.data.dto.CustomerConsolidationDto
 import com.thapsus.cargo.data.dto.PaymentDto
 import com.thapsus.cargo.data.repository.AuthSession
 import com.thapsus.cargo.presentation.CustomerDashboardViewModel
-import com.thapsus.cargo.presentation.WarehouseViewModel
 import com.thapsus.cargo.presentation.home.HomeGreetingDestination
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-
-private val DEFAULT_LINES = listOf(
-    "31 Collingwood Close",
-    "Hazel Grove, Stockport",
-    "SK7 4LB",
-    "United Kingdom"
-)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -108,22 +93,14 @@ fun HomeScreen(
     // Home and PendingActions screens share a single VM + a single
     // Supabase realtime channel for consolidations. See the comment in
     // CustomerScaffold for the original crash this addresses.
-    val warehouseVm = remember { ThapsusSdk.warehouseViewModel() }
-    LaunchedEffect(warehouseVm) { warehouseVm.load() }
-
     val state by dashVm.state.collectAsStateWithLifecycle()
-    val warehouse by warehouseVm.state.collectAsStateWithLifecycle()
     val bfmPendingInvoices by dashVm.bfmPendingInvoices.collectAsStateWithLifecycle()
     val quotedBfmOrders by dashVm.quotedBfmOrders.collectAsStateWithLifecycle()
 
-    val fullName = session.profile?.fullName?.takeIf { it.isNotBlank() } ?: "Customer"
     val firstName = session.profile?.fullName
         ?.split(" ")
         ?.firstOrNull()
         .orEmpty()
-    val warehouseCode = session.profile?.warehouseId?.takeIf { it.isNotBlank() } ?: "TC-XXXX"
-    val lines = (warehouse as? WarehouseViewModel.UiState.Loaded)
-        ?.addresses?.get("UK")?.lines ?: DEFAULT_LINES
 
     Column(
         modifier = Modifier
@@ -182,42 +159,32 @@ fun HomeScreen(
             }
         }
 
-        WarehouseCard(name = fullName, code = warehouseCode, lines = lines)
-
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        // Three-tile parcel summary matching iOS CustomerDashboardView.
+        // Parcels / In transit / Out for delivery — same labels iOS
+        // uses on its statsTiles row. Source values come straight from
+        // the shared CustomerDashboardViewModel.DashboardState (same VM
+        // backing both platforms).
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             BigStatTile(
-                eyebrow = "Active orders",
+                eyebrow = "Parcels",
                 value = state.totalParcels.toString(),
                 icon = Icons.Filled.Inventory2,
                 modifier = Modifier.weight(1f)
             )
             BigStatTile(
-                eyebrow = "In flight",
+                eyebrow = "In transit",
                 value = state.inFlightParcels.toString(),
                 icon = Icons.Filled.AirplanemodeActive,
                 modifier = Modifier.weight(1f),
                 accent = Color(0xFF2196F3)
             )
-        }
-
-        if (state.recentParcels.isNotEmpty()) {
-            Text(
-                "Recent",
-                color = Brand.ink,
-                style = MaterialTheme.typography.titleLarge
+            BigStatTile(
+                eyebrow = "Out for delivery",
+                value = state.outForDelivery.toString(),
+                icon = Icons.Filled.TwoWheeler,
+                modifier = Modifier.weight(1f),
+                accent = Color(0xFFD9501C)
             )
-            state.recentParcels.take(5).forEach { p ->
-                ParcelTile(
-                    title = p.description?.takeIf { it.isNotBlank() }
-                        ?: p.retailer?.takeIf { it.isNotBlank() }
-                        ?: "Parcel",
-                    // Only surface a tracking number when we have a real one —
-                    // never leak the internal UUID prefix (P3-era bug where
-                    // p.id.take(8) was rendered as if it were a tracking ref).
-                    subtitle = p.trackingNumber?.takeIf { it.isNotBlank() },
-                    onClick = { onOpenParcel(p.id) }
-                )
-            }
         }
 
         HowItWorksSection()
@@ -452,71 +419,6 @@ private fun StepCard(
     }
 }
 
-@Composable
-private fun WarehouseCard(name: String, code: String, lines: List<String>) {
-    val clipboard = LocalClipboardManager.current
-    var copied by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
-
-    InkCard {
-        Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Filled.LocationOn, contentDescription = null, tint = Brand.Orange, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    "YOUR WAREHOUSE ADDRESS",
-                    color = Brand.cream,
-                    fontWeight = FontWeight.ExtraBold,
-                    fontSize = 13.sp,
-                    letterSpacing = 2.sp
-                )
-            }
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
-                    .padding(14.dp)
-            ) {
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text(
-                        name,
-                        color = Brand.Orange,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 18.sp
-                    )
-                    Text(
-                        code,
-                        color = Brand.Orange,
-                        fontFamily = FontFamily.Monospace,
-                        fontWeight = FontWeight.ExtraBold,
-                        fontSize = 18.sp
-                    )
-                    lines.forEach { line ->
-                        Text(
-                            line,
-                            color = Brand.cream.copy(alpha = 0.85f),
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-            OrangeButton(
-                text = if (copied) "Copied!" else "Copy address",
-                onClick = {
-                    clipboard.setText(AnnotatedString((listOf(name, code) + lines).joinToString("\n")))
-                    copied = true
-                    scope.launch {
-                        delay(1800)
-                        copied = false
-                    }
-                }
-            )
-        }
-    }
-}
-
 /**
  * Single home-tab summary card shown when the customer has more than one
  * outstanding invoice (BFM quote + BFM pending payment + consolidation,
@@ -713,34 +615,6 @@ internal fun ActiveInvoiceCard(
                 )
             }
             OrangeButton(text = "Pay invoice", onClick = onPay)
-        }
-    }
-}
-
-@Composable
-private fun ParcelTile(title: String, subtitle: String?, onClick: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Brand.cream.copy(alpha = 0.78f), RoundedCornerShape(22.dp))
-            .clickable(onClick = onClick)
-            .padding(14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Box(
-            modifier = Modifier
-                .size(44.dp)
-                .background(Brand.ink, RoundedCornerShape(12.dp)),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(Icons.Filled.Inventory2, contentDescription = null, tint = Brand.cream)
-        }
-        Spacer(Modifier.width(12.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, color = Brand.ink, fontWeight = FontWeight.SemiBold)
-            subtitle?.let {
-                Text(it, color = Brand.Orange, fontFamily = FontFamily.Monospace, fontSize = 12.sp)
-            }
         }
     }
 }
