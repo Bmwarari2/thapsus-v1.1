@@ -1,5 +1,6 @@
 package com.thapsus.cargo.android.ui.admin
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -43,7 +44,10 @@ import com.thapsus.cargo.presentation.AdminUsersViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminUsersScreen(onBack: () -> Unit) {
+fun AdminUsersScreen(
+    onBack: () -> Unit,
+    onOpenUser: (String) -> Unit = {}
+) {
     val vm = remember { ThapsusSdk.adminUsersViewModel() }
     DisposableEffect(vm) { onDispose { vm.clear() } }
     LaunchedEffect(vm) { vm.load() }
@@ -95,7 +99,7 @@ fun AdminUsersScreen(onBack: () -> Unit) {
                         SoftCard { Text("No users match.", color = Brand.ink.copy(alpha = 0.7f)) }
                     } else {
                         s.users.forEach { user ->
-                            SoftCard {
+                            SoftCard(modifier = Modifier.clickable { onOpenUser(user.id) }) {
                                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                                     Text(
                                         user.name.ifBlank { user.email },
