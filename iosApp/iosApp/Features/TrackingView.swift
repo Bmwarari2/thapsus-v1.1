@@ -171,7 +171,7 @@ struct TrackingView: View {
             NavigationStack {
                 NewOrderView()
             }
-            .glassSheet(detents: [.large, .medium])
+            .glassSheet(detents: [.fraction(0.85), .large])
         }
         .sheet(isPresented: $showingBuyForMe, onDismiss: {
             // BuyForMeView creates its own VM instance (factory in ThapsusSdk),
@@ -183,7 +183,7 @@ struct TrackingView: View {
             NavigationStack {
                 BuyForMeView()
             }
-            .glassSheet(detents: [.large, .medium])
+            .glassSheet(detents: [.fraction(0.85), .large])
         }
         .sheet(isPresented: Binding(
             get: { rejectingBfm != nil },
@@ -218,7 +218,7 @@ struct TrackingView: View {
                 NavigationStack {
                     StageDetailSheet(group: group)
                 }
-                .glassSheet(detents: [.large, .medium])
+                .glassSheet(detents: [.fraction(0.85), .large])
             }
         }
         .scrollContentBackground(.hidden)

@@ -208,18 +208,23 @@ struct BuyForMeView: View {
     }
 
     private func orderRow(_ order: BuyForMeOrderDto) -> some View {
-        CrystalCard {
+        // Dark ink fill so each active BFM order/invoice card reads
+        // with the same weight as the BFM hero on Home — these are
+        // all actionable rows, not passive history. Foreground colours
+        // are flipped to cream for legibility on the ink surface.
+        InkCard {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
-                    Text(order.itemName).font(.headline).foregroundStyle(Brand.ink)
+                    Text(order.itemName).font(.headline).foregroundStyle(Brand.cream)
                     Spacer()
                     statusBadge(order.status)
                 }
                 if let estimate = order.estimateGbp?.doubleValue {
                     Text("Quote: £ \(String(format: "%.2f", estimate)) + \(Int(order.markupPct))% markup")
-                        .font(.footnote).foregroundStyle(.secondary)
+                        .font(.footnote).foregroundStyle(Brand.cream.opacity(0.7))
                 }
-                Text(order.retailerUrl).font(.caption2).foregroundStyle(.secondary)
+                Text(order.retailerUrl)
+                    .font(.caption2).foregroundStyle(Brand.cream.opacity(0.55))
                     .lineLimit(1).truncationMode(.middle)
 
                 if order.status == "quoted" {
@@ -243,7 +248,7 @@ struct BuyForMeView: View {
                         .font(.caption).foregroundStyle(.red)
                 } else if order.status == "pending_quote" {
                     Button("Cancel") { vm?.cancel(id: order.id) }
-                        .buttonStyle(.bordered).tint(.secondary)
+                        .buttonStyle(.bordered).tint(Brand.cream.opacity(0.85))
                 }
             }
         }
