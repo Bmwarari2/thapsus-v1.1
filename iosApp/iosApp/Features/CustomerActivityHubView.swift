@@ -34,12 +34,15 @@ struct CustomerActivityHubView: View {
                 // Pre-register — secondary creation path for customers
                 // who already bought a parcel from a retailer we don't
                 // cover, or who are consolidating items they already own.
+                // Customer-facing copy also flags that this is where the
+                // UK warehouse address lives (rolled in from the standalone
+                // "Warehouse address" screen — same scope, less hopping).
                 NavigationLink { NewOrderView() } label: {
                     HubCard(
                         icon: "plus.rectangle.on.rectangle",
                         iconBg: Color.purple,
                         title: "Pre-register a parcel",
-                        subtitle: "Already bought something? Tell us it's coming."
+                        subtitle: "Already bought something? Tell us it's coming — your UK warehouse address is here too."
                     )
                 }
                 .buttonStyle(.plain)
