@@ -306,7 +306,7 @@ private fun PreRegisterCard(onClick: () -> Unit) {
                 fontSize = 16.sp
             )
             Text(
-                "Already bought somewhere we don't cover? Tell us it's coming.",
+                "Already bought somewhere we don't cover? Tell us it's coming — your UK warehouse address is here too.",
                 color = Brand.ink.copy(alpha = 0.7f),
                 fontSize = 13.sp
             )
@@ -373,10 +373,46 @@ private fun HowItWorksSection() {
         StepCard(
             number = "04",
             title = "Door-step delivery in Kenya",
-            body = "A rider drops it at your address within 48 hours of touchdown. Already bought somewhere else? Pre-register the parcel and it joins the same flight.",
+            body = "A rider drops it at your address within 48 hours of touchdown.",
             icon = Icons.Filled.TwoWheeler,
             dark = true
         )
+
+        // Pre-register branch callout. Explicitly flags the secondary
+        // path for customers who already bought elsewhere, and points
+        // them at the same warehouse address surfaced inside the
+        // Pre-register screen.
+        PreRegisterBranchCard()
+    }
+}
+
+@Composable
+private fun PreRegisterBranchCard() {
+    SoftCard {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(Brand.ink, RoundedCornerShape(12.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.PostAdd, contentDescription = null, tint = Brand.cream)
+                }
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    "Already bought somewhere else?",
+                    color = Brand.ink,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 14.sp
+                )
+            }
+            Text(
+                "Pre-register the parcel and it joins the next weekly flight. Your UK warehouse address is on the Pre-register screen — ship to it at checkout and tap Pre-register when it's on its way.",
+                color = Brand.ink.copy(alpha = 0.7f),
+                fontSize = 12.sp
+            )
+        }
     }
 }
 

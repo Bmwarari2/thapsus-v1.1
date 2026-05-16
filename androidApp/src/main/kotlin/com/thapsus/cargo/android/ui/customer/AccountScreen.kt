@@ -66,7 +66,6 @@ fun AccountScreen(
     onOpenTransactions: () -> Unit = {},
     onOpenConsolidations: () -> Unit = {},
     onOpenInvoices: () -> Unit = {},
-    onOpenWarehouseAddress: () -> Unit = {},
     onOpenTickets: () -> Unit = {},
     onOpenReferral: () -> Unit = {},
     onOpenProhibitedSearch: () -> Unit = {},
@@ -134,8 +133,6 @@ fun AccountScreen(
 
         Section(title = "Send & ship") {
             LinkRow("New order", Icons.Filled.Add, onOpenNewOrder)
-            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
-            LinkRow("Warehouse address", Icons.Filled.LocationOn, onOpenWarehouseAddress)
             HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
             LinkRow("Consolidations", Icons.Filled.Inventory2, onOpenConsolidations)
         }
