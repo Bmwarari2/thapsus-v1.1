@@ -35,6 +35,7 @@ object CustomerRoutes {
     const val TICKET_DETAIL = "customer/tickets/{ticketId}"
     fun ticketDetail(ticketId: String) = "customer/tickets/$ticketId"
     const val DSAR = "customer/dsar"
+    const val ACCOUNT_DELETION = "customer/account-deletion"
     const val REFERRAL = "customer/referral"
     const val PROHIBITED = "customer/prohibited"
     const val PUBLIC_PAY = "customer/public-pay/{orderId}"
