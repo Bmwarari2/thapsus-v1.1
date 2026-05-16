@@ -47,6 +47,14 @@ planning artifacts.
   End-to-end manual test plan covering customer + operator + rider +
   admin journeys. Use before release tagging.
 
+## Submission planning
+
+- [`app_store_submission_plan_2026_05_16.md`](./app_store_submission_plan_2026_05_16.md) —
+  Pre-submission readiness plan derived from the 2026-05-16
+  `app-store-submission-auditor` run. Captures P0/P1/P2 fixes to land
+  before the first App Store Connect upload, plus the steps gated on
+  the paid Apple Developer Program enrolment.
+
 ## User-facing
 
 - [`guide/Thapsus_Cargo_User_Guide.pdf`](./guide/Thapsus_Cargo_User_Guide.pdf)
