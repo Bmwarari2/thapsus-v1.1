@@ -1,6 +1,8 @@
 // CustomerDashboardView.swift
 // Customer Home tab — liquid-glass redesign.
-// Hi-greeting · cut-off banner · warehouse terminal · quick actions · stat tiles.
+// Hi-greeting · cut-off banner · pending actions · quick actions · stat tiles.
+// Warehouse-address terminal lives on the Pre-register (New order)
+// screen now, not here — see claude/ios-warehouse-into-prereg.
 
 import SwiftUI
 import ThapsusShared
@@ -8,12 +10,8 @@ import ThapsusShared
 struct CustomerDashboardView: View {
     @Environment(AppEnvironment.self) private var env
 
-    @State private var warehouseVM: WarehouseViewModel? = nil
-    @State private var warehouseObs: StateFlowObserver<WarehouseViewModelUiState>? = nil
     @State private var dashVM: CustomerDashboardViewModel? = nil
     @State private var dashObs: StateFlowObserver<DashboardState>? = nil
-
-    @State private var copied: Bool = false
     // Expanded by default — customers benefit from seeing the steps as soon as
     // they land on the home tab; they can still collapse it via the toggle
     // below.
@@ -52,7 +50,6 @@ struct CustomerDashboardView: View {
                 topBar
                 header
                 CutoffBannerView()
-                warehouseCard
                 pendingActionsArea
                 actionGrid
                 statsTiles
@@ -113,7 +110,7 @@ struct CustomerDashboardView: View {
             }
             .glassSheet(detents: [.medium, .large])
         }
-        .refreshable { dashVM?.refresh(); warehouseVM?.load() }
+        .refreshable { dashVM?.refresh() }
         .task {
             bootstrap()
             // Customer-consolidation invoices: same Supabase + Realtime
@@ -140,7 +137,6 @@ struct CustomerDashboardView: View {
             dashVM?.clear(); dashVM = nil; dashObs = nil
             bfmPendingObs = nil
             quotedBfmObs = nil
-            warehouseVM = nil; warehouseObs = nil
             customerConsolidationsTask?.cancel()
             customerConsolidationsTask = nil
         }
@@ -193,80 +189,6 @@ struct CustomerDashboardView: View {
             firstName: first,
             onNpsTap: { npsSheetPresented = true }
         )
-    }
-
-    // MARK: - Warehouse address card (matches mockup)
-
-    @ViewBuilder
-    private var warehouseCard: some View {
-        let auth = env.session as? AuthSessionAuthenticated
-        let userName = (auth?.profile?.fullName?.isEmpty == false) ? auth!.profile!.fullName! : "Customer"
-        let warehouseCode: String = {
-            if let id = auth?.profile?.warehouseId, !id.isEmpty { return id }
-            return "THP-XXXXXX"
-        }()
-        let lines: [String] = {
-            if case let loaded as WarehouseViewModelUiStateLoaded = warehouseObs?.value,
-               let uk = loaded.addresses["UK"]?.lines, !uk.isEmpty {
-                return uk
-            }
-            return ["Unit 12, Pinewood Court", "Stockport, SK6 1AA, UK"]
-        }()
-
-        // High-contrast "ink terminal" — matches the Android InkCard
-        // warehouse card so the customer's routing reference reads with
-        // the same weight on both platforms. The card is the only place
-        // on Home that drops the translucent glass treatment; the
-        // editorial intent is "this is your fixed reference, treat it
-        // like a hardware terminal screen", and the dark surface gives
-        // mono cream+orange text the contrast iOS otherwise lacked.
-        InkCard {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack(spacing: 8) {
-                    Image(systemName: "mappin.and.ellipse")
-                        .font(.caption.weight(.bold))
-                        .foregroundStyle(Brand.orange)
-                    Text("YOUR WAREHOUSE ADDRESS")
-                        .font(.caption.weight(.heavy))
-                        .tracking(2)
-                        .foregroundStyle(Brand.cream)
-                    Spacer()
-                }
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(userName)
-                        .font(.system(size: 18, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(Brand.orange)
-                    Text(warehouseCode)
-                        .font(.system(size: 18, weight: .heavy, design: .monospaced))
-                        .foregroundStyle(Brand.orange)
-                    ForEach(lines, id: \.self) { line in
-                        Text(line)
-                            .font(.system(size: 14, weight: .regular, design: .monospaced))
-                            .foregroundStyle(Brand.cream.opacity(0.85))
-                    }
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 18, style: .continuous)
-                        .fill(Color.white.opacity(0.06))
-                )
-
-                Button {
-                    UIPasteboard.general.string = "\(userName)\n\(warehouseCode)\n" + lines.joined(separator: "\n")
-                    copied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { copied = false }
-                } label: {
-                    HStack(spacing: 8) {
-                        Image(systemName: copied ? "checkmark.circle.fill" : "doc.on.doc")
-                        Text(copied ? "Copied!" : "Copy address")
-                    }
-                    .frame(maxWidth: .infinity)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(GlassSheenButtonStyle(fill: Brand.orange, foreground: .white))
-            }
-        }
     }
 
     // MARK: - Action grid (Buy-for-me hero + pre-register secondary)
@@ -409,15 +331,9 @@ struct CustomerDashboardView: View {
                 vm.quotedBfmOrders
             }
         }
-        if warehouseVM == nil {
-            let vm = ThapsusSdk.shared.warehouseViewModel()
-            warehouseVM = vm
-            vm.load()
-            warehouseObs = StateFlowObserver(initial: vm.state.value) { vm.state }
-        }
     }
 
-    // MARK: - Active invoices section (under the address card)
+    // MARK: - Active invoices section
 
     /// Only `invoiced` rows surface here — `paid`/`shipped` belong on the
     /// Activity → Invoices archive (CustomerInvoicesView) and `pending`
