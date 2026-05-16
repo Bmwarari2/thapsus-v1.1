@@ -73,7 +73,7 @@ fun ActivityHubScreen(
             icon = Icons.Filled.PostAdd,
             iconBg = Color(0xFF6A4DBA),
             title = "Pre-register a parcel",
-            subtitle = "Already bought something? Tell us it's coming.",
+            subtitle = "Already bought something? Tell us it's coming — your UK warehouse address is here too.",
             onClick = onOpenPreRegister
         )
         HubCard(

@@ -263,7 +263,6 @@ fun CustomerScaffold(
                     onOpenTransactions = { nav.navigate(CustomerRoutes.TRANSACTIONS) },
                     onOpenConsolidations = { nav.navigate(CustomerRoutes.CONSOLIDATIONS) },
                     onOpenInvoices = { nav.navigate(CustomerRoutes.INVOICES) },
-                    onOpenWarehouseAddress = { nav.navigate(CustomerRoutes.WAREHOUSE) },
                     onOpenTickets = { nav.navigate(CustomerRoutes.TICKETS) },
                     onOpenReferral = { nav.navigate(CustomerRoutes.REFERRAL) },
                     onOpenProhibitedSearch = { nav.navigate(CustomerRoutes.PROHIBITED) },
@@ -291,9 +290,6 @@ fun CustomerScaffold(
             }
             composable(CustomerRoutes.CONSOLIDATIONS) {
                 CustomerConsolidationsScreen(userId = session.userId)
-            }
-            composable(CustomerRoutes.WAREHOUSE) {
-                WarehouseAddressScreen(session = session)
             }
             composable(CustomerRoutes.INVOICES) {
                 CustomerInvoicesScreen(
@@ -333,7 +329,8 @@ fun CustomerScaffold(
             composable(CustomerRoutes.NEW_ORDER) {
                 NewOrderScreen(
                     userId = session.userId,
-                    onClose = { nav.popBackStack() }
+                    onClose = { nav.popBackStack() },
+                    session = session
                 )
             }
             composable(

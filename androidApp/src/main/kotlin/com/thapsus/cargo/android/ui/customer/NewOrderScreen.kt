@@ -19,6 +19,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -29,13 +30,18 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -46,18 +52,42 @@ import com.thapsus.cargo.android.ui.primitives.CalloutBanner
 import com.thapsus.cargo.android.ui.primitives.EditorialHeader
 import com.thapsus.cargo.android.ui.primitives.EyebrowPill
 import com.thapsus.cargo.android.ui.primitives.InkButton
+import com.thapsus.cargo.android.ui.primitives.InkCard
+import com.thapsus.cargo.android.ui.primitives.OrangeButton
 import com.thapsus.cargo.android.ui.primitives.SoftCard
 import com.thapsus.cargo.android.ui.theme.Brand
 import com.thapsus.cargo.data.dto.InsuranceTier
+import com.thapsus.cargo.data.repository.AuthSession
 import com.thapsus.cargo.presentation.ParcelPreRegViewModel
+import com.thapsus.cargo.presentation.WarehouseViewModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private val RETAILERS = listOf("Amazon", "Shein", "Next", "Asos", "Superdrug", "eBay", "ZARA", "H&M", "Other")
 
+private val DEFAULT_WAREHOUSE_LINES = listOf(
+    "31 Collingwood Close",
+    "Hazel Grove, Stockport",
+    "SK7 4LB",
+    "United Kingdom"
+)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewOrderScreen(userId: String, onClose: () -> Unit) {
+fun NewOrderScreen(
+    userId: String,
+    onClose: () -> Unit,
+    session: AuthSession.Authenticated? = null
+) {
     val vm = remember(userId) { ThapsusSdk.parcelPreRegViewModel(userId) }
     DisposableEffect(vm) { onDispose { vm.reset() } }
+
+    // Warehouse address VM — folded in from the standalone
+    // WarehouseAddressScreen so the customer sees the shipping
+    // address right when they need it (before picking a retailer).
+    val warehouseVm = remember { ThapsusSdk.warehouseViewModel() }
+    LaunchedEffect(warehouseVm) { warehouseVm.load() }
+    val warehouseState by warehouseVm.state.collectAsStateWithLifecycle()
 
     val state by vm.state.collectAsStateWithLifecycle()
 
@@ -101,7 +131,12 @@ fun NewOrderScreen(userId: String, onClose: () -> Unit) {
             EyebrowPill(label = "Send a parcel")
             EditorialHeader(
                 title = "New order",
-                subtitle = "We'll generate a label and book a slot on the next weekly flight."
+                subtitle = "Ship to our UK warehouse — we'll consolidate and book a slot on the next weekly flight."
+            )
+
+            WarehouseAddressInlineCard(
+                session = session,
+                warehouseState = warehouseState
             )
 
             SoftCard {
@@ -189,6 +224,95 @@ fun NewOrderScreen(userId: String, onClose: () -> Unit) {
             }
 
             Spacer(Modifier.height(24.dp))
+        }
+    }
+}
+
+@Composable
+private fun WarehouseAddressInlineCard(
+    session: AuthSession.Authenticated?,
+    warehouseState: WarehouseViewModel.UiState
+) {
+    val fullName = session?.profile?.fullName?.takeIf { it.isNotBlank() }
+    val warehouseCode = session?.profile?.warehouseId?.takeIf { it.isNotBlank() } ?: "TC-XXXX"
+    val lines = (warehouseState as? WarehouseViewModel.UiState.Loaded)
+        ?.addresses?.get("UK")?.lines
+        ?.takeIf { it.isNotEmpty() }
+        ?: DEFAULT_WAREHOUSE_LINES
+
+    val clipboard = LocalClipboardManager.current
+    var copied by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    InkCard {
+        Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Filled.LocationOn,
+                    contentDescription = null,
+                    tint = Brand.Orange,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    "SHIP YOUR PARCEL HERE",
+                    color = Brand.cream,
+                    fontWeight = FontWeight.ExtraBold,
+                    fontSize = 12.sp,
+                    letterSpacing = 2.sp
+                )
+            }
+            Text(
+                "Use this address when you check out at the UK retailer. The warehouse code on line 2 is what tags the parcel to your account.",
+                color = Brand.cream.copy(alpha = 0.7f),
+                fontSize = 12.sp
+            )
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(Color.White.copy(alpha = 0.06f), RoundedCornerShape(16.dp))
+                    .padding(14.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    if (fullName != null) {
+                        Text(
+                            fullName,
+                            color = Brand.Orange,
+                            fontFamily = FontFamily.Monospace,
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 18.sp
+                        )
+                    }
+                    Text(
+                        warehouseCode,
+                        color = Brand.Orange,
+                        fontFamily = FontFamily.Monospace,
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 18.sp
+                    )
+                    lines.forEach { line ->
+                        Text(
+                            line,
+                            color = Brand.cream.copy(alpha = 0.85f),
+                            fontFamily = FontFamily.Monospace,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+            OrangeButton(
+                text = if (copied) "Copied!" else "Copy address",
+                onClick = {
+                    val payload = (listOfNotNull(fullName, warehouseCode) + lines)
+                        .joinToString("\n")
+                    clipboard.setText(AnnotatedString(payload))
+                    copied = true
+                    scope.launch {
+                        delay(1800)
+                        copied = false
+                    }
+                }
+            )
         }
     }
 }
