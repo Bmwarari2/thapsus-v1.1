@@ -110,7 +110,9 @@ fun SignInScreen(vm: AuthViewModel) {
     var isSignUp by remember { mutableStateOf(false) }
     var agreedToTerms by remember { mutableStateOf(false) }
     var presentingForgot by remember { mutableStateOf(false) }
+    var presentingTracking by remember { mutableStateOf(false) }
     val forgotSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val trackingSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val openUrl: (String) -> Unit = { url ->
         runCatching {
@@ -269,7 +271,30 @@ fun SignInScreen(vm: AuthViewModel) {
             else -> Unit
         }
 
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.Center
+        ) {
+            TextButton(onClick = { presentingTracking = true }) {
+                Text(
+                    "Track a shipment without signing in",
+                    color = Brand.Orange,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp
+                )
+            }
+        }
+
         Spacer(Modifier.height(24.dp))
+    }
+
+    if (presentingTracking) {
+        ModalBottomSheet(
+            onDismissRequest = { presentingTracking = false },
+            sheetState = trackingSheetState
+        ) {
+            PublicTrackingScreen(onClose = { presentingTracking = false })
+        }
     }
 
     if (presentingForgot) {
