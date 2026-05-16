@@ -86,10 +86,10 @@ struct CustomerDashboardView: View {
         // if/when we want a less aggressive trigger (once per N
         // deliveries, or only via the email link).
         .sheet(isPresented: $showingNewOrder) {
-            NavigationStack { NewOrderView() }.glassSheet(detents: [.large, .medium])
+            NavigationStack { NewOrderView() }.glassSheet(detents: [.fraction(0.85), .large])
         }
         .sheet(isPresented: $showingBuyForMe) {
-            NavigationStack { BuyForMeView() }.glassSheet(detents: [.large, .medium])
+            NavigationStack { BuyForMeView() }.glassSheet(detents: [.fraction(0.85), .large])
         }
         .sheet(item: $payTarget) { target in
             PayInvoiceView(
@@ -108,7 +108,7 @@ struct CustomerDashboardView: View {
                     npsSheetPresented = false
                 }
             }
-            .glassSheet(detents: [.medium, .large])
+            .glassSheet(detents: [.fraction(0.85), .large])
         }
         .refreshable { dashVM?.refresh() }
         .task {
@@ -250,28 +250,29 @@ struct CustomerDashboardView: View {
     }
 
     /// Mirrors `bfmHeroCard`'s horizontal layout (icon-left, title +
-    /// subtitle right) so the two cards align visually. Tonal contrast
-    /// (glass vs accent gradient) carries the primary-vs-secondary
-    /// hierarchy without needing labels like "PRIMARY".
+    /// subtitle right) so the two cards align visually. Dark ink fill
+    /// matches the BFM hero's weight so the secondary card feels
+    /// equally tappable — the orange-vs-ink fill (rather than glass-
+    /// vs-accent) still carries the primary/secondary hierarchy.
     private var preRegisterCard: some View {
         Button { showingNewOrder = true } label: {
             HStack(alignment: .center, spacing: 14) {
                 ZStack {
-                    Circle().fill(LG.glassBgStrong)
+                    Circle().fill(Color.white.opacity(0.10))
                     Image(systemName: "plus.rectangle.on.rectangle")
                         .font(.system(size: 20, weight: .semibold))
-                        .foregroundStyle(LG.accent2)
+                        .foregroundStyle(Brand.orange)
                 }
                 .frame(width: 48, height: 48)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Pre-register a parcel")
                         .font(.body(17, weight: .bold))
-                        .foregroundStyle(LG.fg)
+                        .foregroundStyle(Brand.cream)
                         .multilineTextAlignment(.leading)
                     Text("Already bought somewhere we don't cover? Tell us it's coming — your UK warehouse address is here too.")
                         .font(.body(13, weight: .medium))
-                        .foregroundStyle(LG.fg3)
+                        .foregroundStyle(Brand.cream.opacity(0.7))
                         .multilineTextAlignment(.leading)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -280,23 +281,19 @@ struct CustomerDashboardView: View {
 
                 Image(systemName: "arrow.right")
                     .font(.system(size: 14, weight: .bold))
-                    .foregroundStyle(LG.fg3)
+                    .foregroundStyle(Brand.cream.opacity(0.75))
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
-                ZStack {
-                    RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
-                        .fill(.ultraThinMaterial)
-                    RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
-                        .fill(LG.glassBg)
-                }
+                RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
+                    .fill(Brand.ink)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: LG.Radius.xl, style: .continuous)
-                    .strokeBorder(LG.glassBorder, lineWidth: 1)
+                    .strokeBorder(Color.white.opacity(0.08), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.08), radius: 14, x: 0, y: 8)
+            .shadow(color: .black.opacity(0.18), radius: 14, x: 0, y: 8)
         }
         .buttonStyle(.plain)
     }
@@ -411,13 +408,13 @@ struct CustomerDashboardView: View {
                 onPickBfmPending: { p in payTarget = PayTarget.fromBfmPayment(p) }
             )
         } label: {
-            SoftCard {
+            InkCard {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Label("Pending actions", systemImage: "tray.full.fill")
                             .font(.caption.weight(.heavy)).tracking(2)
                             .textCase(.uppercase)
-                            .foregroundStyle(Brand.ink.opacity(0.8))
+                            .foregroundStyle(Brand.cream.opacity(0.85))
                         Spacer()
                         LGPill(text: "Action", tone: .accent)
                     }
@@ -427,11 +424,11 @@ struct CustomerDashboardView: View {
                             .foregroundStyle(Brand.orange)
                         Text("invoice\(pendingActionsTotal == 1 ? "" : "s")")
                             .font(.title3.weight(.semibold))
-                            .foregroundStyle(Brand.ink)
+                            .foregroundStyle(Brand.cream)
                     }
                     Text("Buy-for-me requests and shipping invoices waiting on your action.")
                         .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Brand.cream.opacity(0.7))
                     HStack(spacing: 6) {
                         Text("Resolve pending actions")
                             .font(.subheadline.weight(.semibold))

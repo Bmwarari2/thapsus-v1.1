@@ -150,7 +150,7 @@ struct PayInvoiceView: View {
             .task { bootstrap() }
             .onChange(of: actionStateKey) { _, _ in handleActionChange() }
         }
-        .glassSheet(detents: [.large, .medium])
+        .glassSheet(detents: [.fraction(0.85), .large])
         .overlay {
             // Overlay sits OUTSIDE the NavigationStack so it covers the
             // sheet's full chrome (including the nav bar) — that's the
