@@ -38,3 +38,7 @@ Thumbs.db
 # Local DB / migration backups (may contain user data)
 .backups/
 .claude/
+
+# Agent skills (installed via `npx skills add`)
+.agents/
+skills-lock.json
