@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.Group
 import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Brightness6
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Search
@@ -70,6 +71,7 @@ fun AccountScreen(
     onOpenReferral: () -> Unit = {},
     onOpenProhibitedSearch: () -> Unit = {},
     onOpenDsar: () -> Unit = {},
+    onOpenAccountDeletion: () -> Unit = {},
     onOpenAppearance: () -> Unit = {}
 ) {
     Column(
@@ -162,6 +164,8 @@ fun AccountScreen(
             LinkRow("Can I ship this?", Icons.Filled.Search, onOpenProhibitedSearch)
             HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
             LinkRow("My data (GDPR)", Icons.Filled.PrivacyTip, onOpenDsar)
+            HorizontalDivider(color = Brand.ink.copy(alpha = 0.08f))
+            LinkRow("Delete account", Icons.Filled.DeleteForever, onOpenAccountDeletion)
         }
 
         Button(

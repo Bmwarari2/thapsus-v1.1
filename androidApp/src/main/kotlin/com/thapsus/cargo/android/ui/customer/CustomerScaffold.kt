@@ -268,6 +268,7 @@ fun CustomerScaffold(
                     onOpenReferral = { nav.navigate(CustomerRoutes.REFERRAL) },
                     onOpenProhibitedSearch = { nav.navigate(CustomerRoutes.PROHIBITED) },
                     onOpenDsar = { nav.navigate(CustomerRoutes.DSAR) },
+                    onOpenAccountDeletion = { nav.navigate(CustomerRoutes.ACCOUNT_DELETION) },
                     onOpenAppearance = { nav.navigate(CustomerRoutes.APPEARANCE) }
                 )
             }
@@ -369,6 +370,9 @@ fun CustomerScaffold(
                 TicketDetailScreen(ticketId = id, onClose = { nav.popBackStack() })
             }
             composable(CustomerRoutes.DSAR) { DsarScreen() }
+            composable(CustomerRoutes.ACCOUNT_DELETION) {
+                AccountDeletionScreen(onBack = { nav.popBackStack() })
+            }
             composable(CustomerRoutes.REFERRAL) { ReferralScreen() }
             composable(CustomerRoutes.PROHIBITED) { ProhibitedSearchScreen() }
             composable(
