@@ -73,11 +73,10 @@ import kotlin.math.max
  * Flow:
  *   1. Show gross amount, credit applied, net amount due (KES).
  *   2. Customer picks Card (Stripe) or M-Pesa.
- *   3a. Card → Stripe path. Android Stripe SDK is not yet wired into
- *       the Gradle deps; this surfaces a clear "Card payments coming
- *       soon" banner and steers the customer to M-Pesa. Once approval
- *       lands to add `com.stripe:stripe-android`, the Stripe Ready
- *       state can be honoured directly here.
+ *   3a. Card → Stripe PaymentSheet (com.stripe:stripe-android), driven by
+ *       the shared VM's `StripeReady` action state. Cancel/fail messages
+ *       surface as a Compose-side `stripeError` without mutating the
+ *       shared VM.
  *   3b. M-Pesa → server returns Till + reference + amount → customer
  *       pays in their M-Pesa app, then pastes the confirmation SMS
  *       into MpesaSubmitBottomSheet → status → 'awaiting_review'.
