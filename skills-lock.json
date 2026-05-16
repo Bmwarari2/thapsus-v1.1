@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "app-store-submission-auditor": {
+      "source": "itsncki-design/app-store-submission-auditor",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "213600877f5d0178d6a509a748fb21d9013197911927f27c103696eb70a2c80c"
+    }
+  }
+}
