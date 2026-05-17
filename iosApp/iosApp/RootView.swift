@@ -194,6 +194,23 @@ struct RootView: View {
             return
         }
 
+        // /verify-email?token=<hex>
+        // PR P — the activation email's CTA lands here. We hand the
+        // plaintext token to AuthViewModel.verifyEmail which posts it to
+        // /api/auth/verify-email; on success the server mints a fresh
+        // auth bundle, the AuthSession flips to Authenticated, and the
+        // RootView gate above transitions automatically into the
+        // role-tabs without any further UI ceremony. Same token shape
+        // as /reset-password (64-char hex from crypto.randomBytes(32)).
+        if comps.count >= 1, comps[0] == "verify-email" {
+            let comp = URLComponents(url: url, resolvingAgainstBaseURL: false)
+            if let token = comp?.queryItems?.first(where: { $0.name == "token" })?.value,
+               Self.isValidResetToken(token) {
+                env.authVM?.verifyEmail(token: token)
+            }
+            return
+        }
+
         guard comps.count >= 2, Self.isValidLinkId(comps[1]) else { return }
         switch comps[0] {
         case "pay":    pendingPaymentOrderId = comps[1]
