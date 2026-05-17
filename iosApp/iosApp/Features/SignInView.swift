@@ -431,7 +431,7 @@ struct SignInView: View {
             LGStatusBanner(
                 tone: .info,
                 title: "Check your inbox",
-                message: "We sent an activation link to \(email). Tap it to finish setting up your account."
+                message: "We sent an activation link to \(email). Tap it within 24 hours to finish setting up your account — after that the link expires and you'll need a fresh one."
             )
             Button("Resend activation email") {
                 env.authVM?.resendVerification(email: email)
