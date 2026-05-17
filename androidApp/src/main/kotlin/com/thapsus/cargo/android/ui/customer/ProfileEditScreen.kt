@@ -53,6 +53,7 @@ fun ProfileEditScreen(onClose: () -> Unit) {
 
     var name by remember(profile?.id) { mutableStateOf(profile?.fullName ?: "") }
     var phone by remember(profile?.id) { mutableStateOf(profile?.phone ?: "") }
+    var deliveryAddress by remember(profile?.id) { mutableStateOf(profile?.deliveryAddress ?: "") }
 
     val isSubmitting = form is ProfileEditViewModel.FormState.Submitting
 
@@ -81,7 +82,7 @@ fun ProfileEditScreen(onClose: () -> Unit) {
             EditorialHeader(
                 eyebrow = "Profile",
                 title = "Edit profile",
-                subtitle = "Update your name and phone number. Email changes need a separate request via Support."
+                subtitle = "Update your name, phone number, and Kenya delivery address. Email changes need a separate request via Support."
             )
             SoftCard {
                 Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -98,6 +99,18 @@ fun ProfileEditScreen(onClose: () -> Unit) {
                         label = { Text("Phone") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    OutlinedTextField(
+                        value = deliveryAddress,
+                        onValueChange = { deliveryAddress = it },
+                        label = { Text("Kenya delivery address") },
+                        placeholder = { Text("e.g. Westlands, Nairobi — Apartment 4B") },
+                        minLines = 2,
+                        maxLines = 4,
+                        supportingText = {
+                            Text("Riders use this to find you in Nairobi. Leave blank if you collect from the warehouse.")
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                     Text(
@@ -123,7 +136,17 @@ fun ProfileEditScreen(onClose: () -> Unit) {
             InkButton(
                 text = if (isSubmitting) "Saving…" else "Save",
                 enabled = !isSubmitting && name.isNotBlank(),
-                onClick = { vm.save(name = name, phone = phone, languagePref = null) }
+                onClick = {
+                    // Pass the address through (including the empty string) so
+                    // the server treats it as a deliberate clear when the user
+                    // wipes the field — matches the iOS ProfileEditView path.
+                    vm.save(
+                        name = name,
+                        phone = phone,
+                        languagePref = null,
+                        deliveryAddress = deliveryAddress
+                    )
+                }
             )
             Spacer(Modifier.height(24.dp))
         }
