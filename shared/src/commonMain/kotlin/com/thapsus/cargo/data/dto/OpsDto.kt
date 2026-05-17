@@ -70,7 +70,15 @@ data class OpsCustomerDto(
     @SerialName("full_name") val fullName: String? = null,
     @SerialName("warehouse_id") val warehouseId: String? = null,
     val email: String? = null,
-    val phone: String? = null
+    val phone: String? = null,
+    /**
+     * Customer's Kenya delivery address. Added 2026-05-17 so operators on
+     * the receive screen can see where the parcel will end up without
+     * leaving the SKU intake flow. Nullable when the customer hasn't
+     * filled in the field — the iOS / Android receive views hide the row
+     * in that case.
+     */
+    @SerialName("delivery_address") val deliveryAddress: String? = null
 )
 
 /**
