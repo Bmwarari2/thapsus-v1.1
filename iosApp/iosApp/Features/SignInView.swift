@@ -130,6 +130,30 @@ struct SignInView: View {
             guard let vm = env.authVM, formObserver == nil else { return }
             formObserver = StateFlowObserver(initial: vm.form.value) { vm.form }
         }
+        .onChange(of: verificationJustSent) { _, sent in
+            // When the server accepts the registration but flags it as
+            // awaiting verification, leave the sign-up form behind. The
+            // user came here to create an account; they've done that.
+            // Now they wait for the email + sign in. We:
+            //   - flip back to sign-in mode (clears the sign-up-only
+            //     section of the card)
+            //   - clear the password fields so the next person on a
+            //     shared device can't lift them
+            //   - keep the email pre-filled so they only have to type
+            //     the password when the activation lands
+            // The verificationPendingBanner stays visible above the
+            // sign-in form — it lives outside the formCard.
+            guard sent else { return }
+            withAnimation(LG.animation) {
+                isSignUp = false
+                password = ""
+                confirmPassword = ""
+                fullName = ""
+                phone = ""
+                country = ""
+                agreedToTerms = false
+            }
+        }
         .onAppear {
             // Audit follow-up — read + clear the AuthEventFlags
             // sessionExpired one-shot. Setting both the local @State
@@ -373,6 +397,16 @@ struct SignInView: View {
     /// affordance + the warning never disagree.
     private var passwordsMatch: Bool {
         !password.isEmpty && password == confirmPassword
+    }
+
+    /// Bool projection of `FormState.VerificationSent` used as the diff
+    /// key on the `onChange` that flips us out of sign-up mode (see the
+    /// view's task chain). Same workaround pattern as
+    /// `AddressCaptureSheet.didSucceed` — Swift's optional dot-chain
+    /// binds `.map` to the inner value rather than the Optional, so a
+    /// computed Bool is the cleaner diff key.
+    private var verificationJustSent: Bool {
+        formObserver?.value is AuthViewModelFormStateVerificationSent
     }
 
     /// All-or-nothing gate for the Create-account button: terms ticked,
