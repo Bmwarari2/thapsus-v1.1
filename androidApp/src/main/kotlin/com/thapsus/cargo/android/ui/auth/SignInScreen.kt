@@ -104,6 +104,7 @@ fun SignInScreen(vm: AuthViewModel) {
 
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var confirmPassword by remember { mutableStateOf("") }
     var fullName by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var country by remember { mutableStateOf<Country?>(null) }
@@ -196,7 +197,28 @@ fun SignInScreen(vm: AuthViewModel) {
                     modifier = Modifier.fillMaxWidth()
                 )
                 if (isSignUp) {
+                    OutlinedTextField(
+                        value = confirmPassword,
+                        onValueChange = { confirmPassword = it },
+                        label = { Text("Confirm password") },
+                        placeholder = { Text("••••••••") },
+                        singleLine = true,
+                        visualTransformation = PasswordVisualTransformation(),
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
+                        modifier = Modifier.fillMaxWidth()
+                    )
                     PasswordRequirements(password = password)
+                    val passwordsMatch = password.isNotEmpty() && password == confirmPassword
+                    if (confirmPassword.isNotEmpty() && !passwordsMatch) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                text = "Passwords don't match.",
+                                color = Color(0xFFB3261E),
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
                 }
 
                 if (!isSignUp) {
@@ -225,9 +247,10 @@ fun SignInScreen(vm: AuthViewModel) {
                         CircularProgressIndicator(color = Brand.ink)
                     }
                 } else {
+                    val passwordsMatch = password.isNotEmpty() && password == confirmPassword
                     InkButton(
                         text = if (isSignUp) "Create account" else "Sign in",
-                        enabled = !isSignUp || (agreedToTerms && PasswordPolicy.isValid(password)),
+                        enabled = !isSignUp || (agreedToTerms && PasswordPolicy.isValid(password) && passwordsMatch),
                         onClick = {
                             if (isSignUp) {
                                 vm.signUp(
@@ -260,10 +283,53 @@ fun SignInScreen(vm: AuthViewModel) {
         }
 
         when (val s = form) {
-            is AuthViewModel.FormState.Error -> CalloutBanner(
-                title = "Couldn't sign you in",
-                message = s.message
-            )
+            is AuthViewModel.FormState.VerificationSent -> {
+                // Sign-up just landed verification_required = true on the
+                // server (PR N). Surface the email + a one-tap resend so
+                // the user doesn't get stranded if the activation message
+                // is slow or buried in spam.
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    CalloutBanner(
+                        title = "Check your inbox",
+                        message = "We sent an activation link to ${s.email}. Tap it to finish setting up your account."
+                    )
+                    TextButton(onClick = { vm.resendVerification(s.email) }) {
+                        Text(
+                            "Resend activation email",
+                            color = Brand.Orange,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+            is AuthViewModel.FormState.Error -> {
+                if (s.code == "email_unverified") {
+                    // /auth/login refused because email_verified_at is null
+                    // server-side. Mirror the iOS treatment — explicit
+                    // headline + resend affordance so the user understands
+                    // the password isn't the problem.
+                    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        CalloutBanner(
+                            title = "Email not verified",
+                            message = "Activate your account from the link we emailed to ${email.ifBlank { "your inbox" }}, then sign in again."
+                        )
+                        if (email.isNotBlank()) {
+                            TextButton(onClick = { vm.resendVerification(email) }) {
+                                Text(
+                                    "Resend activation email",
+                                    color = Brand.Orange,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    CalloutBanner(
+                        title = "Couldn't sign you in",
+                        message = s.message
+                    )
+                }
+            }
             is AuthViewModel.FormState.Sent -> CalloutBanner(
                 title = "Check your inbox",
                 message = s.message

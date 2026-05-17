@@ -22,10 +22,27 @@
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.ThapsusCargo">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <!-- PR Q — /verify-email Universal Link. App Links variant
+                 (autoVerify=true) so post-install the OS routes the
+                 activation email's CTA straight here without prompting
+                 the user to choose. Pairs with the existing iOS
+                 /reset-password handler shape. apex + www hosts are
+                 covered explicitly because Android doesn't expand
+                 host wildcards. -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" />
+                <data android:host="thapsus.uk" />
+                <data android:host="www.thapsus.uk" />
+                <data android:pathPrefix="/verify-email" />
             </intent-filter>
         </activity>
     </application>
