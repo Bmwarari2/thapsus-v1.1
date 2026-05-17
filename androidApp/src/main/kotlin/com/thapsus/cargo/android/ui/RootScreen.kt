@@ -20,6 +20,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thapsus.cargo.ThapsusSdk
 import com.thapsus.cargo.android.ui.auth.SignInScreen
 import com.thapsus.cargo.android.ui.nav.RoleTabsScreen
+import com.thapsus.cargo.android.ui.onboarding.OnboardingScreen
+import com.thapsus.cargo.android.ui.onboarding.rememberOnboardingStore
 import com.thapsus.cargo.android.ui.primitives.AppBackground
 import com.thapsus.cargo.android.ui.primitives.BrandWordmark
 import com.thapsus.cargo.android.ui.primitives.WordmarkSize
@@ -38,6 +40,16 @@ fun RootScreen() {
     }
 
     val session by authVm.session.collectAsStateWithLifecycle()
+    val onboardingStore = rememberOnboardingStore()
+
+    // First-launch gate. Reads the persisted flag on every recomposition
+    // (cheap SharedPreferences-backed mutableState) and surfaces the
+    // walkthrough until the user taps "Get started". Reinstalling clears
+    // SharedPreferences and re-shows it. Mirrors iOS RootView gate.
+    if (!onboardingStore.isCompleted) {
+        OnboardingScreen(onComplete = { onboardingStore.complete() })
+        return
+    }
 
     AppBackground {
         AnimatedContent(
