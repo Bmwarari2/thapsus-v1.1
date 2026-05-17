@@ -311,7 +311,7 @@ fun SignInScreen(vm: AuthViewModel) {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     CalloutBanner(
                         title = "Check your inbox",
-                        message = "We sent an activation link to ${s.email}. Tap it to finish setting up your account."
+                        message = "We sent an activation link to ${s.email}. Tap it within 24 hours to finish setting up your account — after that the link expires and you'll need a fresh one."
                     )
                     TextButton(onClick = { vm.resendVerification(s.email) }) {
                         Text(
