@@ -31,6 +31,7 @@
 		1A0001000000000000000010 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000010 /* SignInView.swift */; };
 		1A0001000000000000000011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000011 /* Assets.xcassets */; };
 		1A0001000000000000000056 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000056 /* LaunchScreen.storyboard */; };
+		1A0001000000000000007001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000007001 /* PrivacyInfo.xcprivacy */; };
 		1A0001000000000000000015 /* OutboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000015 /* OutboxView.swift */; };
 		1A0001000000000000000016 /* OperatorTodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000016 /* OperatorTodayView.swift */; };
 		1A0001000000000000000017 /* ConsolidationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000017 /* ConsolidationListView.swift */; };
@@ -120,6 +121,7 @@
 		1A0002000000000000000011 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A0002000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A0002000000000000000056 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
+		1A0002000000000000007001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1A0002000000000000000013 /* Configuration/Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Config.xcconfig; sourceTree = "<group>"; };
 		1A0002000000000000000015 /* OutboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboxView.swift; sourceTree = "<group>"; };
 		1A0002000000000000000016 /* OperatorTodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperatorTodayView.swift; sourceTree = "<group>"; };
@@ -224,6 +226,7 @@
 				1A0002000000000000000011 /* Assets.xcassets */,
 				1A0002000000000000000012 /* Info.plist */,
 				1A0002000000000000000056 /* LaunchScreen.storyboard */,
+				1A0002000000000000007001 /* PrivacyInfo.xcprivacy */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -414,6 +417,7 @@
 			files = (
 				1A0001000000000000000011 /* Assets.xcassets in Resources */,
 				1A0001000000000000000056 /* LaunchScreen.storyboard in Resources */,
+				1A0001000000000000007001 /* PrivacyInfo.xcprivacy in Resources */,
 				215C7EAF2FA143B100D8BCC4 /* THAPSUS ICON.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
