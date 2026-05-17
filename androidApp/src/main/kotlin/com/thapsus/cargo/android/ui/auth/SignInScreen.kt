@@ -38,6 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -110,6 +111,25 @@ fun SignInScreen(vm: AuthViewModel) {
     var country by remember { mutableStateOf<Country?>(null) }
     var isSignUp by remember { mutableStateOf(false) }
     var agreedToTerms by remember { mutableStateOf(false) }
+
+    // When the server accepts a registration but flags it as awaiting
+    // email verification, leave the sign-up form behind. The user came
+    // here to create an account; they've done that — now they wait for
+    // the activation email and sign in. Flip back to sign-in mode and
+    // clear the sign-up-only fields; keep email pre-filled so the user
+    // only has to type the password when the activation lands. The
+    // VerificationSent banner stays visible below the form card.
+    LaunchedEffect(form) {
+        if (form is AuthViewModel.FormState.VerificationSent) {
+            isSignUp = false
+            password = ""
+            confirmPassword = ""
+            fullName = ""
+            phone = ""
+            country = null
+            agreedToTerms = false
+        }
+    }
     var presentingForgot by remember { mutableStateOf(false) }
     var presentingTracking by remember { mutableStateOf(false) }
     val forgotSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
