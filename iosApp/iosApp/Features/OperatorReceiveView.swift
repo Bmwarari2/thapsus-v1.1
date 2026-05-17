@@ -200,6 +200,7 @@ private struct ReceiveLabelSheet: View {
     @State private var printed: Bool = false
     @State private var customerFullName: String?
     @State private var customerWarehouseCode: String?
+    @State private var customerDeliveryAddress: String?
     @State private var welcomeMessage: String = LabelWelcome.random()
     @State private var photo: UIImage?
     @State private var photoURL: String?
@@ -412,6 +413,7 @@ private struct ReceiveLabelSheet: View {
         guard let result else { return }
         customerFullName = result.fullName
         customerWarehouseCode = result.warehouseId
+        customerDeliveryAddress = result.deliveryAddress
     }
 
     private var intakeStateValue: IntakeState? { intakeState?.value }
@@ -433,6 +435,26 @@ private struct ReceiveLabelSheet: View {
                     Text(r).font(.subheadline).foregroundStyle(.secondary)
                 }
                 Text("Order \(pkg.id.prefix(8))…").font(.caption.monospaced()).foregroundStyle(.secondary)
+
+                // Customer delivery address — populated alongside the label
+                // fields via /api/ops/parcels/:id/customer. Hidden when the
+                // customer hasn't filled an address on their profile; we
+                // don't render an empty "deliver to: —" placeholder because
+                // the operator's mental model is "address known or not".
+                if let address = customerDeliveryAddress?
+                    .trimmingCharacters(in: .whitespacesAndNewlines), !address.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Deliver to".uppercased())
+                            .font(.caption2.weight(.heavy)).tracking(2)
+                            .foregroundStyle(Brand.ink.opacity(0.55))
+                        Text(address)
+                            .font(.subheadline)
+                            .foregroundStyle(Brand.ink)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
+                    .padding(.top, 8)
+                }
             }
         }
     }

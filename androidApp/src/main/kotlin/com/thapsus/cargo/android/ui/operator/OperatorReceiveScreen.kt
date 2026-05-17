@@ -189,12 +189,14 @@ private fun ReceiveSheetBody(
 
     var customerName by remember(parcel.id) { mutableStateOf("Customer") }
     var customerWarehouseCode by remember(parcel.id) { mutableStateOf<String?>(null) }
+    var customerDeliveryAddress by remember(parcel.id) { mutableStateOf<String?>(null) }
     LaunchedEffect(parcel.id) {
         runCatching {
             ThapsusSdk.packages().fetchCustomer(parcel.orderId ?: parcel.id)
         }.getOrNull()?.let { res ->
             customerName = res.fullName?.takeIf { it.isNotBlank() } ?: "Customer"
             customerWarehouseCode = res.warehouseId
+            customerDeliveryAddress = res.deliveryAddress
         }
     }
 
@@ -220,6 +222,31 @@ private fun ReceiveSheetBody(
                     fontFamily = FontFamily.Monospace,
                     fontSize = 12.sp
                 )
+
+                // Customer delivery address — populated from
+                // /api/ops/parcels/:id/customer. Hidden when the customer
+                // hasn't filled an address; we don't render an empty
+                // "deliver to: —" placeholder.
+                val address = customerDeliveryAddress?.trim().orEmpty()
+                if (address.isNotEmpty()) {
+                    Column(
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                        modifier = Modifier.padding(top = 8.dp)
+                    ) {
+                        Text(
+                            text = "DELIVER TO",
+                            color = Brand.ink.copy(alpha = 0.55f),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 10.sp,
+                            letterSpacing = 2.sp
+                        )
+                        Text(
+                            text = address,
+                            color = Brand.ink,
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
         }
 

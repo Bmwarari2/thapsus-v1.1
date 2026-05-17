@@ -43,7 +43,15 @@ import kotlinx.serialization.json.Json
  */
 data class OpsCustomer(
     val fullName: String?,
-    val warehouseId: String?
+    val warehouseId: String?,
+    /**
+     * Customer's Kenya delivery address. Sourced from `users.delivery_address`
+     * via `/api/ops/parcels/:id/customer`. Operators see this on the receive
+     * sheet so the rider/dispatch can read it without leaving the intake
+     * flow. Null when the customer hasn't provided one — the UI hides the
+     * row in that case rather than rendering an empty section.
+     */
+    val deliveryAddress: String?
 )
 
 class PackageRepository(
@@ -183,7 +191,11 @@ class PackageRepository(
     suspend fun fetchCustomer(orderId: String): OpsCustomer? = try {
         val resp = api.get<OpsCustomerLookupResponse>("/ops/parcels/$orderId/customer")
         resp.customer?.let {
-            OpsCustomer(fullName = it.fullName, warehouseId = it.warehouseId)
+            OpsCustomer(
+                fullName = it.fullName,
+                warehouseId = it.warehouseId,
+                deliveryAddress = it.deliveryAddress
+            )
         }
     } catch (_: Throwable) {
         null
