@@ -29,8 +29,15 @@ struct RootView: View {
     /// `thapsus.onboarding.completed_v1`. Reinstalling the app resets it.
     @State private var hasCompletedOnboarding: Bool =
         UserDefaults.standard.bool(forKey: Self.onboardingCompletedKey)
+    /// Post-authentication address-capture prompt gate. Set true once the
+    /// user either saves an address or taps "Skip for now"; either action
+    /// suppresses the sheet on subsequent cold launches. The Account tab
+    /// stays the canonical edit path regardless.
+    @State private var addressPromptDismissed: Bool =
+        UserDefaults.standard.bool(forKey: Self.addressPromptDismissedKey)
 
     private static let onboardingCompletedKey = "thapsus.onboarding.completed_v1"
+    private static let addressPromptDismissedKey = "thapsus.address.prompt.dismissed_v1"
 
     var body: some View {
         ZStack {
@@ -108,6 +115,9 @@ struct RootView: View {
                     }
             }
         }
+        .sheet(isPresented: addressPromptBinding) {
+            AddressCaptureSheet(onResolved: markAddressPromptDismissed)
+        }
     }
 
     /// Persists the first-launch completion flag and flips `RootView` to the
@@ -118,6 +128,37 @@ struct RootView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             hasCompletedOnboarding = true
         }
+    }
+
+    /// True when the authenticated user has no delivery address on file
+    /// and hasn't previously dismissed the prompt. Read on every
+    /// recomposition — once the user provides an address via
+    /// `AddressCaptureSheet` (or any other path, e.g. `ProfileEditView`),
+    /// the underlying `env.session.profile.deliveryAddress` updates and
+    /// the sheet stops re-presenting.
+    private var addressPromptBinding: Binding<Bool> {
+        Binding(
+            get: {
+                guard hasCompletedOnboarding,
+                      !addressPromptDismissed,
+                      let auth = env.session as? AuthSessionAuthenticated
+                else { return false }
+                let trimmed = auth.profile?.deliveryAddress?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                return trimmed.isEmpty
+            },
+            set: { _ in /* dismissal flows through onResolved → markAddressPromptDismissed */ }
+        )
+    }
+
+    /// Called by `AddressCaptureSheet` after either a save or skip. We
+    /// persist a "asked" flag (not "address present") so the sheet
+    /// doesn't reappear on every cold launch for users who deliberately
+    /// skip. The Account tab → ProfileEditView remains the canonical
+    /// edit path for everyone.
+    private func markAddressPromptDismissed() {
+        UserDefaults.standard.set(true, forKey: Self.addressPromptDismissedKey)
+        addressPromptDismissed = true
     }
 
     private func handle(url: URL) {
