@@ -104,14 +104,26 @@ struct AddressCaptureSheet: View {
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(false)
         .task { bootstrap() }
-        .onChange(of: observer?.value.map { String(describing: type(of: $0)) }) { _, _ in
-            if case is ProfileEditViewModelFormStateSaved = observer?.value {
+        // `?.value.map { … }` doesn't parse the way you'd want — Swift binds
+        // the trailing chain to the unwrapped value, not the Optional. A
+        // Bool-derived diff key avoids the problem and reads more directly:
+        // we only care that the form state flipped to Saved, so observe the
+        // boolean and fire the dismiss-on-success branch when it goes true.
+        .onChange(of: didSucceed) { _, succeeded in
+            if succeeded {
                 AppHaptics.fire(.success)
                 onResolved()
                 dismiss()
             }
         }
         .onAppear { addressFocused = true }
+    }
+
+    /// True once the server has accepted the address. Drives the
+    /// dismiss-on-success transition above; recomputed from the SKIE-bridged
+    /// `ProfileEditViewModelFormStateSaved` variant of the form state.
+    private var didSucceed: Bool {
+        observer?.value is ProfileEditViewModelFormStateSaved
     }
 
     // MARK: - Helpers
