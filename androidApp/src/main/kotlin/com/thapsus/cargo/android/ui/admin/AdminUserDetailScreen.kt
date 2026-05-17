@@ -281,6 +281,30 @@ private fun ProfileCard(user: AdminUserDto) {
                     fontSize = 11.sp
                 )
             }
+            // Delivery address — visible to admins (this screen) and to
+            // operators on the SKU-scan receive sheet. Free-form text, so
+            // a blank/whitespace-only string is treated as "none on file"
+            // and the row is dropped entirely rather than rendered empty.
+            val address = user.deliveryAddress?.trim().orEmpty()
+            if (address.isNotEmpty()) {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(
+                        text = "DELIVERY ADDRESS",
+                        color = Brand.ink.copy(alpha = 0.55f),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 10.sp,
+                        letterSpacing = 2.sp
+                    )
+                    Text(
+                        text = address,
+                        color = Brand.ink,
+                        fontSize = 13.sp
+                    )
+                }
+            }
         }
     }
 }
