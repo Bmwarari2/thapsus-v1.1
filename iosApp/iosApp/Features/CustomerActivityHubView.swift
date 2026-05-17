@@ -87,7 +87,15 @@ private struct HubCard: View {
             HStack(spacing: 14) {
                 Image(systemName: icon)
                     .font(.title3)
-                    .foregroundStyle(.white)
+                    // Brand.cream tracks Brand.ink's auto-flip in reverse —
+                    // cream in light mode, near-black in dark mode — so the
+                    // ink-badge cards (Parcel tracking, Transactions) stay
+                    // legible on both themes. The previous hardcoded white
+                    // foreground vanished against the near-white Brand.ink
+                    // in dark mode. Coloured iconBgs (purple, orange) also
+                    // contrast cleanly with cream, so a single foreground
+                    // covers all four hub cards.
+                    .foregroundStyle(Brand.cream)
                     .frame(width: 44, height: 44)
                     .background(
                         RoundedRectangle(cornerRadius: 12, style: .continuous).fill(iconBg)
