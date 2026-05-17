@@ -6,6 +6,9 @@
 
 import SwiftUI
 import ThapsusShared
+import os
+
+private let trackingLog = Logger(subsystem: "uk.thapsus.cargo", category: "TrackingView")
 
 struct TrackingView: View {
     @Environment(AppEnvironment.self) private var env
@@ -249,7 +252,7 @@ struct TrackingView: View {
                         self.parcels = rows
                     }
                 } catch {
-                    print("[TrackingView] observeForUser failed: \(error)")
+                    trackingLog.error("observeForUser failed: \(error.localizedDescription, privacy: .public)")
                 }
             }
             if realtimeTask == nil {
@@ -263,7 +266,7 @@ struct TrackingView: View {
                         // task's lifetime.
                         for try await _ in repo.observeRealtimeForUser(userId: userID) { }
                     } catch {
-                        print("[TrackingView] observeRealtimeForUser failed: \(error)")
+                        trackingLog.error("observeRealtimeForUser failed: \(error.localizedDescription, privacy: .public)")
                     }
                 }
             }
