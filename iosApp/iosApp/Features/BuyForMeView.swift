@@ -190,10 +190,7 @@ struct BuyForMeView: View {
         switch stateObserver?.value {
         case let loaded as BuyForMeViewModelUiStateLoaded:
             if loaded.orders.isEmpty {
-                CrystalCard {
-                    Text("Drop a retailer link and we'll buy on your behalf.")
-                        .font(.subheadline).foregroundStyle(.secondary)
-                }
+                emptyState
             } else {
                 ForEach(loaded.orders, id: \.id) { order in
                     orderRow(order)
@@ -214,18 +211,30 @@ struct BuyForMeView: View {
         // are flipped to cream for legibility on the ink surface.
         InkCard {
             VStack(alignment: .leading, spacing: 8) {
-                HStack {
-                    Text(order.itemName).font(.headline).foregroundStyle(Brand.cream)
-                    Spacer()
+                HStack(alignment: .top, spacing: 8) {
+                    Text(order.itemName)
+                        .font(.headline)
+                        .foregroundStyle(Brand.cream)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 8)
                     statusBadge(order.status)
                 }
                 if let estimate = order.estimateGbp?.doubleValue {
+                    // Bumped from 0.7 to 0.85 to clear AA on cream-over-ink
+                    // at Dynamic Type sizes up to accessibility5. Original
+                    // 0.7 read as washed-out small grey on dark.
                     Text("Quote: £ \(String(format: "%.2f", estimate)) + \(Int(order.markupPct))% markup")
-                        .font(.footnote).foregroundStyle(Brand.cream.opacity(0.7))
+                        .font(.footnote)
+                        .foregroundStyle(Brand.cream.opacity(0.85))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
                 Text(order.retailerUrl)
-                    .font(.caption2).foregroundStyle(Brand.cream.opacity(0.55))
+                    // Bumped from 0.55 (sub-AA) to 0.7 — small URL text on
+                    // ink needs more contrast than a passive caption colour.
+                    .font(.caption2)
+                    .foregroundStyle(Brand.cream.opacity(0.7))
                     .lineLimit(1).truncationMode(.middle)
+                    .accessibilityLabel("Retailer link: \(order.retailerUrl)")
 
                 if order.status == "quoted" {
                     HStack(spacing: 10) {
@@ -254,20 +263,73 @@ struct BuyForMeView: View {
         }
     }
 
-    @ScaledMetric(relativeTo: .caption2) private var statusBadgeSize: CGFloat = 9
+    @ScaledMetric(relativeTo: .caption) private var statusBadgeSize: CGFloat = 11
 
+    /// Status pill rendered on top of an `InkCard` (Brand.ink fill). Previous
+    /// implementation used `color.opacity(0.16)` over the dark ink, which gave
+    /// 1.5–2.0:1 contrast on the status word — below WCAG AA for small text.
+    /// The cream pill + saturated text pattern hits ~7:1 against the ink and
+    /// stays readable for the reviewer's first impression of the Shop tab.
     private func statusBadge(_ status: String) -> some View {
         let map: [String: Color] = [
-            "pending_quote": .orange, "quoted": .blue, "paid": .green,
-            "purchased": .purple, "received": .teal, "shipped": .green,
-            "cancelled": .red
+            "pending_quote": Color(red: 0.78, green: 0.43, blue: 0.05), // accessible orange (deeper than .orange)
+            "quoted":       Color(red: 0.10, green: 0.40, blue: 0.78),
+            "paid":         Color(red: 0.08, green: 0.50, blue: 0.20),
+            "purchased":    Color(red: 0.45, green: 0.15, blue: 0.70),
+            "received":     Color(red: 0.05, green: 0.45, blue: 0.55),
+            "shipped":      Color(red: 0.08, green: 0.50, blue: 0.20),
+            "cancelled":    Color(red: 0.75, green: 0.10, blue: 0.10)
         ]
-        let color = map[status] ?? .secondary
-        return Text(status.replacingOccurrences(of: "_", with: " ").uppercased())
-            .font(.system(size: statusBadgeSize, weight: .heavy)).tracking(2)
+        let color = map[status] ?? Color(red: 0.30, green: 0.30, blue: 0.30)
+        return Text(status.replacingOccurrences(of: "_", with: " ").capitalized)
+            .font(.system(size: statusBadgeSize, weight: .bold))
             .foregroundStyle(color)
-            .padding(.horizontal, 8).padding(.vertical, 4)
-            .background(Capsule().fill(color.opacity(0.16)))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, 10).padding(.vertical, 5)
+            .background(Capsule().fill(Brand.cream))
+            .overlay(Capsule().stroke(color.opacity(0.30), lineWidth: 1))
+            .accessibilityLabel("Status: \(status.replacingOccurrences(of: "_", with: " "))")
+    }
+
+    /// First-run / no-requests empty state. Replaces the previous thin
+    /// CrystalCard one-liner ("Drop a retailer link and we'll buy on your
+    /// behalf.") that gave the App Store reviewer's freshly-created account
+    /// nothing to read on the Shop tab. Now includes the same wand glyph as
+    /// the tab icon, a sentence-case headline, body copy, and a tappable
+    /// "How it works" link that opens the in-app browser to the public guide.
+    @ViewBuilder
+    private var emptyState: some View {
+        InkCard {
+            VStack(alignment: .leading, spacing: 14) {
+                HStack(spacing: 10) {
+                    Image(systemName: "wand.and.stars")
+                        .font(.title2.weight(.bold))
+                        .foregroundStyle(Brand.orange)
+                    Text("No requests yet")
+                        .font(.title3.weight(.bold))
+                        .foregroundStyle(Brand.cream)
+                }
+
+                Text("Paste any UK retailer link and we'll quote, buy and ship it to Kenya. New here? Tap a retailer above to start browsing.")
+                    .font(.subheadline)
+                    .foregroundStyle(Brand.cream.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Button {
+                    inAppUrl = IdentifiableURL(url: URL(string: "https://thapsus.uk/how-it-works")!)
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "info.circle")
+                        Text("How it works")
+                    }
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Brand.orange)
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Opens the how-it-works guide in the in-app browser.")
+            }
+        }
     }
 
     private func bootstrap() {
