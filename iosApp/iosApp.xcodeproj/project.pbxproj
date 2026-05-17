@@ -34,6 +34,10 @@
 		1A0001000000000000007001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000007001 /* PrivacyInfo.xcprivacy */; };
 		1A0001000000000000007002 /* AppHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000007002 /* AppHaptics.swift */; };
 		1A0001000000000000007003 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000007003 /* OnboardingView.swift */; };
+		1A0001000000000000008001 /* world_map_plane.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000008001 /* world_map_plane.json */; };
+		1A0001000000000000008002 /* handover_parcel.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000008002 /* handover_parcel.json */; };
+		1A0001000000000000008003 /* parcel_pipeline.json in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000008003 /* parcel_pipeline.json */; };
+		7100B102AAAAAAAAAAAAAAAA /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 7100B101AAAAAAAAAAAAAAAA /* Lottie */; };
 		1A0001000000000000000015 /* OutboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000015 /* OutboxView.swift */; };
 		1A0001000000000000000016 /* OperatorTodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000016 /* OperatorTodayView.swift */; };
 		1A0001000000000000000017 /* ConsolidationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000017 /* ConsolidationListView.swift */; };
@@ -126,6 +130,9 @@
 		1A0002000000000000007001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		1A0002000000000000007002 /* AppHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppHaptics.swift; sourceTree = "<group>"; };
 		1A0002000000000000007003 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
+		1A0002000000000000008001 /* world_map_plane.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Assets/Onboarding/world_map_plane.json"; sourceTree = "<group>"; };
+		1A0002000000000000008002 /* handover_parcel.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Assets/Onboarding/handover_parcel.json"; sourceTree = "<group>"; };
+		1A0002000000000000008003 /* parcel_pipeline.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "Assets/Onboarding/parcel_pipeline.json"; sourceTree = "<group>"; };
 		1A0002000000000000000013 /* Configuration/Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Config.xcconfig; sourceTree = "<group>"; };
 		1A0002000000000000000015 /* OutboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboxView.swift; sourceTree = "<group>"; };
 		1A0002000000000000000016 /* OperatorTodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperatorTodayView.swift; sourceTree = "<group>"; };
@@ -194,6 +201,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				216710B42FA6DAD500CF4933 /* StripePaymentSheet in Frameworks */,
+				7100B102AAAAAAAAAAAAAAAA /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -231,6 +239,9 @@
 				1A0002000000000000000012 /* Info.plist */,
 				1A0002000000000000000056 /* LaunchScreen.storyboard */,
 				1A0002000000000000007001 /* PrivacyInfo.xcprivacy */,
+				1A0002000000000000008001 /* world_map_plane.json */,
+				1A0002000000000000008002 /* handover_parcel.json */,
+				1A0002000000000000008003 /* parcel_pipeline.json */,
 			);
 			path = iosApp;
 			sourceTree = "<group>";
@@ -406,6 +417,7 @@
 			mainGroup = 1A0004000000000000000000;
 			packageReferences = (
 				216710B22FA6DAD500CF4933 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */,
+				7100B100AAAAAAAAAAAAAAAA /* XCRemoteSwiftPackageReference "lottie-spm" */,
 			);
 			productRefGroup = 1A0004000000000000000001 /* Products */;
 			projectDirPath = "";
@@ -424,6 +436,9 @@
 				1A0001000000000000000011 /* Assets.xcassets in Resources */,
 				1A0001000000000000000056 /* LaunchScreen.storyboard in Resources */,
 				1A0001000000000000007001 /* PrivacyInfo.xcprivacy in Resources */,
+				1A0001000000000000008001 /* world_map_plane.json in Resources */,
+				1A0001000000000000008002 /* handover_parcel.json in Resources */,
+				1A0001000000000000008003 /* parcel_pipeline.json in Resources */,
 				215C7EAF2FA143B100D8BCC4 /* THAPSUS ICON.icon in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -742,6 +757,14 @@
 				minimumVersion = 25.13.0;
 			};
 		};
+		7100B100AAAAAAAAAAAAAAAA /* XCRemoteSwiftPackageReference "lottie-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-spm";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 4.5.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -749,6 +772,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 216710B22FA6DAD500CF4933 /* XCRemoteSwiftPackageReference "stripe-ios-spm" */;
 			productName = StripePaymentSheet;
+		};
+		7100B101AAAAAAAAAAAAAAAA /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 7100B100AAAAAAAAAAAAAAAA /* XCRemoteSwiftPackageReference "lottie-spm" */;
+			productName = Lottie;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

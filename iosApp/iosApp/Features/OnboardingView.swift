@@ -20,6 +20,7 @@
 // transition to the auth / role-routed view.
 
 import SwiftUI
+import Lottie
 
 struct OnboardingView: View {
     /// Called once the user reaches the final page and taps "Get started".
@@ -196,191 +197,32 @@ private struct OnboardingPageView: View {
     @ViewBuilder
     private var illustration: some View {
         switch page.illustration {
-        case .shipArc:       ShipArcIllustration(trigger: appearTrigger)
-        case .warehouseDrop: WarehouseDropIllustration(trigger: appearTrigger)
-        case .statusPills:   StatusPillsIllustration(trigger: appearTrigger)
+        case .shipArc:       LottieOnboarding(name: "world_map_plane")
+        case .warehouseDrop: LottieOnboarding(name: "handover_parcel")
+        case .statusPills:   LottieOnboarding(name: "parcel_pipeline")
         case .payMethods:    PayMethodsIllustration(trigger: appearTrigger)
         }
     }
 }
 
-// MARK: - Page 1 illustration — parcel + GB→KE arc
+// MARK: - Lottie wrapper
 
-private struct ShipArcIllustration: View {
-    let trigger: Int
-    @State private var arcProgress: CGFloat = 0
-    @State private var parcelOffset: CGFloat = 0
-
-    var body: some View {
-        ZStack {
-            // Arc line — animated stroke from GB to KE.
-            GeometryReader { proxy in
-                let w = proxy.size.width
-                let h = proxy.size.height
-                Path { p in
-                    p.move(to: CGPoint(x: w * 0.18, y: h * 0.72))
-                    p.addQuadCurve(
-                        to: CGPoint(x: w * 0.82, y: h * 0.72),
-                        control: CGPoint(x: w * 0.5, y: h * 0.18)
-                    )
-                }
-                .trim(from: 0, to: arcProgress)
-                .stroke(Brand.orange, style: StrokeStyle(lineWidth: 3, lineCap: .round, dash: [2, 6]))
-            }
-            .frame(height: 180)
-
-            HStack(spacing: 0) {
-                FlagDot(label: "UK")
-                Spacer()
-                FlagDot(label: "KE")
-            }
-            .padding(.horizontal, 32)
-            .offset(y: 50)
-
-            Image(systemName: "shippingbox.fill")
-                .font(.system(size: 42, weight: .bold))
-                .foregroundStyle(Brand.ink)
-                .offset(x: parcelOffset, y: -28)
-        }
-        .onAppear(perform: replay)
-        .onChange(of: trigger) { _, _ in replay() }
-    }
-
-    private func replay() {
-        arcProgress = 0
-        parcelOffset = -120
-        withAnimation(.easeInOut(duration: 1.1)) {
-            arcProgress = 1
-        }
-        withAnimation(.easeInOut(duration: 1.1)) {
-            parcelOffset = 120
-        }
-    }
-}
-
-private struct FlagDot: View {
-    let label: String
-    var body: some View {
-        VStack(spacing: 6) {
-            Circle()
-                .fill(Brand.ink)
-                .frame(width: 44, height: 44)
-                .overlay(
-                    Text(label)
-                        .font(.system(size: 14, weight: .bold))
-                        .foregroundStyle(Brand.cream)
-                )
-            Circle()
-                .fill(Brand.ink.opacity(0.18))
-                .frame(width: 56, height: 8)
-                .blur(radius: 4)
-                .offset(y: -4)
-        }
-    }
-}
-
-// MARK: - Page 2 illustration — package falling into warehouse
-
-private struct WarehouseDropIllustration: View {
-    let trigger: Int
-    @State private var boxY: CGFloat = -80
-    @State private var settle: CGFloat = 1.0
+/// Loops a bundled Lottie `.json` from `iosApp/Assets/Onboarding/` at
+/// native size with `.scaleAspectFit` so the animation respects the host
+/// frame height (240pt) without overflowing horizontally.
+private struct LottieOnboarding: View {
+    let name: String
 
     var body: some View {
-        ZStack(alignment: .bottom) {
-            // Warehouse outline — simple shed silhouette.
-            WarehouseSilhouette()
-                .fill(Brand.ink)
-                .frame(width: 220, height: 140)
-
-            Image(systemName: "shippingbox.fill")
-                .font(.system(size: 36, weight: .bold))
-                .foregroundStyle(Brand.orange)
-                .offset(y: boxY)
-                .scaleEffect(settle)
-        }
-        .frame(height: 240, alignment: .bottom)
-        .onAppear(perform: replay)
-        .onChange(of: trigger) { _, _ in replay() }
-    }
-
-    private func replay() {
-        boxY = -160
-        settle = 1.0
-        withAnimation(.easeIn(duration: 0.6)) {
-            boxY = -54
-        }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.5).delay(0.6)) {
-            settle = 0.9
-        }
-        withAnimation(.spring(response: 0.35, dampingFraction: 0.7).delay(0.8)) {
-            settle = 1.0
-        }
+        LottieView(animation: .named(name))
+            .playing(loopMode: .loop)
+            .resizable()
+            .aspectRatio(contentMode: .fit)
     }
 }
 
-private struct WarehouseSilhouette: Shape {
-    func path(in rect: CGRect) -> Path {
-        var p = Path()
-        let roofPeak = rect.minY + rect.height * 0.18
-        let roofEnd = rect.minY + rect.height * 0.35
-        p.move(to: CGPoint(x: rect.minX, y: roofEnd))
-        p.addLine(to: CGPoint(x: rect.midX, y: roofPeak))
-        p.addLine(to: CGPoint(x: rect.maxX, y: roofEnd))
-        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
-        p.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        p.closeSubpath()
-        return p
-    }
-}
-
-// MARK: - Page 3 illustration — status timeline cascade
-
-private struct StatusPillsIllustration: View {
-    let trigger: Int
-    @State private var visibleCount: Int = 0
-
-    private let steps: [(String, String)] = [
-        ("checkmark.circle.fill", "Purchased"),
-        ("airplane",              "In flight"),
-        ("doc.text.fill",         "Customs"),
-        ("truck.box.fill",        "Out for delivery"),
-        ("house.fill",            "Delivered"),
-    ]
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            ForEach(steps.indices, id: \.self) { idx in
-                HStack(spacing: 14) {
-                    Image(systemName: steps[idx].0)
-                        .font(.system(size: 18, weight: .bold))
-                        .foregroundStyle(Brand.cream)
-                        .frame(width: 32, height: 32)
-                        .background(Brand.ink, in: Circle())
-                    Text(steps[idx].1)
-                        .font(.headline)
-                        .foregroundStyle(Brand.ink)
-                    Spacer()
-                }
-                .opacity(idx < visibleCount ? 1 : 0)
-                .offset(x: idx < visibleCount ? 0 : -20)
-                .animation(.easeOut(duration: 0.35).delay(Double(idx) * 0.12), value: visibleCount)
-            }
-        }
-        .padding(.horizontal, 32)
-        .onAppear(perform: replay)
-        .onChange(of: trigger) { _, _ in replay() }
-    }
-
-    private func replay() {
-        visibleCount = 0
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-            visibleCount = steps.count
-        }
-    }
-}
-
-// MARK: - Page 4 illustration — payment methods
+// MARK: - Page 4 illustration — payment methods (native; the only page
+// the user opted to keep on native motion)
 
 private struct PayMethodsIllustration: View {
     let trigger: Int
