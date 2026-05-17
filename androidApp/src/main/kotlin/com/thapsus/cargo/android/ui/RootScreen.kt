@@ -19,6 +19,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.thapsus.cargo.ThapsusSdk
 import com.thapsus.cargo.android.ui.auth.SignInScreen
+import com.thapsus.cargo.android.ui.customer.AddressCaptureSheet
+import com.thapsus.cargo.android.ui.customer.rememberAddressPromptStore
 import com.thapsus.cargo.android.ui.nav.RoleTabsScreen
 import com.thapsus.cargo.android.ui.onboarding.OnboardingScreen
 import com.thapsus.cargo.android.ui.onboarding.rememberOnboardingStore
@@ -63,6 +65,21 @@ fun RootScreen() {
                 is AuthSession.Authenticated -> RoleTabsScreen(session = s, onSignOut = { authVm.signOut() })
             }
         }
+    }
+
+    // Post-auth address prompt — surfaces once when the authenticated
+    // user has no delivery_address on file and hasn't previously
+    // dismissed the prompt. Saving the address (here or via
+    // ProfileEditScreen) updates the session profile, so this branch
+    // stops short on the next recomposition. Mirrors the iOS RootView
+    // gate semantics.
+    val addressPromptStore = rememberAddressPromptStore()
+    val authenticatedProfile = (session as? AuthSession.Authenticated)?.profile
+    val needsAddress = authenticatedProfile != null &&
+        authenticatedProfile.deliveryAddress.orEmpty().trim().isEmpty() &&
+        !addressPromptStore.isDismissed
+    if (needsAddress) {
+        AddressCaptureSheet(onResolved = { addressPromptStore.markDismissed() })
     }
 }
 
