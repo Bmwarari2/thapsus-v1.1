@@ -107,8 +107,10 @@
     <key>NSContactsUsageDescription</key>
     <string>Thapsus uses your contacts so you can quickly assign a recipient to a parcel without retyping their phone number.</string>
 
-    <!-- Bluetooth & local network — barcode scanner accessories, optional -->
-    <key>NSLocalNetworkUsageDescription</key>
-    <string>Thapsus uses the local network to discover wireless label printers at the Stockport hub.</string>
+    <!-- NSLocalNetworkUsageDescription removed 2026-05-17: the only printing
+         path is AirPrint via UIPrintInteractionController in
+         Hardware/LabelPrinter.swift, which is system-mediated and does not
+         trigger the Local Network prompt. The previous declaration was
+         over-declared per audit P1 #2 (docs/app_store_submission_plan_2026_05_16.md). -->
 </dict>
 </plist>
