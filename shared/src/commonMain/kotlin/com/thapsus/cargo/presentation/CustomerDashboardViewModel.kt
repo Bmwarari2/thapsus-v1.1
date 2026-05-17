@@ -107,12 +107,23 @@ class CustomerDashboardViewModel(
      * an invoice-due card on the home tab so the customer doesn't have to
      * dig into the Shop tab to find a quote that's ready for them.
      *
-     * Pairs with [bfmPendingInvoices] (post-accept): the home UI renders
-     * both lists together in one "Buy-for-me payment due" section.
+     * Pairs with [bfmPendingInvoices] (post-accept). The two are joined
+     * here so a single logical BFM order never appears in both lists at
+     * once: once a pending payment exists for an order (post-accept),
+     * the quote-side card disappears and only the KES payment card
+     * remains on the customer's Pending actions tab. Previously a brief
+     * server window left status="quoted" alongside an already-created
+     * pending payment, surfacing the same request twice — once in GBP,
+     * once in KES.
      */
-    val quotedBfmOrders: StateFlow<List<BuyForMeOrderDto>> = bfmFlow
-        .map { list -> list.filter { it.status == "quoted" } }
-        .stateIn(scope, SharingStarted.Eagerly, emptyList())
+    val quotedBfmOrders: StateFlow<List<BuyForMeOrderDto>> =
+        combine(bfmFlow, paymentsFlow) { orders, payments ->
+            val pendingBfmOrderIds = payments
+                .filter { it.status == "pending" && it.targetKind == "buy_for_me" }
+                .map { it.targetId }
+                .toSet()
+            orders.filter { it.status == "quoted" && it.id !in pendingBfmOrderIds }
+        }.stateIn(scope, SharingStarted.Eagerly, emptyList())
 
     /**
      * Reactive seen-marker stream from the SQLDelight table. Updates whenever
@@ -346,10 +357,10 @@ private object SnapshotAssembler {
             lastActivityAt = lastActivity,
 
             urgentInvoice = urgentInvoicePayment?.let {
-                HomeGreetingSnapshot.UrgentInvoice(ref = it.toInvoiceRef(), overdue = false)
+                HomeGreetingSnapshot.UrgentInvoice(ref = it.toInvoiceRef(buyForMe), overdue = false)
             },
-            failedPayment = failedPayment?.toInvoiceRef(),
-            mpesaPending = mpesaPending?.toInvoiceRef(),
+            failedPayment = failedPayment?.toInvoiceRef(buyForMe),
+            mpesaPending = mpesaPending?.toInvoiceRef(buyForMe),
             quoteExpiringSoon = expiringSoon?.let {
                 HomeGreetingSnapshot.PendingQuote(it.id, it.estimateGbp)
             },
@@ -407,13 +418,31 @@ private object SnapshotAssembler {
      * `target_label` for the title with a defensive fallback to the
      * payment id so the customer never sees an empty header.
      */
-    internal fun PaymentDto.toInvoiceRef(): HomeGreeting.InvoiceRef =
-        HomeGreeting.InvoiceRef(
+    /**
+     * Builds an [HomeGreeting.InvoiceRef] from a pending payment row. For
+     * buy-for-me payments, also looks up the matching `BuyForMeOrderDto`
+     * by id so the home-greeting copy can surface the original quote's
+     * GBP amount alongside the KES total. We deliberately read GBP from
+     * the BFM order rather than back-converting amountKes via live FX —
+     * the goal is to show the customer the price they originally agreed
+     * to on the quote card, not a number that drifts as rates move.
+     * Non-BFM target kinds get `amountGbp = null` (the GBP price clause
+     * is then dropped from the greeting body).
+     */
+    internal fun PaymentDto.toInvoiceRef(
+        bfmOrders: List<BuyForMeOrderDto> = emptyList()
+    ): HomeGreeting.InvoiceRef {
+        val amountGbp = if (targetKind == "buy_for_me") {
+            bfmOrders.firstOrNull { it.id == targetId }?.estimateGbp
+        } else null
+        return HomeGreeting.InvoiceRef(
             targetKind = targetKind,
             targetId = targetId,
             amountKes = if (amountDueKes > 0) amountDueKes else amountGrossKes,
-            title = targetLabel?.takeIf { it.isNotBlank() }
+            title = targetLabel?.takeIf { it.isNotBlank() },
+            amountGbp = amountGbp
         )
+    }
 
 }
 
