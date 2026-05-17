@@ -15,6 +15,13 @@ data class AdminUserDto(
     @SerialName("referral_code") val referralCode: String? = null,
     @SerialName("is_active") val isActive: Boolean = true,
     @SerialName("kyc_status") val kycStatus: String? = null,
+    /**
+     * Customer's Kenya delivery address (free-form). Served by both
+     * `/api/admin/users` and `/api/admin/users/:id`; surfaced on the
+     * admin user-detail screens so admins / operators can read the
+     * recipient's location without leaving the user profile.
+     */
+    @SerialName("delivery_address") val deliveryAddress: String? = null,
     @SerialName("created_at") val createdAt: String? = null
 )
 

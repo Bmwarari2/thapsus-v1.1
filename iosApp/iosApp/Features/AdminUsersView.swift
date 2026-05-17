@@ -337,6 +337,20 @@ struct AdminUserDetailView: View {
                     if let warehouse = loaded.user.warehouseId {
                         Text(warehouse).font(.caption.monospaced()).foregroundStyle(.tertiary)
                     }
+                    if let address = loaded.user.deliveryAddress?
+                        .trimmingCharacters(in: .whitespacesAndNewlines), !address.isEmpty {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Delivery address".uppercased())
+                                .font(.caption2.weight(.heavy)).tracking(2)
+                                .foregroundStyle(Brand.ink.opacity(0.55))
+                            Text(address)
+                                .font(.subheadline)
+                                .foregroundStyle(Brand.ink)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .textSelection(.enabled)
+                        }
+                        .padding(.top, 8)
+                    }
                     // Wallet row removed in PR B — users.wallet_balance was
                     // dropped in migration 028 / Swiftcargo PR #61. Customer
                     // credit (replacement) is per-user via /api/payments/me/credit
