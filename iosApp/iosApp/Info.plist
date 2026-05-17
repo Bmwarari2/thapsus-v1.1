@@ -78,20 +78,37 @@
     </array>
 
     <!-- U.S. encryption export compliance.
-         The app uses encryption beyond Apple's provided defaults (Supabase
-         HTTPS via BoringSSL / Network.framework, JWT signature validation,
-         and SHA-256 over reset-tokens / OTPs / log-out token revocation), so
-         we declare ITSAppUsesNonExemptEncryption=YES and file the annual
-         self-classification with the U.S. Bureau of Industry and Security.
-         The previous pairing with ITSAppUsesNonExemptEncryption_NoCryptography_Exemption
-         was internally contradictory — we both claim non-exempt encryption
-         AND assert no cryptography is used.  Removed (audit T27).
-         ITSEncryptionExportComplianceCode is left blank in source; the
-         App Store Connect record carries the actual ERN year-letter. -->
+
+         Set to NO under the BIS "uses only Apple-provided / standard
+         encryption" exemption. Audited 2026-05-17 for the first App Store
+         submission:
+
+           • All HTTPS goes through URLSession / Network.framework — the
+             Supabase Swift SDK consumes URLSession; we do NOT bundle
+             BoringSSL or any third-party TLS stack on iOS. (The earlier
+             plist comment claiming "Supabase HTTPS via BoringSSL" was
+             carried over from the Android/JVM side and was incorrect for
+             the iOS target.)
+           • JWT signature validation uses CryptoKit (Apple-provided).
+           • SHA-256 / HMAC over reset-tokens, OTPs, and log-out token
+             revocation uses CryptoKit (Apple-provided).
+           • The app does NOT implement its own cryptographic algorithms.
+
+         Per the BIS year-letter guidance, an app that uses encryption
+         only via the operating system or for HTTPS authentication with
+         the app's own back-end servers qualifies for the "mass-market
+         exemption" and does NOT need an annual ERN filing. Apple's
+         Encryption Documentation panel in App Store Connect accepts
+         NO + no compliance code in this case.
+
+         If we later bundle a third-party crypto library, link OpenSSL,
+         add an end-to-end encrypted chat feature, or otherwise reach for
+         encryption beyond Apple's standard surfaces, flip this back to
+         YES and file the year-letter. The audit T27 cleanup that removed
+         the contradictory ITSAppUsesNonExemptEncryption_NoCryptography_Exemption
+         pairing applies regardless of which way this key flips. -->
     <key>ITSAppUsesNonExemptEncryption</key>
-    <true/>
-    <key>ITSEncryptionExportComplianceCode</key>
-    <string></string>
+    <false/>
 
     <!-- Camera permission for the operator AVFoundation barcode scanner -->
     <key>NSCameraUsageDescription</key>
