@@ -45,14 +45,18 @@ sealed class HomeGreeting(
      * P=1. Unpaid invoice past its due date. Body branches on the underlying
      * payment's `target_kind` so a stuck buy-for-me order reads as a
      * concierge-specific reminder rather than a generic "your invoice is
-     * overdue" line.
+     * overdue" line. For BFM invoices the original quote's GBP amount is
+     * woven into the headline ("£42.30 buy-for-me payment is overdue…")
+     * so the customer sees the price they originally agreed on the home
+     * screen — the source of truth is the BFM order's `estimateGbp`, not
+     * a KES→GBP back-conversion, so the greeting matches the quote card.
      */
     class OverdueInvoice(ref: InvoiceRef) : HomeGreeting(
         id = "overdue_invoice",
         priority = 1,
         category = Category.Urgent,
         body = if (ref.targetKind == "buy_for_me")
-            "Your buy-for-me payment is overdue — settle to keep the order moving."
+            bfmInvoiceBody(ref.amountGbp, overdue = true)
         else "Your invoice is overdue — please settle to avoid storage fees.",
         destination = ref.toDestination()
     )
@@ -62,13 +66,15 @@ sealed class HomeGreeting(
      * `target_kind` so a buy-for-me order awaiting payment reads distinctly
      * from a shipping/consolidation invoice — fixes the "I accepted a BFM
      * quote but the home tab doesn't tell me it's awaiting payment" gap.
+     * BFM variants include the original quote's GBP amount; see
+     * [OverdueInvoice] for the rationale.
      */
     class UnpaidInvoice(ref: InvoiceRef) : HomeGreeting(
         id = "unpaid_invoice",
         priority = 2,
         category = Category.Urgent,
         body = if (ref.targetKind == "buy_for_me")
-            "Your buy-for-me order is awaiting payment — complete to ship."
+            bfmInvoiceBody(ref.amountGbp, overdue = false)
         else "You have a pending invoice that needs your attention.",
         destination = ref.toDestination()
     )
@@ -102,7 +108,17 @@ sealed class HomeGreeting(
         val targetKind: String,
         val targetId: String,
         val amountKes: Long,
-        val title: String?
+        val title: String?,
+        /**
+         * Original quote price in GBP for buy-for-me invoices. Sourced
+         * from the matching `BuyForMeOrderDto.estimateGbp` at snapshot-
+         * assembly time so the customer sees the same number on the home
+         * greeting as on their quote card — not a KES→GBP back-conversion
+         * via live FX (which would drift as exchange rates move).
+         * Null for non-BFM invoices (consolidations, orders) or when the
+         * matching BFM order can't be located in the snapshot.
+         */
+        val amountGbp: Double? = null
     ) {
         internal fun toDestination(): HomeGreetingDestination.PayInvoice =
             HomeGreetingDestination.PayInvoice(
@@ -335,6 +351,23 @@ private fun formatGbp(amount: Double): String {
     if (frac == 0) return "$whole"
     val pad = if (frac < 10) "0$frac" else "$frac"
     return "$whole.$pad"
+}
+
+/**
+ * Composes the BFM unpaid/overdue invoice greeting body. Includes the
+ * original quote's GBP amount in parentheses when the snapshot was able
+ * to resolve the matching BuyForMeOrderDto; falls back to a price-less
+ * sentence otherwise so an FX-or-data-race never strands the customer
+ * with a blank £ placeholder.
+ */
+private fun bfmInvoiceBody(amountGbp: Double?, overdue: Boolean): String {
+    val priceClause = if (amountGbp != null && amountGbp > 0)
+        " (£${formatGbp(amountGbp)})"
+    else ""
+    return if (overdue)
+        "Your buy-for-me payment$priceClause is overdue — settle to keep the order moving."
+    else
+        "Your buy-for-me order$priceClause is awaiting payment — complete to ship."
 }
 
 /**
