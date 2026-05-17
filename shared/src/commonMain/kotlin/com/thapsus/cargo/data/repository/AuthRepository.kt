@@ -7,7 +7,9 @@ import com.thapsus.cargo.data.dto.GenericAckResponse
 import com.thapsus.cargo.data.dto.LoginRequest
 import com.thapsus.cargo.data.dto.MeResponseDto
 import com.thapsus.cargo.data.dto.RegisterRequest
+import com.thapsus.cargo.data.dto.ResendVerificationRequest
 import com.thapsus.cargo.data.dto.ResetPasswordRequest
+import com.thapsus.cargo.data.dto.VerifyEmailRequest
 import com.thapsus.cargo.data.dto.ScUserDto
 import com.thapsus.cargo.data.dto.SupabaseTokenResponse
 import com.thapsus.cargo.data.dto.UpdateProfileRequest
@@ -107,13 +109,30 @@ class AuthRepository(
         applyAuthResponse(resp)
     }
 
+    /**
+     * Result of POST /auth/register. PR N split registration into two
+     * outcomes:
+     *   - [VerificationRequired] — the account exists but email confirmation
+     *     is pending. No JWT was issued; the client should show a
+     *     "check your inbox" surface and wait for the user to hit the
+     *     activation link. Calling [verifyEmail] with the token from the
+     *     email finishes the flow and lands the session in `Authenticated`.
+     *   - [Authenticated] — legacy server that auto-signs the user in
+     *     (pre-PR-N). Kept so the same client code base stays compatible
+     *     with older deployments during the rollout window.
+     */
+    sealed class SignUpResult {
+        data class VerificationRequired(val email: String) : SignUpResult()
+        data object Authenticated : SignUpResult()
+    }
+
     suspend fun signUpWithEmail(
         email: String,
         password: String,
         name: String? = null,
         phone: String? = null,
         countryOfResidence: String? = null
-    ): Result<Unit> = runCatching {
+    ): Result<SignUpResult> = runCatching {
         val resolvedName = name?.takeIf { it.isNotBlank() }
             ?: email.substringBefore('@').replace(Regex("[._-]+"), " ").trim()
                 .ifBlank { "Customer" }
@@ -127,7 +146,42 @@ class AuthRepository(
                 countryOfResidence = countryOfResidence
             )
         )
+        if (resp.verificationRequired == true || resp.scToken.isNullOrBlank()) {
+            SignUpResult.VerificationRequired(email)
+        } else {
+            applyAuthResponse(resp)
+            SignUpResult.Authenticated
+        }
+    }
+
+    /**
+     * POST /auth/verify-email — consumes the one-shot token from the
+     * activation email, stamps `users.email_verified_at` server-side, and
+     * returns the same auth bundle `/login` would. On success the
+     * AuthSession state flips to Authenticated and the role-routed tab
+     * view takes over automatically.
+     */
+    suspend fun verifyEmail(token: String): Result<Unit> = runCatching {
+        val resp: AuthResponseDto = api.post<AuthResponseDto, VerifyEmailRequest>(
+            "/auth/verify-email",
+            VerifyEmailRequest(token = token)
+        )
         applyAuthResponse(resp)
+    }
+
+    /**
+     * POST /auth/resend-verification — requests a fresh activation email
+     * for an unverified account. The server uses an anti-enumeration
+     * generic response shape, so this method only signals "request
+     * accepted" — it doesn't tell the caller whether an email was
+     * actually dispatched. Surface a generic "if your account exists,
+     * we've sent a fresh link" message in the UI.
+     */
+    suspend fun resendVerification(email: String): Result<Unit> = runCatching {
+        api.post<GenericAckResponse, ResendVerificationRequest>(
+            "/auth/resend-verification",
+            ResendVerificationRequest(email = email)
+        )
     }
 
     /** Phone OTP not supported by the Express backend yet — keep the surface

@@ -57,7 +57,42 @@ class AuthViewModel(
                 phone = phone?.trim()?.takeIf { it.isNotBlank() },
                 countryOfResidence = countryOfResidence?.trim()?.takeIf { it.isNotBlank() }
             )
-                .onSuccess { _form.value = FormState.Sent("Check your inbox to verify.") }
+                .onSuccess { result ->
+                    _form.value = when (result) {
+                        is AuthRepository.SignUpResult.VerificationRequired ->
+                            FormState.VerificationSent(result.email)
+                        AuthRepository.SignUpResult.Authenticated ->
+                            FormState.Idle
+                    }
+                }
+                .onFailure { _form.value = FormState.Error(friendly(it)) }
+        }
+    }
+
+    /**
+     * POST /auth/verify-email — driven by the iOS / Android Universal Link
+     * handler. On success the AuthSession flips to Authenticated and
+     * RootView's gate transitions automatically into the role-tabs.
+     */
+    fun verifyEmail(token: String) {
+        scope.launch {
+            _form.value = FormState.Submitting
+            auth.verifyEmail(token)
+                .onSuccess { _form.value = FormState.Idle }
+                .onFailure { _form.value = FormState.Error(friendly(it)) }
+        }
+    }
+
+    /**
+     * POST /auth/resend-verification — used by the "I didn't get the
+     * email" affordance on the post-sign-up check-inbox screen and by
+     * the sign-in screen when the server returns `email_unverified`.
+     */
+    fun resendVerification(email: String) {
+        scope.launch {
+            _form.value = FormState.Submitting
+            auth.resendVerification(email.trim())
+                .onSuccess { _form.value = FormState.Sent("If your account is awaiting verification, a fresh activation email has been sent.") }
                 .onFailure { _form.value = FormState.Error(friendly(it)) }
         }
     }
@@ -107,5 +142,12 @@ class AuthViewModel(
         data object Submitting : FormState
         data class Sent(val message: String) : FormState
         data class Error(val message: String) : FormState
+        /**
+         * Sign-up completed but the account is awaiting email
+         * verification (server PR N). The screen layer routes this
+         * to a "check your inbox" view that surfaces the email +
+         * a "resend" affordance backed by [resendVerification].
+         */
+        data class VerificationSent(val email: String) : FormState
     }
 }

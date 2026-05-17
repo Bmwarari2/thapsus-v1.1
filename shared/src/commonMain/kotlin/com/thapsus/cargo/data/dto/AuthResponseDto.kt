@@ -22,7 +22,15 @@ data class AuthResponseDto(
     @SerialName("token") val scToken: String? = null,
     @SerialName("supabase_token") val supabaseToken: String? = null,
     @SerialName("supabase_token_expires_at") val supabaseTokenExpiresAt: Long? = null,
-    @SerialName("user") val user: ScUserDto? = null
+    @SerialName("user") val user: ScUserDto? = null,
+    /**
+     * Set by `POST /api/auth/register` (PR N): when true the account
+     * exists but is awaiting email verification, no JWT was issued, and
+     * the client should route to the "check your inbox" screen instead
+     * of the role-tabs. `AuthRepository.signUpWithEmail` maps this onto
+     * the [SignUpResult.VerificationRequired] branch.
+     */
+    @SerialName("verification_required") val verificationRequired: Boolean? = null
 )
 
 @Serializable
@@ -52,6 +60,26 @@ data class RegisterRequest(
     val name: String,
     val phone: String? = null,
     @SerialName("country_of_residence") val countryOfResidence: String? = null
+)
+
+/**
+ * POST /api/auth/verify-email — body is the one-shot plaintext token
+ * the user lifted from their activation email. The server hashes it
+ * for comparison so storage never holds the plaintext.
+ */
+@Serializable
+data class VerifyEmailRequest(
+    val token: String
+)
+
+/**
+ * POST /api/auth/resend-verification — body carries the email so the
+ * server can find the unverified user and mint a fresh activation
+ * link. Response shape is the generic ack envelope (anti-enumeration).
+ */
+@Serializable
+data class ResendVerificationRequest(
+    val email: String
 )
 
 @Serializable

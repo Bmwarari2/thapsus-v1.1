@@ -139,7 +139,11 @@ class ThapsusApiClient(
             // HTTP verbs, paths, SQL keywords, or stack-trace fragments
             // into a friendly fallback so a stale endpoint or a
             // hand-typed dev error never lands in a customer banner.
-            throw ApiException(response.status.value, sanitize(raw, response.status.value))
+            throw ApiException(
+                response.status.value,
+                sanitize(raw, response.status.value),
+                envelope?.code
+            )
         }
         return response.body()
     }
@@ -149,10 +153,28 @@ class ThapsusApiClient(
 data class ErrorEnvelope(
     val success: Boolean = false,
     val message: String = "Something went wrong",
-    val detail: String? = null
+    val detail: String? = null,
+    /**
+     * Optional machine-readable code for branching client UI on specific
+     * server-side failure modes (e.g. `email_unverified` from
+     * `/auth/login`). Always nullable — most routes don't set it.
+     */
+    val code: String? = null
 )
 
-class ApiException(val status: Int, message: String) : RuntimeException(message)
+/**
+ * Wire-side exception bubbled from `decode`. The optional [code] field
+ * is the server's machine-readable failure code (currently used for
+ * `email_unverified` so the sign-in screen can surface a "Resend
+ * verification" affordance instead of the generic invalid-credentials
+ * banner). Clients should branch on [code] when set and fall back to
+ * `message` otherwise.
+ */
+class ApiException(
+    val status: Int,
+    message: String,
+    val code: String? = null
+) : RuntimeException(message)
 
 /**
  * Filter dev-facing strings out of error messages before they bubble
