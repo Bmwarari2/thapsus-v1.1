@@ -23,12 +23,23 @@ struct RootView: View {
     @State private var pendingTrackId: String? = nil
     @State private var pendingOrderId: String? = nil
     @State private var pendingResetToken: String? = nil
+    /// First-launch walkthrough gate. Once true the user is routed into the
+    /// normal splash → sign-in / dashboard flow and the onboarding never
+    /// shows again on this install. Persisted in UserDefaults under
+    /// `thapsus.onboarding.completed_v1`. Reinstalling the app resets it.
+    @State private var hasCompletedOnboarding: Bool =
+        UserDefaults.standard.bool(forKey: Self.onboardingCompletedKey)
+
+    private static let onboardingCompletedKey = "thapsus.onboarding.completed_v1"
 
     var body: some View {
         ZStack {
             AppBackground()
             Group {
-                if env.isInitialising {
+                if !hasCompletedOnboarding {
+                    OnboardingView(onComplete: completeOnboarding)
+                        .transition(.opacity)
+                } else if env.isInitialising {
                     SplashView()
                 } else if let auth = env.session as? AuthSessionAuthenticated {
                     RootTabView(role: auth.role)
@@ -38,6 +49,7 @@ struct RootView: View {
                         .transition(.opacity)
                 }
             }
+            .animation(.easeInOut(duration: 0.3), value: hasCompletedOnboarding)
             .animation(.easeInOut(duration: 0.25), value: env.isSignedIn)
         }
         .onOpenURL(perform: handle(url:))
@@ -95,6 +107,16 @@ struct RootView: View {
                         }
                     }
             }
+        }
+    }
+
+    /// Persists the first-launch completion flag and flips `RootView` to the
+    /// normal splash / sign-in / dashboard flow. Called by `OnboardingView`
+    /// from its "Get started" CTA on the final page.
+    private func completeOnboarding() {
+        UserDefaults.standard.set(true, forKey: Self.onboardingCompletedKey)
+        withAnimation(.easeInOut(duration: 0.3)) {
+            hasCompletedOnboarding = true
         }
     }
 

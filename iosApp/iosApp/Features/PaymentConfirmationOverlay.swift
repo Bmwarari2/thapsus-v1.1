@@ -52,7 +52,7 @@ struct PaymentConfirmationOverlay: View {
             }
         }
 
-        var hapticType: UINotificationFeedbackGenerator.FeedbackType {
+        var appHaptic: AppHaptic {
             switch self {
             case .received: .success
             case .submitted: .warning
@@ -156,7 +156,7 @@ struct PaymentConfirmationOverlay: View {
     }
 
     private func runEntranceAnimation() {
-        UINotificationFeedbackGenerator().notificationOccurred(variant.hapticType)
+        AppHaptics.fire(variant.appHaptic)
         withAnimation(.easeOut(duration: 0.25)) {
             backdropOpacity = 1
         }

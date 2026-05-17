@@ -187,6 +187,10 @@ struct ErrorBanner: View {
             title: title,
             message: message
         )
+        // Error toast → error haptic. Triggered by the message changing so
+        // re-firing the same banner with new copy buzzes again, but a
+        // static banner doesn't keep buzzing every render.
+        .sensoryFeedback(.appHaptic(.error), trigger: message)
     }
 }
 
@@ -431,6 +435,12 @@ struct InkButtonStyle: ButtonStyle {
             .opacity(configuration.isPressed ? 0.92 : 1)
             .scaleEffect(configuration.isPressed ? 0.97 : 1)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            // Light impact on press — primary CTAs leading to mutations.
+            // `Reduce Haptics` accessibility setting is honoured automatically
+            // by .sensoryFeedback (iOS 17+).
+            .sensoryFeedback(.appHaptic(.action), trigger: configuration.isPressed) { _, isPressed in
+                isPressed
+            }
     }
 }
 

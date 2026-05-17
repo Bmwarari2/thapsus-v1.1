@@ -171,6 +171,22 @@ private enum Strings {
         "admin.payments": "Pending payments",
         "admin.errorLogs": "Error logs",
         "admin.signedIn": "Signed in",
+
+        // First-launch onboarding (Features/OnboardingView.swift).
+        // OnboardingPage.all is the single source of truth for the live
+        // English copy; these keys mirror it so the SW translator can fill
+        // in real translations. The view itself does NOT call T() yet —
+        // migrate during the post-translator localisation sweep.
+        "onboarding.cta.next": "Next",
+        "onboarding.cta.getStarted": "Get started",
+        "onboarding.page1.headline": "Shop the UK, delivered to Kenya.",
+        "onboarding.page1.body": "Send us a link from any UK retailer and we'll buy on your behalf, ship it home, and handle every step in between.",
+        "onboarding.page2.headline": "Already bought something? We'll ship it for you.",
+        "onboarding.page2.body": "Send your parcels to our Preston warehouse. We consolidate, customs-clear, and deliver to your door.",
+        "onboarding.page3.headline": "Track every step.",
+        "onboarding.page3.body": "From purchase to your door — including KRA customs clearance — visible in one place. Realtime updates, no waiting.",
+        "onboarding.page4.headline": "Pay how you like.",
+        "onboarding.page4.body": "M-Pesa, Lipana STK push, or any card. Earn wallet credits when you refer a friend.",
     ]
 
     static let sw: [String: String] = [
@@ -181,6 +197,18 @@ private enum Strings {
         "common.loading": "Inapakia…",
         "common.required": "Inahitajika",
         "common.signOut": "Ondoka",
+
+        // Onboarding — EN fallthrough until SW translator delivers.
+        "onboarding.cta.next": "Next",
+        "onboarding.cta.getStarted": "Get started",
+        "onboarding.page1.headline": "Shop the UK, delivered to Kenya.",
+        "onboarding.page1.body": "Send us a link from any UK retailer and we'll buy on your behalf, ship it home, and handle every step in between.",
+        "onboarding.page2.headline": "Already bought something? We'll ship it for you.",
+        "onboarding.page2.body": "Send your parcels to our Preston warehouse. We consolidate, customs-clear, and deliver to your door.",
+        "onboarding.page3.headline": "Track every step.",
+        "onboarding.page3.body": "From purchase to your door — including KRA customs clearance — visible in one place. Realtime updates, no waiting.",
+        "onboarding.page4.headline": "Pay how you like.",
+        "onboarding.page4.body": "M-Pesa, Lipana STK push, or any card. Earn wallet credits when you refer a friend.",
 
         "auth.welcome": "Karibu",
         "auth.signIn": "Ingia",

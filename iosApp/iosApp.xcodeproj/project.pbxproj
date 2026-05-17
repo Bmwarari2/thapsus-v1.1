@@ -32,6 +32,8 @@
 		1A0001000000000000000011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000011 /* Assets.xcassets */; };
 		1A0001000000000000000056 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000056 /* LaunchScreen.storyboard */; };
 		1A0001000000000000007001 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000007001 /* PrivacyInfo.xcprivacy */; };
+		1A0001000000000000007002 /* AppHaptics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000007002 /* AppHaptics.swift */; };
+		1A0001000000000000007003 /* OnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000007003 /* OnboardingView.swift */; };
 		1A0001000000000000000015 /* OutboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000015 /* OutboxView.swift */; };
 		1A0001000000000000000016 /* OperatorTodayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000016 /* OperatorTodayView.swift */; };
 		1A0001000000000000000017 /* ConsolidationListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1A0002000000000000000017 /* ConsolidationListView.swift */; };
@@ -122,6 +124,8 @@
 		1A0002000000000000000012 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		1A0002000000000000000056 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 		1A0002000000000000007001 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		1A0002000000000000007002 /* AppHaptics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppHaptics.swift; sourceTree = "<group>"; };
+		1A0002000000000000007003 /* OnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnboardingView.swift; sourceTree = "<group>"; };
 		1A0002000000000000000013 /* Configuration/Config.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Configuration/Config.xcconfig; sourceTree = "<group>"; };
 		1A0002000000000000000015 /* OutboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OutboxView.swift; sourceTree = "<group>"; };
 		1A0002000000000000000016 /* OperatorTodayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OperatorTodayView.swift; sourceTree = "<group>"; };
@@ -249,6 +253,7 @@
 				1A0002000000000000000007 /* GlassChrome.swift */,
 				1A0002000000000000000021 /* WebappPrimitives.swift */,
 				1A0002000000000000000033 /* Localization.swift */,
+				1A0002000000000000007002 /* AppHaptics.swift */,
 			);
 			path = DesignSystem;
 			sourceTree = "<group>";
@@ -277,6 +282,7 @@
 				1A0002000000000000003004 /* HomeGreetingNavigation.swift */,
 				1A0002000000000000003005 /* PendingActionsView.swift */,
 				1A0002000000000000003006 /* AccountDeletionView.swift */,
+				1A0002000000000000007003 /* OnboardingView.swift */,
 				1A000200000000000000000A /* QuoteCalculatorView.swift */,
 				1A000200000000000000000C /* RiderRunView.swift */,
 				1A000200000000000000000D /* PodCaptureView.swift */,
@@ -505,6 +511,8 @@
 				1A0001000000000000000031 /* OpsSettingsView.swift in Sources */,
 				1A0001000000000000000032 /* RoleHomeViews.swift in Sources */,
 				1A0001000000000000000033 /* Localization.swift in Sources */,
+				1A0001000000000000007002 /* AppHaptics.swift in Sources */,
+				1A0001000000000000007003 /* OnboardingView.swift in Sources */,
 				1A0001000000000000000034 /* HowItWorksView.swift in Sources */,
 				1A0001000000000000000035 /* AdminUsersView.swift in Sources */,
 				1A0001000000000000000036 /* AdminOrdersView.swift in Sources */,
