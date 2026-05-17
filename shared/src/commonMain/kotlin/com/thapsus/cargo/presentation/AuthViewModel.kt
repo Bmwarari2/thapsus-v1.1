@@ -1,5 +1,6 @@
 package com.thapsus.cargo.presentation
 
+import com.thapsus.cargo.data.remote.ApiException
 import com.thapsus.cargo.data.repository.AuthRepository
 import com.thapsus.cargo.data.repository.AuthSession
 import com.thapsus.cargo.domain.auth.PasswordPolicy
@@ -29,7 +30,7 @@ class AuthViewModel(
             _form.value = FormState.Submitting
             auth.signInWithEmail(email.trim(), password)
                 .onSuccess { _form.value = FormState.Idle }
-                .onFailure { _form.value = FormState.Error(friendly(it)) }
+                .onFailure { t -> _form.value = FormState.Error(friendly(t), codeOf(t)) }
         }
     }
 
@@ -137,11 +138,26 @@ class AuthViewModel(
     private fun friendly(t: Throwable): String =
         t.message?.takeIf { it.isNotBlank() } ?: "Sign-in failed. Please try again."
 
+    /**
+     * Extracts the server's machine-readable failure code if the throwable
+     * is an ApiException. Currently the only code the client branches on
+     * is `"email_unverified"` from /auth/login (PR N) — surfaced to the
+     * sign-in UI so the generic invalid-credentials banner can be swapped
+     * for a "resend activation email" affordance.
+     */
+    private fun codeOf(t: Throwable): String? = (t as? ApiException)?.code
+
     sealed interface FormState {
         data object Idle : FormState
         data object Submitting : FormState
         data class Sent(val message: String) : FormState
-        data class Error(val message: String) : FormState
+        /**
+         * Generic auth error. [code] mirrors the server's
+         * machine-readable failure code (e.g. `"email_unverified"`)
+         * when set; the UI may branch on it to render specific
+         * recovery affordances and falls back to [message] otherwise.
+         */
+        data class Error(val message: String, val code: String? = null) : FormState
         /**
          * Sign-up completed but the account is awaiting email
          * verification (server PR N). The screen layer routes this

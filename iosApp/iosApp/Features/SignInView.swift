@@ -20,6 +20,7 @@ struct SignInView: View {
 
     @State private var email: String = ""
     @State private var password: String = ""
+    @State private var confirmPassword: String = ""
     @State private var fullName: String = ""
     @State private var phone: String = ""
     @State private var country: String = ""
@@ -71,10 +72,20 @@ struct SignInView: View {
                     .padding(.top, 14)
                 }
 
-                if let err = formObserver?.value as? AuthViewModelFormStateError {
-                    LGStatusBanner(tone: .err, title: "Couldn't sign you in", message: err.message)
+                if let verif = formObserver?.value as? AuthViewModelFormStateVerificationSent {
+                    verificationPendingBanner(email: verif.email)
                         .padding(.horizontal, 18)
                         .padding(.top, 14)
+                } else if let err = formObserver?.value as? AuthViewModelFormStateError {
+                    if err.code == "email_unverified" {
+                        emailUnverifiedBanner(email: email)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 14)
+                    } else {
+                        LGStatusBanner(tone: .err, title: "Couldn't sign you in", message: err.message)
+                            .padding(.horizontal, 18)
+                            .padding(.top, 14)
+                    }
                 } else if let sent = formObserver?.value as? AuthViewModelFormStateSent {
                     LGStatusBanner(tone: .info, title: "Check your inbox", message: sent.message)
                         .padding(.horizontal, 18)
@@ -170,8 +181,22 @@ struct SignInView: View {
                             text: $password, capitalization: .never, isSecure: true)
 
                 if isSignUp {
+                    LGTextField(label: "Confirm password", placeholder: "••••••••",
+                                text: $confirmPassword, capitalization: .never, isSecure: true)
                     passwordRequirements
                         .padding(.top, 2)
+                    if !confirmPassword.isEmpty && !passwordsMatch {
+                        HStack(spacing: 8) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.red)
+                            Text("Passwords don't match.")
+                                .font(.body(12, weight: .medium))
+                                .foregroundStyle(.red)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.leading, 4)
+                    }
                 }
 
                 if !isSignUp {
@@ -202,8 +227,8 @@ struct SignInView: View {
                     }
                     .buttonStyle(LGPrimaryButtonStyle())
                     .padding(.top, 6)
-                    .disabled(isSignUp && (!agreedToTerms || !PasswordPolicy.shared.isValid(password: password)))
-                    .opacity(isSignUp && (!agreedToTerms || !PasswordPolicy.shared.isValid(password: password)) ? 0.5 : 1.0)
+                    .disabled(isSignUp && !signUpReady)
+                    .opacity(isSignUp && !signUpReady ? 0.5 : 1.0)
                 }
             }
         }
@@ -339,6 +364,68 @@ struct SignInView: View {
             )
         } else {
             vm.signIn(email: email, password: password)
+        }
+    }
+
+    /// True when both password fields are non-empty and match
+    /// character-for-character. The mismatch banner above and the
+    /// Create-account disable gate read from the same source so the
+    /// affordance + the warning never disagree.
+    private var passwordsMatch: Bool {
+        !password.isEmpty && password == confirmPassword
+    }
+
+    /// All-or-nothing gate for the Create-account button: terms ticked,
+    /// password meets the shared policy (used for parity with Android),
+    /// and the confirm-password field matches. The OR-fallback existed
+    /// before email-verification landed but the explicit `passwordsMatch`
+    /// is new in PR P so the user can't slip a typo'd password through.
+    private var signUpReady: Bool {
+        agreedToTerms
+            && PasswordPolicy.shared.isValid(password: password)
+            && passwordsMatch
+    }
+
+    /// Banner shown after a successful sign-up. The account exists on the
+    /// server but is awaiting activation via the link in
+    /// sendEmailVerificationEmail. We surface the email address that was
+    /// registered (helps the user recognise the inbox to check) plus a
+    /// "Resend activation" button wired to AuthViewModel.resendVerification.
+    @ViewBuilder
+    private func verificationPendingBanner(email: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LGStatusBanner(
+                tone: .info,
+                title: "Check your inbox",
+                message: "We sent an activation link to \(email). Tap it to finish setting up your account."
+            )
+            Button("Resend activation email") {
+                env.authVM?.resendVerification(email: email)
+            }
+            .font(.body(13, weight: .semibold))
+            .foregroundStyle(LG.accent2)
+        }
+    }
+
+    /// Login error banner for the email_unverified server code. Same
+    /// recovery affordance as verificationPendingBanner — resend the
+    /// activation email — but with a sign-in-context headline so the
+    /// user knows why the password they remember isn't getting them in.
+    @ViewBuilder
+    private func emailUnverifiedBanner(email: String) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            LGStatusBanner(
+                tone: .err,
+                title: "Email not verified",
+                message: "Activate your account from the link we emailed to \(email.isEmpty ? "your inbox" : email), then sign in again."
+            )
+            if !email.isEmpty {
+                Button("Resend activation email") {
+                    env.authVM?.resendVerification(email: email)
+                }
+                .font(.body(13, weight: .semibold))
+                .foregroundStyle(LG.accent2)
+            }
         }
     }
 }
